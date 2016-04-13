@@ -1,12 +1,12 @@
 import sys
 from sickle import Sickle
-import sqlite3 as lite
 
 
 repositories = {'http://researchdata.sfu.ca/oai2':None, 'http://dataverse.scholarsportal.info/dvn/OAIHandler':'ugrdr', 'http://circle.library.ubc.ca/oai/request':'com_2429_622'}
 
 
 def sqlite_writer(record, repository_url):
+	import sqlite3 as lite
 
 	litecon = lite.connect('data/globus_oai.db')
 	with litecon:
@@ -93,5 +93,9 @@ if __name__ == "__main__":
 	global dbtype
 	dbtype = sys.argv[1]
 
-	for repository_url, record_set in repositories.iteritems():
-		oai_harvest(repository_url, record_set)
+	if sys.version_info[0] == 2:
+		for repository_url, record_set in repositories.iteritems():
+			oai_harvest(repository_url, record_set)
+	else:
+		for repository_url, record_set in repositories.items():
+			oai_harvest(repository_url, record_set)
