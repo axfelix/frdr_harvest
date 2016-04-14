@@ -90,6 +90,10 @@ def oai_harvest(repository_url, record_set):
 
 if __name__ == "__main__":
 
+	if len(sys.argv) != 2:
+		print("Please specify a database backend as an argument to the script. Currently only sqlite is supported.")
+		raise SystemExit
+
 	global dbtype
 	dbtype = sys.argv[1]
 
