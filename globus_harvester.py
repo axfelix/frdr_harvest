@@ -2,7 +2,7 @@ import sys
 from sickle import Sickle
 
 
-repositories = {'http://researchdata.sfu.ca/oai2':None, 'http://dataverse.scholarsportal.info/dvn/OAIHandler':'ugrdr', 'http://circle.library.ubc.ca/oai/request':'com_2429_622'}
+repositories = {'http://researchdata.sfu.ca/oai2':None, 'http://dataverse.scholarsportal.info/dvn/OAIHandler':'ugrdr', 'http://circle.library.ubc.ca/oai/request':'com_2429_622', 'http://www.polardata.ca/oai/provider':None}
 
 
 def sqlite_writer(record, repository_url):
@@ -25,7 +25,7 @@ def sqlite_writer(record, repository_url):
 
 		try:
 			litecur.execute("INSERT INTO records (title, date, local_identifier, repository_url) VALUES(?,?,?,?)", (record["title"][0], record["date"][0], record["identifier"][0], repository_url))
-			
+
 			for creator in record["creator"]:
 				litecur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"][0], repository_url, creator, 0))
 
@@ -49,8 +49,41 @@ def sqlite_writer(record, repository_url):
 
 		except lite.IntegrityError:
 			# record already present in repo
-			# need to be able to check for deleted records, right now easiest way to do that is just dropping the DB before each harvest :)
-			return None	
+			return None
+
+
+def sqlite_reader():
+	import sqlite3 as lite
+	litecon = lite.connect('data/globus_oai.db')
+
+	# serialize records as JSON
+	# might have to switch this to a cursor if it gets too big
+
+	records = litecon.execute("SELECT title, date, local_identifier, repository_url FROM records")
+
+	for record in records:
+		record = dict(zip([tuple[0] for tuple in records.description], record))
+
+		with litecon:
+			litecur = litecon.cursor()
+
+			# attach the other values to the dict
+			# I really should've done this purely in SQL
+			# but group_concat() was making me angry
+
+			litecur.execute("SELECT creator, is_contributor FROM creators WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+			record["creator"] = litecur.fetchall()
+
+			litecur.execute("SELECT subject FROM subjects WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+			record["subject"] = litecur.fetchall()
+
+			litecur.execute("SELECT rights FROM rights WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+			record["rights"] = litecur.fetchall()
+
+			litecur.execute("SELECT description FROM descriptions WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+			record["description"] = litecur.fetchall()
+
+		# now rename some keys and hand it off to globus
 
 
 def unpack_metadata(record, repository_url):
@@ -103,3 +136,6 @@ if __name__ == "__main__":
 	else:
 		for repository_url, record_set in repositories.items():
 			oai_harvest(repository_url, record_set)
+
+	if dbtype == "sqlite":
+		sqlite_reader()
