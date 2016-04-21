@@ -1,8 +1,18 @@
 import sys
+import json
+import requests
 from sickle import Sickle
 
 
+# TODO: make these dynamic
 repositories = {'http://researchdata.sfu.ca/oai2':None, 'http://dataverse.scholarsportal.info/dvn/OAIHandler':'ugrdr', 'http://circle.library.ubc.ca/oai/request':'com_2429_622', 'http://www.polardata.ca/oai/provider':None}
+globus_endpoint_api_url = "https://rdmdev1.computecanada.ca/v1/api/collections/25"
+
+
+def construct_local_url(repository_url, local_identifier):
+	local_url = repository_url + " " + local_identifier
+	# add rules to derive URLs for dataverse, dspace, islandora, etc.
+	return local_url
 
 
 def sqlite_writer(record, repository_url):
@@ -65,25 +75,43 @@ def sqlite_reader():
 		record = dict(zip([tuple[0] for tuple in records.description], record))
 
 		with litecon:
+			litecon.row_factory = lambda cursor, row: row[0]
 			litecur = litecon.cursor()
 
 			# attach the other values to the dict
 			# I really should've done this purely in SQL
 			# but group_concat() was making me angry
 
-			litecur.execute("SELECT creator, is_contributor FROM creators WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
-			record["creator"] = litecur.fetchall()
+			litecur.execute("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=0", (record["local_identifier"], record["repository_url"]))
+			record["dc.contributor.author"] = litecur.fetchall()
+
+			litecur.execute("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=1", (record["local_identifier"], record["repository_url"]))
+			record["dc.contributor"] = litecur.fetchall()
 
 			litecur.execute("SELECT subject FROM subjects WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
-			record["subject"] = litecur.fetchall()
+			record["dc.subject"] = litecur.fetchall()
 
 			litecur.execute("SELECT rights FROM rights WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
-			record["rights"] = litecur.fetchall()
+			record["dc.rights"] = litecur.fetchall()
 
 			litecur.execute("SELECT description FROM descriptions WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
-			record["description"] = litecur.fetchall()
+			record["dc.description"] = litecur.fetchall()
 
-		# now rename some keys and hand it off to globus
+			record["dc.source"] = construct_local_url(record["repository_url"], record["local_identifier"])
+			record.pop("repository_url", None)
+			record.pop("local_identifier", None)
+
+			record["dc.title"] = record["title"]
+			record.pop("title", None)
+			record["dc.date"] = record["date"]
+			record.pop("date", None)
+
+
+			authheader = "bearer: \'" + access_token + "\'"
+			headers = {'content-type': 'application/json', 'authentication': authheader}
+			response = requests.post(globus_endpoint_api_url, data=json.dumps(record), headers=headers)
+
+			# did it work?
 
 
 def unpack_metadata(record, repository_url):
@@ -136,6 +164,11 @@ if __name__ == "__main__":
 	else:
 		for repository_url, record_set in repositories.items():
 			oai_harvest(repository_url, record_set)
+
+	global access_token
+	with open("data/token", "r") as tokenfile:
+		jsontoken = json.loads(token.read())
+		access_token = jsontoken['access_token'].encode()
 
 	if dbtype == "sqlite":
 		sqlite_reader()
