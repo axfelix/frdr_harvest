@@ -15,6 +15,24 @@ def construct_local_url(repository_url, local_identifier):
 	return local_url
 
 
+def rest_insert(record):
+	authheader = "bearer: \'" + access_token + "\'"
+	headers = {'content-type': 'application/json', 'authentication': authheader}
+	response = requests.post(globus_endpoint_api_url, data=json.dumps(record), headers=headers)
+	return response
+
+
+def write_gmeta(record):
+	# TODO: generate filepath?
+	filepath = "data/gmeta/file"
+	gmeta_filepath = filepath + ".gmeta.json"
+	gmeta_data = {filepath : {"mimetype": "application/json", "content": json.dumps(record)}}
+	gmeta = {"_gmeta":[gmeta_data]}
+
+	with open(gmeta_filepath, "w") as gmetafile:
+		gmetafile.write(json.dumps(gmeta))
+
+
 def sqlite_writer(record, repository_url):
 	import sqlite3 as lite
 
@@ -106,12 +124,8 @@ def sqlite_reader():
 			record["dc.date"] = record["date"]
 			record.pop("date", None)
 
-
-			authheader = "bearer: \'" + access_token + "\'"
-			headers = {'content-type': 'application/json', 'authentication': authheader}
-			response = requests.post(globus_endpoint_api_url, data=json.dumps(record), headers=headers)
-
-			# did it work?
+			#api_response = rest_insert(record)
+			gmeta = write_gmeta(record)
 
 
 def unpack_metadata(record, repository_url):
@@ -167,7 +181,7 @@ if __name__ == "__main__":
 
 	global access_token
 	with open("data/token", "r") as tokenfile:
-		jsontoken = json.loads(token.read())
+		jsontoken = json.loads(tokenfile.read())
 		access_token = jsontoken['access_token'].encode()
 
 	if dbtype == "sqlite":
