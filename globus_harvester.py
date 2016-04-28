@@ -1,6 +1,7 @@
 import sys
 import json
 import requests
+import re
 from sickle import Sickle
 
 
@@ -10,8 +11,16 @@ globus_endpoint_api_url = "https://rdmdev1.computecanada.ca/v1/api/collections/2
 
 
 def construct_local_url(repository_url, local_identifier):
-	local_url = repository_url + " " + local_identifier
-	# add rules to derive URLs for dataverse, dspace, islandora, etc.
+	local_url = repository_url + "/" + local_identifier
+
+	# islandora
+	if "/oai2" in repository_url:
+		local_url = re.sub("\/oai2", "/islandora/object/", repository_url) + local_identifier
+
+	# handle
+	if "http://hdl.handle.net" in local_url:
+		local_url = local_identifier
+
 	return local_url
 
 
@@ -20,17 +29,6 @@ def rest_insert(record):
 	headers = {'content-type': 'application/json', 'authentication': authheader}
 	response = requests.post(globus_endpoint_api_url, data=json.dumps(record), headers=headers)
 	return response
-
-
-def write_gmeta(record):
-	# TODO: generate filepath?
-	filepath = "data/gmeta/file"
-	gmeta_filepath = filepath + ".gmeta.json"
-	gmeta_data = {filepath : {"mimetype": "application/json", "content": json.dumps(record)}}
-	gmeta = {"_gmeta":[gmeta_data]}
-
-	with open(gmeta_filepath, "w") as gmetafile:
-		gmetafile.write(json.dumps(gmeta))
 
 
 def sqlite_writer(record, repository_url):
@@ -80,12 +78,10 @@ def sqlite_writer(record, repository_url):
 			return None
 
 
-def sqlite_reader():
+def sqlite_reader(gmeta_filepath):
 	import sqlite3 as lite
 	litecon = lite.connect('data/globus_oai.db')
-
-	# serialize records as JSON
-	# might have to switch this to a cursor if it gets too big
+	gmeta = []
 
 	records = litecon.execute("SELECT title, date, local_identifier, repository_url FROM records")
 
@@ -119,13 +115,18 @@ def sqlite_reader():
 			record.pop("repository_url", None)
 			record.pop("local_identifier", None)
 
-			record["dc.title"] = record["title"]
-			record.pop("title", None)
-			record["dc.date"] = record["date"]
-			record.pop("date", None)
+		record["dc.title"] = record["title"]
+		record.pop("title", None)
+		record["dc.date"] = record["date"]
+		record.pop("date", None)
 
-			#api_response = rest_insert(record)
-			gmeta = write_gmeta(record)
+		#api_response = rest_insert(record)
+
+		record["@context"] = {"dc" : "http://dublincore.org/documents/dcmi-terms"}
+		gmeta_data = {record["dc.source"] : {"mimetype": "application/json", "content": record}}
+		gmeta.append(gmeta_data)
+
+	return gmeta
 
 
 def unpack_metadata(record, repository_url):
@@ -133,7 +134,7 @@ def unpack_metadata(record, repository_url):
 		# if there's no author, probably not a valid record
 		return None
 
-	# if date is undefined, as they can be optional in some repos, add an empty key
+	# if date is undefined, add an empty key
 	if 'date' not in record.keys():
 		record["date"] = ['']
 
@@ -165,12 +166,13 @@ def oai_harvest(repository_url, record_set):
 
 if __name__ == "__main__":
 
-	if len(sys.argv) != 2:
+	if len(sys.argv) < 2:
 		print("Please specify a database backend as an argument to the script. Currently only sqlite is supported.")
 		raise SystemExit
 
 	global dbtype
 	dbtype = sys.argv[1]
+
 
 	if sys.version_info[0] == 2:
 		for repository_url, record_set in repositories.iteritems():
@@ -179,10 +181,19 @@ if __name__ == "__main__":
 		for repository_url, record_set in repositories.items():
 			oai_harvest(repository_url, record_set)
 
+	if len(sys.argv) == 3:
+		if sys.argv[2] == "--only-harvest":
+			raise SystemExit
+
+
 	global access_token
 	with open("data/token", "r") as tokenfile:
 		jsontoken = json.loads(tokenfile.read())
 		access_token = jsontoken['access_token'].encode()
 
+	gmeta_filepath = "data/gmeta.json"
 	if dbtype == "sqlite":
-		sqlite_reader()
+		gmeta = sqlite_reader(gmeta_filepath)
+
+	with open(gmeta_filepath, "w") as gmetafile:
+		gmetafile.write(json.dumps({"_gmeta":gmeta}))
