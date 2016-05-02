@@ -1,13 +1,35 @@
+"""Globus Harvester.
+
+Usage:
+  globus_harvester.py <dbtype>...
+  globus_harvester.py <dbtype> [--onlyharvest | --onlyexport]
+
+"""
+
+from docopt import docopt
 import sys
 import json
 import requests
 import re
+import csv
 from sickle import Sickle
 
 
-# TODO: make these dynamic
-repositories = {'http://researchdata.sfu.ca/oai2':None, 'http://dataverse.scholarsportal.info/dvn/OAIHandler':'ugrdr', 'http://circle.library.ubc.ca/oai/request':'com_2429_622', 'http://www.polardata.ca/oai/provider':None}
 globus_endpoint_api_url = "https://rdmdev1.computecanada.ca/v1/api/collections/25"
+
+
+def get_repositories(repos_csv="repos.csv"):
+	repositories = {}
+
+	with open('repos.csv', 'r') as csvfile:
+		reader = csv.reader(csvfile)
+		for row in reader:
+			if not row[1]:
+				repositories[row[0]] = None
+			else:
+				repositories[row[0]] = row[1]
+
+	return repositories
 
 
 def construct_local_url(repository_url, local_identifier):
@@ -166,25 +188,23 @@ def oai_harvest(repository_url, record_set):
 
 if __name__ == "__main__":
 
-	if len(sys.argv) < 2:
-		print("Please specify a database backend as an argument to the script. Currently only sqlite is supported.")
-		raise SystemExit
+	arguments = docopt(__doc__)
 
 	global dbtype
-	dbtype = sys.argv[1]
+	dbtype = arguments["<dbtype>"][0]
 
+	repositories = get_repositories()
 
-	if sys.version_info[0] == 2:
+	if sys.version_info[0] == 2 and arguments["--onlyexport"] == False:
 		for repository_url, record_set in repositories.iteritems():
 			oai_harvest(repository_url, record_set)
-	else:
+	elif arguments["--onlyexport"] == False:
 		for repository_url, record_set in repositories.items():
 			oai_harvest(repository_url, record_set)
 
 	if len(sys.argv) == 3:
-		if sys.argv[2] == "--only-harvest":
+		if arguments["--onlyharvest"] == True:
 			raise SystemExit
-
 
 	global access_token
 	with open("data/token", "r") as tokenfile:
