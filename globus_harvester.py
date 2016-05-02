@@ -12,6 +12,7 @@ import json
 import requests
 import re
 import csv
+import os
 from sickle import Sickle
 
 
@@ -101,6 +102,13 @@ def sqlite_writer(record, repository_url):
 
 def sqlite_reader(gmeta_filepath):
 	import sqlite3 as lite
+
+	# this sucks but I can't think of a better solution right now
+	deleted_records = []
+	if os.path.isfile('data/deleted.db'):
+		litecon = lite.connect('data/deleted.db')
+		deleted_records = litecon.execute("SELECT local_identifier, repository_url FROM records").fetchall()
+
 	litecon = lite.connect('data/globus_oai.db')
 	gmeta = []
 
@@ -108,6 +116,13 @@ def sqlite_reader(gmeta_filepath):
 
 	for record in records:
 		record = dict(zip([tuple[0] for tuple in records.description], record)) 
+
+		deleted_tuple = (record["local_identifier"], record["repository_url"])
+		if deleted_tuple in deleted_records:
+			record["dc.source"] = construct_local_url(record["repository_url"], record["local_identifier"])
+			gmeta_data = {record["dc.source"] : {"mimetype": "application/json", "content": None}}
+			gmeta.append(gmeta_data)
+			continue
 
 		with litecon:
 			litecon.row_factory = lambda cursor, row: row[0]
