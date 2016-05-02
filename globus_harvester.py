@@ -18,10 +18,10 @@ from sickle import Sickle
 globus_endpoint_api_url = "https://rdmdev1.computecanada.ca/v1/api/collections/25"
 
 
-def get_repositories(repos_csv="repos.csv"):
+def get_repositories(repos_csv="data/repos.csv"):
 	repositories = {}
 
-	with open('repos.csv', 'r') as csvfile:
+	with open(repos_csv, 'r') as csvfile:
 		reader = csv.reader(csvfile)
 		for row in reader:
 			if not row[1]:
@@ -60,8 +60,7 @@ def sqlite_writer(record, repository_url):
 	with litecon:
 		litecur = litecon.cursor()
 
-		litecur.execute("CREATE TABLE IF NOT EXISTS records (title TEXT, date TEXT, local_identifier TEXT, repository_url TEXT)")
-		litecur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_repository ON records (local_identifier, repository_url)")
+		litecur.execute("CREATE TABLE IF NOT EXISTS records (title TEXT, date TEXT, local_identifier TEXT, repository_url TEXT, PRIMARY KEY (local_identifier, repository_url))  WITHOUT ROWID")
 		litecur.execute("CREATE TABLE IF NOT EXISTS creators (local_identifier TEXT, repository_url TEXT, creator TEXT, is_contributor INTEGER)")
 		litecur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_creator ON creators (local_identifier, repository_url, creator)")
 		litecur.execute("CREATE TABLE IF NOT EXISTS subjects (local_identifier TEXT, repository_url TEXT, subject TEXT)")
@@ -108,7 +107,7 @@ def sqlite_reader(gmeta_filepath):
 	records = litecon.execute("SELECT title, date, local_identifier, repository_url FROM records")
 
 	for record in records:
-		record = dict(zip([tuple[0] for tuple in records.description], record))
+		record = dict(zip([tuple[0] for tuple in records.description], record)) 
 
 		with litecon:
 			litecon.row_factory = lambda cursor, row: row[0]
@@ -202,9 +201,8 @@ if __name__ == "__main__":
 		for repository_url, record_set in repositories.items():
 			oai_harvest(repository_url, record_set)
 
-	if len(sys.argv) == 3:
-		if arguments["--onlyharvest"] == True:
-			raise SystemExit
+	if arguments["--onlyharvest"] == True:
+		raise SystemExit
 
 	global access_token
 	with open("data/token", "r") as tokenfile:
