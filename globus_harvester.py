@@ -25,7 +25,7 @@ def get_repositories(repos_csv="data/repos.csv"):
 	with open(repos_csv, 'r') as csvfile:
 		reader = csv.reader(csvfile)
 		for row in reader:
-			if not row[1]:
+			if len(row)==1 or not row[1]:
 				repositories[row[0]] = None
 			else:
 				repositories[row[0]] = row[1]
@@ -34,16 +34,28 @@ def get_repositories(repos_csv="data/repos.csv"):
 
 
 def construct_local_url(repository_url, local_identifier):
-	local_url = repository_url + "/" + local_identifier
-
 	# islandora
 	if "/oai2" in repository_url:
 		local_url = re.sub("\/oai2", "/islandora/object/", repository_url) + local_identifier
+		return local_url
 
-	# handle
-	if "http://hdl.handle.net" in local_url:
-		local_url = local_identifier
+	# handle -- safer to catch these by URL regex, though slower
+	#if "http://hdl.handle.net" in local_identifier:
+	#	local_url = local_identifier
+	#	return local_url
 
+	# doi
+	doi = re.search("(doi|DOI):\s?\S+", local_identifier)
+	if doi:
+		doi = doi.group(0).rstrip('\.')
+		local_url = re.sub("(doi|DOI):\s?", "http://dx.doi.org/", doi)
+		return local_url
+
+	# errant URL
+	local_url = re.search("(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?", local_identifier)
+	if local_url: return local_url.group(0)
+
+	local_url = None
 	return local_url
 
 
@@ -115,12 +127,14 @@ def sqlite_reader(gmeta_filepath):
 	records = litecon.execute("SELECT title, date, local_identifier, repository_url FROM records")
 
 	for record in records:
-		record = dict(zip([tuple[0] for tuple in records.description], record)) 
+		record = dict(zip([tuple[0] for tuple in records.description], record))
+		record["dc:source"] = construct_local_url(record["repository_url"], record["local_identifier"])
+		if record["dc:source"] is None:
+			continue
 
 		deleted_tuple = (record["local_identifier"], record["repository_url"])
 		if deleted_tuple in deleted_records:
-			record["dc.source"] = construct_local_url(record["repository_url"], record["local_identifier"])
-			gmeta_data = {record["dc.source"] : {"mimetype": "application/json", "content": None}}
+			gmeta_data = {record["dc:source"] : {"mimetype": "application/json", "content": None}}
 			gmeta.append(gmeta_data)
 			continue
 
@@ -133,33 +147,32 @@ def sqlite_reader(gmeta_filepath):
 			# but group_concat() was making me angry
 
 			litecur.execute("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=0", (record["local_identifier"], record["repository_url"]))
-			record["dc.contributor.author"] = litecur.fetchall()
+			record["dc:contributor.author"] = litecur.fetchall()
 
 			litecur.execute("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=1", (record["local_identifier"], record["repository_url"]))
-			record["dc.contributor"] = litecur.fetchall()
+			record["dc:contributor"] = litecur.fetchall()
 
 			litecur.execute("SELECT subject FROM subjects WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
-			record["dc.subject"] = litecur.fetchall()
+			record["dc:subject"] = litecur.fetchall()
 
 			litecur.execute("SELECT rights FROM rights WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
-			record["dc.rights"] = litecur.fetchall()
+			record["dc:rights"] = litecur.fetchall()
 
 			litecur.execute("SELECT description FROM descriptions WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
-			record["dc.description"] = litecur.fetchall()
+			record["dc:description"] = litecur.fetchall()
 
-			record["dc.source"] = construct_local_url(record["repository_url"], record["local_identifier"])
 			record.pop("repository_url", None)
 			record.pop("local_identifier", None)
 
-		record["dc.title"] = record["title"]
+		record["dc:title"] = record["title"]
 		record.pop("title", None)
-		record["dc.date"] = record["date"]
+		record["dc:date"] = record["date"]
 		record.pop("date", None)
 
 		#api_response = rest_insert(record)
 
 		record["@context"] = {"dc" : "http://dublincore.org/documents/dcmi-terms"}
-		gmeta_data = {record["dc.source"] : {"mimetype": "application/json", "content": record}}
+		gmeta_data = {record["dc:source"] : {"mimetype": "application/json", "content": record}}
 		gmeta.append(gmeta_data)
 
 	return gmeta
