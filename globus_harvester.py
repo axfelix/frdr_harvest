@@ -161,6 +161,10 @@ def sqlite_reader(gmeta_filepath):
 			litecur.execute("SELECT description FROM descriptions WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
 			record["dc:description"] = litecur.fetchall()
 
+			litecur.execute("SELECT repository_name FROM repositories WHERE repository_url=?", (record["repository_url"],))
+			record["nrdr:origin.id"] = litecur.fetchall()[0]
+
+			record["nrdr:origin.url"] = record["repository_url"]
 			record.pop("repository_url", None)
 			record.pop("local_identifier", None)
 
@@ -171,7 +175,7 @@ def sqlite_reader(gmeta_filepath):
 
 		#api_response = rest_insert(record)
 
-		record["@context"] = {"dc" : "http://dublincore.org/documents/dcmi-terms"}
+		record["@context"] = {"dc" : "http://dublincore.org/documents/dcmi-terms", "nrdr" : "http://nrdr-ednr.ca/schema/1.0/"}
 		gmeta_data = {record["dc:source"] : {"mimetype": "application/json", "content": record}}
 		gmeta.append(gmeta_data)
 
@@ -192,14 +196,30 @@ def unpack_metadata(record, repository_url):
 	# elif other dbtypes
 
 
+def sqlite_reponame_writer(repository_url, repository_name):
+	import sqlite3 as lite
+
+	litecon = lite.connect('data/globus_oai.db')
+	with litecon:
+		litecur = litecon.cursor()
+
+		litecur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, PRIMARY KEY (repository_url)) WITHOUT ROWID")
+		litecur.execute("INSERT INTO repositories (repository_url, repository_name) VALUES (?,?)", (repository_url, repository_name))
+
+
 def oai_harvest(repository_url, record_set):
 	sickle = Sickle(repository_url)
+
+	repository_name = sickle.Identify().repositoryName
 
 	if record_set is not None:
 		records = sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True, set=record_set)
 
 	else:
 		records = sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True)
+
+	if dbtype == "sqlite":
+		sqlite_reponame_writer(repository_url, repository_name)
 
 	while records:
 		try:
