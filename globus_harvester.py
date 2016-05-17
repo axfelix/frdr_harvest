@@ -33,6 +33,18 @@ def get_repositories(repos_csv="data/repos.csv"):
 	return repositories
 
 
+def get_repositories_with_thumbnails(repos_csv="data/repos.csv"):
+	repositories = []
+
+	with open(repos_csv, 'r') as csvfile:
+		reader = csv.DictReader(csvfile, ["Name", "URL", "Set", "Thumbnail"])
+
+		for row in reader:
+			repositories.append(row)
+
+	return repositories
+
+
 def construct_local_url(repository_url, local_identifier):
 	# islandora
 	if "/oai2" in repository_url:
@@ -162,9 +174,11 @@ def sqlite_reader(gmeta_filepath):
 			record["dc:description"] = litecur.fetchall()
 
 			litecur.execute("SELECT repository_name FROM repositories WHERE repository_url=?", (record["repository_url"],))
-			record["nrdr:origin.id"] = litecur.fetchall()[0]
+			record["nrdr:origin.id"] = litecur.fetchall()
 
-			record["nrdr:origin.url"] = record["repository_url"]
+			litecur.execute("SELECT repository_thumbnail FROM repositories WHERE repository_url=?", (record["repository_url"],))
+			record["thumbnail"] = litecur.fetchall()
+
 			record.pop("repository_url", None)
 			record.pop("local_identifier", None)
 
@@ -196,15 +210,15 @@ def unpack_metadata(record, repository_url):
 	# elif other dbtypes
 
 
-def sqlite_reponame_writer(repository_url, repository_name):
+def sqlite_repo_writer(repository_url, repository_name, repository_thumbnail=""):
 	import sqlite3 as lite
 
 	litecon = lite.connect('data/globus_oai.db')
 	with litecon:
 		litecur = litecon.cursor()
 
-		litecur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, PRIMARY KEY (repository_url)) WITHOUT ROWID")
-		litecur.execute("INSERT INTO repositories (repository_url, repository_name) VALUES (?,?)", (repository_url, repository_name))
+		litecur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, PRIMARY KEY (repository_url)) WITHOUT ROWID")
+		litecur.execute("INSERT INTO repositories (repository_url, repository_name, repository_thumbnail) VALUES (?,?,?)", (repository_url, repository_name, repository_thumbnail))
 
 
 def oai_harvest(repository_url, record_set):
@@ -214,17 +228,39 @@ def oai_harvest(repository_url, record_set):
 
 	if record_set is not None:
 		records = sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True, set=record_set)
-
 	else:
 		records = sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True)
 
 	if dbtype == "sqlite":
-		sqlite_reponame_writer(repository_url, repository_name)
+		sqlite_repo_writer(repository_url, repository_name)
 
 	while records:
 		try:
 			record = records.next().metadata
 			unpack_metadata(record, repository_url)
+		except AttributeError:
+			# probably not a valid OAI record
+			# Islandora throws this for non-object directories
+			pass
+		except StopIteration:
+			break
+
+
+def oai_harvest_with_thumbnails(repository):
+	sickle = Sickle(repository["URL"])
+
+	if not repository["Set"]:
+		records = sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True)
+	else:
+		records = sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True, set=repository["Set"])
+
+	if dbtype == "sqlite":
+		sqlite_repo_writer(repository["URL"], repository["Name"], repository["Thumbnail"])
+
+	while records:
+		try:
+			record = records.next().metadata
+			unpack_metadata(record, repository["URL"])
 		except AttributeError:
 			# probably not a valid OAI record
 			# Islandora throws this for non-object directories
@@ -240,22 +276,27 @@ if __name__ == "__main__":
 	global dbtype
 	dbtype = arguments["<dbtype>"][0]
 
-	repositories = get_repositories()
+#	repositories = get_repositories()
 
-	if sys.version_info[0] == 2 and arguments["--onlyexport"] == False:
-		for repository_url, record_set in repositories.iteritems():
-			oai_harvest(repository_url, record_set)
-	elif arguments["--onlyexport"] == False:
-		for repository_url, record_set in repositories.items():
-			oai_harvest(repository_url, record_set)
+#	if sys.version_info[0] == 2 and arguments["--onlyexport"] == False:
+#		for repository_url, record_set in repositories.iteritems():
+#			oai_harvest(repository_url, record_set)
+#	elif arguments["--onlyexport"] == False:
+#		for repository_url, record_set in repositories.items():
+#			oai_harvest(repository_url, record_set)
+
+	if arguments["--onlyexport"] == False:
+		repositories = get_repositories_with_thumbnails()
+		for repository in repositories:
+				oai_harvest_with_thumbnails(repository)
 
 	if arguments["--onlyharvest"] == True:
 		raise SystemExit
 
-	global access_token
-	with open("data/token", "r") as tokenfile:
-		jsontoken = json.loads(tokenfile.read())
-		access_token = jsontoken['access_token'].encode()
+#	global access_token
+#	with open("data/token", "r") as tokenfile:
+#		jsontoken = json.loads(tokenfile.read())
+#		access_token = jsontoken['access_token'].encode()
 
 	gmeta_filepath = "data/gmeta.json"
 	if dbtype == "sqlite":
