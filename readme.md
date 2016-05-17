@@ -1,6 +1,6 @@
 This is a first version of an OAI record crawler which outputs gmeta.json files for indexing by Globus. It currently only supports Dublin Core records.
 
-Repos to be crawled should be placed in data/repos.csv, in a two column CSV with the structure `Repository Name, OAI base URL, [OAI record set], [Repository thumbnail` as in this example:
+Repos to be crawled should be placed in data/repos.csv, in a four column CSV with the structure `Repository Name, OAI base URL, [OAI record set], [Repository thumbnail` as in this example:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 SFU Radar,http://researchdata.sfu.ca/oai2,,
