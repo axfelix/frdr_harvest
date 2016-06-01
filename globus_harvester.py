@@ -177,7 +177,7 @@ def sqlite_reader(gmeta_filepath):
 			record["nrdr:origin.id"] = litecur.fetchall()
 
 			litecur.execute("SELECT repository_thumbnail FROM repositories WHERE repository_url=?", (record["repository_url"],))
-			record["thumbnail"] = litecur.fetchall()
+			record["nrdr:origin.icon"] = litecur.fetchall()
 
 			record.pop("repository_url", None)
 			record.pop("local_identifier", None)
@@ -204,6 +204,10 @@ def unpack_metadata(record, repository_url):
 	# if date is undefined, add an empty key
 	if 'date' not in record.keys():
 		record["date"] = ['']
+
+	# if multiple dates, just grab the most recent (DSpace workaround)
+	if record["date"][0][0]:
+		record["date"] = record["date"][0]
 
 	if dbtype == "sqlite":
 		sqlite_writer(record, repository_url)
