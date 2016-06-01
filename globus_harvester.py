@@ -206,8 +206,11 @@ def unpack_metadata(record, repository_url):
 		record["date"] = ['']
 
 	# if multiple dates, just grab the most recent (DSpace workaround)
-	if record["date"][0][0]:
-		record["date"] = record["date"][0]
+	try:
+		if record["date"][0][0]:
+			record["date"] = record["date"][0]
+	except:
+		pass
 
 	if dbtype == "sqlite":
 		sqlite_writer(record, repository_url)
@@ -222,7 +225,11 @@ def sqlite_repo_writer(repository_url, repository_name, repository_thumbnail="")
 		litecur = litecon.cursor()
 
 		litecur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, PRIMARY KEY (repository_url)) WITHOUT ROWID")
-		litecur.execute("INSERT INTO repositories (repository_url, repository_name, repository_thumbnail) VALUES (?,?,?)", (repository_url, repository_name, repository_thumbnail))
+		try:
+			litecur.execute("INSERT INTO repositories (repository_url, repository_name, repository_thumbnail) VALUES (?,?,?)", (repository_url, repository_name, repository_thumbnail))
+		except lite.IntegrityError:
+			# record already present in repo
+			return None
 
 
 def oai_harvest(repository_url, record_set):
