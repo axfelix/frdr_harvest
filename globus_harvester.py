@@ -15,6 +15,7 @@ import csv
 import os
 from sickle import Sickle
 import ckanapi
+import time
 
 
 globus_endpoint_api_url = "https://rdmdev1.computecanada.ca/v1/api/collections/25"
@@ -317,7 +318,12 @@ def ckan_harvest(repository):
 	records = ckanrepo.action.package_list()
 
 	for record_id in records:
-		record = ckanrepo.action.package_show(id=record_id)
+		try:
+			record = ckanrepo.action.package_show(id=record_id)
+		except ConnectionError:
+			time.sleep(300)
+			record = ckanrepo.action.package_show(id=record_id)
+
 		oai_record = format_ckan_to_oai(record, record_id)
 		sqlite_writer(oai_record, repository["URL"])
 
