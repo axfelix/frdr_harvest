@@ -14,6 +14,7 @@ import re
 import csv
 import os
 from sickle import Sickle
+import ckanapi
 
 
 globus_endpoint_api_url = "https://rdmdev1.computecanada.ca/v1/api/collections/25"
@@ -37,7 +38,7 @@ def get_repositories_with_thumbnails(repos_csv="data/repos.csv"):
 	repositories = []
 
 	with open(repos_csv, 'r') as csvfile:
-		reader = csv.DictReader(csvfile, ["Name", "URL", "Set", "Thumbnail"])
+		reader = csv.DictReader(csvfile, ["Name", "URL", "Set", "Thumbnail", "Type"])
 
 		for row in reader:
 			repositories.append(row)
@@ -196,6 +197,33 @@ def sqlite_reader(gmeta_filepath):
 	return gmeta
 
 
+def format_ckan_to_oai(ckan_record, local_identifier):
+	record = {}
+
+	try:
+		if ckan_record['digital_object_identifier']:
+			record["identifier"] = [ckan_record['digital_object_identifier']]
+		else:
+			record["identifier"] = [local_identifier]
+	except KeyError:
+		record["identifier"] = [local_identifier]
+
+	if ckan_record['author']:
+		record["creator"] = [ckan_record['author']]
+	elif ckan_record['maintainer']:
+		record["creator"] = [ckan_record['maintainer']]
+	else:
+		record["creator"] = [ckan_record['organization']['title']]
+
+	record["title"] = [ckan_record['title']]
+	record["description"] = [ckan_record['notes']]
+	record["date"] = [ckan_record['date_published']]
+	record["subject"] = ckan_record['subject']
+	record["rights"] = [ckan_record['attribution']]
+
+	return record
+
+
 def unpack_metadata(record, repository_url):
 	if 'creator' not in record.keys():
 		# if there's no author, probably not a valid record
@@ -280,6 +308,20 @@ def oai_harvest_with_thumbnails(repository):
 			break
 
 
+def ckan_harvest(repository):
+	ckanrepo = ckanapi.RemoteCKAN(repository["URL"])
+
+	if dbtype == "sqlite":
+		sqlite_repo_writer(repository["URL"], repository["Name"], repository["Thumbnail"])
+
+	records = ckanrepo.action.package_list()
+
+	for record_id in records:
+		record = ckanrepo.action.package_show(id=record_id)
+		oai_record = format_ckan_to_oai(record, record_id)
+		sqlite_writer(oai_record, repository["URL"])
+
+
 if __name__ == "__main__":
 
 	arguments = docopt(__doc__)
@@ -299,7 +341,10 @@ if __name__ == "__main__":
 	if arguments["--onlyexport"] == False:
 		repositories = get_repositories_with_thumbnails()
 		for repository in repositories:
-				oai_harvest_with_thumbnails(repository)
+				if repository["Type"] == "oai":
+					oai_harvest_with_thumbnails(repository)
+				elif repository["Type"] == "ckan":
+					ckan_harvest(repository)
 
 	if arguments["--onlyharvest"] == True:
 		raise SystemExit
