@@ -1,8 +1,8 @@
 """Globus Harvester.
 
 Usage:
-  globus_harvester.py <dbtype>...
-  globus_harvester.py <dbtype> [--onlyharvest | --onlyexport]
+  globus_harvester.py 
+  globus_harvester.py [--onlyharvest | --onlyexport]
 
 """
 
@@ -16,23 +16,18 @@ import os
 from sickle import Sickle
 import ckanapi
 import time
+import logging
+import time
 
+from logging.handlers import TimedRotatingFileHandler
 
-globus_endpoint_api_url = "https://rdmdev1.computecanada.ca/v1/api/collections/25"
+def get_config_json(repos_json="data/config.json"):
+	configdict = {}
 
+	with open(repos_json, 'r') as jsonfile:
+		configdict = json.load(jsonfile)
 
-def get_repositories(repos_csv="data/repos.csv"):
-	repositories = {}
-
-	with open(repos_csv, 'r') as csvfile:
-		reader = csv.reader(csvfile)
-		for row in reader:
-			if len(row)==1 or not row[1]:
-				repositories[row[0]] = None
-			else:
-				repositories[row[0]] = row[1]
-
-	return repositories
+	return configdict
 
 
 def get_repositories_with_thumbnails(repos_csv="data/repos.csv"):
@@ -76,14 +71,14 @@ def construct_local_url(repository_url, local_identifier):
 def rest_insert(record):
 	authheader = "bearer: \'" + access_token + "\'"
 	headers = {'content-type': 'application/json', 'authentication': authheader}
-	response = requests.post(globus_endpoint_api_url, data=json.dumps(record), headers=headers)
+	response = requests.post(configs['globus_rest_url'], data=json.dumps(record), headers=headers)
 	return response
 
 
 def sqlite_writer(record, repository_url):
 	import sqlite3 as lite
 
-	litecon = lite.connect('data/globus_oai.db')
+	litecon = lite.connect(configs['db']['filename'])
 	with litecon:
 		litecur = litecon.cursor()
 
@@ -126,7 +121,7 @@ def sqlite_writer(record, repository_url):
 			return None
 
 
-def sqlite_reader(gmeta_filepath):
+def sqlite_reader():
 	import sqlite3 as lite
 
 	# this sucks but I can't think of a better solution right now
@@ -135,7 +130,7 @@ def sqlite_reader(gmeta_filepath):
 		litecon = lite.connect('data/deleted.db')
 		deleted_records = litecon.execute("SELECT local_identifier, repository_url FROM records").fetchall()
 
-	litecon = lite.connect('data/globus_oai.db')
+	litecon = lite.connect(configs['db']['filename'])
 	gmeta = []
 
 	records = litecon.execute("SELECT title, date, local_identifier, repository_url FROM records")
@@ -241,7 +236,7 @@ def unpack_metadata(record, repository_url):
 	except:
 		pass
 
-	if dbtype == "sqlite":
+	if configs['db']['type'] == "sqlite":
 		sqlite_writer(record, repository_url)
 	# elif other dbtypes
 
@@ -249,7 +244,7 @@ def unpack_metadata(record, repository_url):
 def sqlite_repo_writer(repository_url, repository_name, repository_thumbnail=""):
 	import sqlite3 as lite
 
-	litecon = lite.connect('data/globus_oai.db')
+	litecon = lite.connect(configs['db']['filename'])
 	with litecon:
 		litecur = litecon.cursor()
 
@@ -271,71 +266,104 @@ def oai_harvest(repository_url, record_set):
 	else:
 		records = sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True)
 
-	if dbtype == "sqlite":
+	if configs['db']['type'] == "sqlite":
 		sqlite_repo_writer(repository_url, repository_name)
 
+	item_count = 0
 	while records:
 		try:
 			record = records.next().metadata
 			unpack_metadata(record, repository_url)
+			item_count = item_count + 1
 		except AttributeError:
 			# probably not a valid OAI record
 			# Islandora throws this for non-object directories
 			pass
 		except StopIteration:
 			break
+	logger.info("Processed %s items in feed" , item_count)
 
 
 def oai_harvest_with_thumbnails(repository):
-	sickle = Sickle(repository["URL"])
+	sickle = Sickle(repository["url"])
+	records = []
 
-	if not repository["Set"]:
-		records = sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True)
+	if not repository["set"]:
+		try:
+			records = sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True)
+		except:
+			logger.info("No items were found")
 	else:
-		records = sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True, set=repository["Set"])
+		try:
+			records = sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True, set=repository["set"])
+		except:
+			logger.info("No items were found")
 
-	if dbtype == "sqlite":
-		sqlite_repo_writer(repository["URL"], repository["Name"], repository["Thumbnail"])
+	if configs['db']['type'] == "sqlite":
+		sqlite_repo_writer(repository["url"], repository["name"], repository["thumbnail"])
 
+	item_count = 0
 	while records:
 		try:
 			record = records.next().metadata
-			unpack_metadata(record, repository["URL"])
+			unpack_metadata(record, repository["url"])
+			item_count = item_count + 1
 		except AttributeError:
 			# probably not a valid OAI record
 			# Islandora throws this for non-object directories
 			pass
 		except StopIteration:
 			break
+	logger.info("Processed %s items in feed", item_count)
 
 
 def ckan_harvest(repository):
-	ckanrepo = ckanapi.RemoteCKAN(repository["URL"])
+	ckanrepo = ckanapi.RemoteCKAN(repository["url"])
 
-	if dbtype == "sqlite":
-		sqlite_repo_writer(repository["URL"], repository["Name"], repository["Thumbnail"])
+	if configs['db']['type'] == "sqlite":
+		sqlite_repo_writer(repository["url"], repository["name"], repository["thumbnail"])
 
 	records = ckanrepo.action.package_list()
 
+	backoff_base = 90
+	error_count = 0
+	item_count = 0
 	for record_id in records:
-		try:
-			record = ckanrepo.action.package_show(id=record_id)
-		except ConnectionError:
-			time.sleep(300)
-			record = ckanrepo.action.package_show(id=record_id)
+		got_item = false
+		while ((not got_item) and (error_count < 5)):
+			try:
+				record = ckanrepo.action.package_show(id=record_id)
+				got_item = true
+				item_count = item_count + 1
+			except ConnectionError:
+				error_count = error_count + 1
+				sleep_time = backoff_base * error_count * error_count
+				logger.error("Connection error, sleeping for %s seconds", sleep_time)
+				time.sleep(sleep_time)
 
 		oai_record = format_ckan_to_oai(record, record_id)
-		sqlite_writer(oai_record, repository["URL"])
-
+		sqlite_writer(oai_record, repository["url"])
+	if (error_count == 5):
+		logger.error("** aborted after processing %s items **", item_count)
+	else:
+		logger.info("Processed %s items in feed", item_count)
 
 if __name__ == "__main__":
 
+	tstart = time.time()
 	arguments = docopt(__doc__)
 
-	global dbtype
-	dbtype = arguments["<dbtype>"][0]
+	global configs 
+	configs = get_config_json()
 
-#	repositories = get_repositories()
+	handler = TimedRotatingFileHandler(configs['logging']['filename'], when="D", interval=configs['logging']['daysperfile'], backupCount=configs['logging']['keep'])
+	logFormatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+	handler.setFormatter(logFormatter)
+	logger = logging.getLogger("Rotating Log")
+	logger.addHandler(handler)
+	logger.setLevel(logging.DEBUG)
+
+	logger.info("Starting...")
 
 #	if sys.version_info[0] == 2 and arguments["--onlyexport"] == False:
 #		for repository_url, record_set in repositories.iteritems():
@@ -345,11 +373,13 @@ if __name__ == "__main__":
 #			oai_harvest(repository_url, record_set)
 
 	if arguments["--onlyexport"] == False:
-		repositories = get_repositories_with_thumbnails()
-		for repository in repositories:
-				if repository["Type"] == "oai":
+		configs = get_config_json()
+		for repository in configs['repos']:
+			logger.info("Repo: " + repository['name'])
+			if (repository["enabled"]):
+				if repository["type"] == "oai":
 					oai_harvest_with_thumbnails(repository)
-				elif repository["Type"] == "ckan":
+				elif repository["type"] == "ckan":
 					ckan_harvest(repository)
 
 	if arguments["--onlyharvest"] == True:
@@ -361,8 +391,13 @@ if __name__ == "__main__":
 #		access_token = jsontoken['access_token'].encode()
 
 	gmeta_filepath = "data/gmeta.json"
-	if dbtype == "sqlite":
-		gmeta = sqlite_reader(gmeta_filepath)
+	if configs['db']['type'] == "sqlite":
+		gmeta = sqlite_reader()
 
 	with open(gmeta_filepath, "w") as gmetafile:
+		logger.info("Writing gmeta file")
 		gmetafile.write(json.dumps({"_gmeta":gmeta}))
+
+	tfinish = time.time()
+	tdelta = tfinish - tstart
+	logger.info("Done after %.2f seconds", tdelta)
