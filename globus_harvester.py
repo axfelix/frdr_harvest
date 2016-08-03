@@ -8,6 +8,7 @@ Usage:
 
 from docopt import docopt
 import sys
+import signal
 import fcntl
 import errno
 import json
@@ -52,6 +53,10 @@ def rate_limited(max_per_second):
         return rate_limited_function
 
     return decorate
+
+def shutdown_handler(signum, frame):
+	os.unlink('lockfile')
+	sys.exit(1)
 
 
 def get_config_json(repos_json="data/config.json"):
@@ -364,11 +369,11 @@ def ckan_harvest(repository):
 		log_update_interval = repository["update_log_after_numitems"]
 
 	for record_id in records:
-		got_item = false
+		got_item = False
 		while ((not got_item) and (error_count < configs['abort_repo_after_numerrors'])):
 			try:
 				record = ckanrepo.action.package_show(id=record_id)
-				got_item = true
+				got_item = True
 				item_count = item_count + 1
 				if (item_count % log_update_interval == 0):
 					tdelta = time.time() - repository["tstart"]
@@ -396,6 +401,7 @@ if __name__ == "__main__":
 		sys.stderr.write("ERROR: is harvester already running? (could not lock lockfile)\n")
 		sys.exit(-1)
 
+	signal.signal(signal.SIGTERM, shutdown_handler)
 	tstart = time.time()
 	arguments = docopt(__doc__)
 
