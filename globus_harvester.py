@@ -10,7 +10,6 @@ from docopt import docopt
 import sys
 import signal
 import fcntl
-import errno
 import json
 import requests
 import re
@@ -222,17 +221,14 @@ def sqlite_reader():
 def format_ckan_to_oai(ckan_record, local_identifier):
 	record = {}
 
-	try:
-		if ckan_record['digital_object_identifier']:
-			record["identifier"] = [ckan_record['digital_object_identifier']]
-		else:
-			record["identifier"] = [local_identifier]
-	except KeyError:
+	if ('digital_object_identifier' in ckan_record) and ckan_record['digital_object_identifier']:
+		record["identifier"] = [ckan_record['digital_object_identifier']]
+	else:
 		record["identifier"] = [local_identifier]
 
-	if ckan_record['author']:
+	if ('author' in ckan_record) and ckan_record['author']:
 		record["creator"] = [ckan_record['author']]
-	elif ckan_record['maintainer']:
+	elif ('maintainer' in ckan_record) and ckan_record['maintainer']:
 		record["creator"] = [ckan_record['maintainer']]
 	else:
 		record["creator"] = [ckan_record['organization']['title']]
@@ -349,7 +345,7 @@ def oai_harvest_with_thumbnails(repository):
 			break
 	logger.info("Processed %s items in feed", item_count)
 
-@rate_limited(1)
+@rate_limited(10)
 def ckan_get_record(ckanrepo, record_id):
 	return ckanrepo.action.package_show(id=record_id)
 
