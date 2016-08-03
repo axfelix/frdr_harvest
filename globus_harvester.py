@@ -8,6 +8,8 @@ Usage:
 
 from docopt import docopt
 import sys
+import fcntl
+import errno
 import json
 import requests
 import re
@@ -18,8 +20,39 @@ import ckanapi
 import time
 import logging
 import time
-
+import threading
+from functools import wraps
 from logging.handlers import TimedRotatingFileHandler
+
+def rate_limited(max_per_second):
+    """
+    Decorator that make functions not be called faster than a set rate
+    """
+    lock = threading.Lock()
+    min_interval = 1.0 / float(max_per_second)
+
+    def decorate(func):
+        last_time_called = [0.0]
+
+        @wraps(func)
+        def rate_limited_function(*args, **kwargs):
+            lock.acquire()
+            elapsed = time.clock() - last_time_called[0]
+            left_to_wait = min_interval - elapsed
+
+            if left_to_wait > 0:
+                time.sleep(left_to_wait)
+
+            lock.release()
+
+            ret = func(*args, **kwargs)
+            last_time_called[0] = time.clock()
+            return ret
+
+        return rate_limited_function
+
+    return decorate
+
 
 def get_config_json(repos_json="data/config.json"):
 	configdict = {}
@@ -28,18 +61,6 @@ def get_config_json(repos_json="data/config.json"):
 		configdict = json.load(jsonfile)
 
 	return configdict
-
-
-def get_repositories_with_thumbnails(repos_csv="data/repos.csv"):
-	repositories = []
-
-	with open(repos_csv, 'r') as csvfile:
-		reader = csv.DictReader(csvfile, ["Name", "URL", "Set", "Thumbnail", "Type"])
-
-		for row in reader:
-			repositories.append(row)
-
-	return repositories
 
 
 def construct_local_url(repository_url, local_identifier):
@@ -303,11 +324,18 @@ def oai_harvest_with_thumbnails(repository):
 		sqlite_repo_writer(repository["url"], repository["name"], repository["thumbnail"])
 
 	item_count = 0
+	log_update_interval = configs['update_log_after_numitems']
+	if 'update_log_after_numitems' in repository:
+		log_update_interval = repository['update_log_after_numitems']
+
 	while records:
 		try:
 			record = records.next().metadata
 			unpack_metadata(record, repository["url"])
 			item_count = item_count + 1
+			if (item_count % log_update_interval == 0):
+				tdelta = time.time() - repository["tstart"]
+				logger.info("Done %s items after %.1f seconds (%.1f items/sec)", item_count, tdelta, (item_count/tdelta))
 		except AttributeError:
 			# probably not a valid OAI record
 			# Islandora throws this for non-object directories
@@ -316,6 +344,9 @@ def oai_harvest_with_thumbnails(repository):
 			break
 	logger.info("Processed %s items in feed", item_count)
 
+@rate_limited(1)
+def ckan_get_record(ckanrepo, record_id):
+	return ckanrepo.action.package_show(id=record_id)
 
 def ckan_harvest(repository):
 	ckanrepo = ckanapi.RemoteCKAN(repository["url"])
@@ -328,13 +359,21 @@ def ckan_harvest(repository):
 	backoff_base = 90
 	error_count = 0
 	item_count = 0
+	log_update_interval = configs['update_log_after_numitems']
+	if 'update_log_after_numitems' in repository:
+		log_update_interval = repository["update_log_after_numitems"]
+
 	for record_id in records:
 		got_item = false
-		while ((not got_item) and (error_count < 5)):
+		while ((not got_item) and (error_count < configs['abort_repo_after_numerrors'])):
 			try:
 				record = ckanrepo.action.package_show(id=record_id)
 				got_item = true
 				item_count = item_count + 1
+				if (item_count % log_update_interval == 0):
+					tdelta = time.time() - repository["tstart"]
+					logger.info("Done %s items after %.1f seconds (%.1f items/sec)", item_count, tdelta, (item_count/tdelta))
+
 			except ConnectionError:
 				error_count = error_count + 1
 				sleep_time = backoff_base * error_count * error_count
@@ -343,18 +382,33 @@ def ckan_harvest(repository):
 
 		oai_record = format_ckan_to_oai(record, record_id)
 		sqlite_writer(oai_record, repository["url"])
-	if (error_count == 5):
+	if (error_count == configs['abort_repo_after_numerrors']):
 		logger.error("** aborted after processing %s items **", item_count)
 	else:
 		logger.info("Processed %s items in feed", item_count)
 
 if __name__ == "__main__":
 
+	lockfile = open('lockfile','w')
+	try:
+		fcntl.flock(lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+	except (OSError, IOError):
+		sys.stderr.write("ERROR: is harvester already running? (could not lock lockfile)\n")
+		sys.exit(-1)
+
 	tstart = time.time()
 	arguments = docopt(__doc__)
 
 	global configs 
 	configs = get_config_json()
+	if not 'update_log_after_numitems' in configs:
+		configs['update_log_after_numitems'] = 1000
+	if not 'abort_repo_after_numerrors' in configs:
+		configs['abort_repo_after_numerrors'] = 5
+
+	logdir = os.path.dirname(configs['logging']['filename'])
+	if not os.path.exists(logdir):
+		os.makedirs(logdir)
 
 	handler = TimedRotatingFileHandler(configs['logging']['filename'], when="D", interval=configs['logging']['daysperfile'], backupCount=configs['logging']['keep'])
 	logFormatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
@@ -365,22 +419,18 @@ if __name__ == "__main__":
 
 	logger.info("Starting...")
 
-#	if sys.version_info[0] == 2 and arguments["--onlyexport"] == False:
-#		for repository_url, record_set in repositories.iteritems():
-#			oai_harvest(repository_url, record_set)
-#	elif arguments["--onlyexport"] == False:
-#		for repository_url, record_set in repositories.items():
-#			oai_harvest(repository_url, record_set)
-
 	if arguments["--onlyexport"] == False:
 		configs = get_config_json()
 		for repository in configs['repos']:
 			logger.info("Repo: " + repository['name'])
 			if (repository["enabled"]):
+				repository["tstart"] = time.time()
 				if repository["type"] == "oai":
 					oai_harvest_with_thumbnails(repository)
 				elif repository["type"] == "ckan":
 					ckan_harvest(repository)
+			else:
+				logger.info("This repo is not enabled for harvesting")
 
 	if arguments["--onlyharvest"] == True:
 		raise SystemExit
@@ -398,6 +448,9 @@ if __name__ == "__main__":
 		logger.info("Writing gmeta file")
 		gmetafile.write(json.dumps({"_gmeta":gmeta}))
 
-	tfinish = time.time()
-	tdelta = tfinish - tstart
-	logger.info("Done after %.2f seconds", tdelta)
+	tdelta = time.time() - tstart
+	logger.info("Done after %.1f seconds", tdelta)
+
+	fcntl.flock(lockfile, fcntl.LOCK_UN)
+	lockfile.close()
+	os.unlink('lockfile')

@@ -18,6 +18,8 @@ Configuration, including which repos are to be crawled, should be placed in data
         "daysperfile": 1,
         "keep": 7
     },
+    "update_log_after_numitems": 100,
+    "abort_repo_after_numerrors": 5,
     "repos": [
         {
             "name": "SFU Radar",
@@ -25,7 +27,8 @@ Configuration, including which repos are to be crawled, should be placed in data
             "set": "",
             "thumbnail": "",
             "type": "oai",
-            "enabled": true
+            "enabled": true,
+            "update_log_after_numitems": 50
         },
         {
             "name": "Scholars Portal",
@@ -38,7 +41,7 @@ Configuration, including which repos are to be crawled, should be placed in data
         {
             "name": "UBC Circle",
             "url": "http://circle.library.ubc.ca/oai/request",
-            "set": "com_2429_622",
+            "set": "com_2429_287",
             "thumbnail": "https://circle-23jan2015.sites.olt.ubc.ca/files/2015/01/circle-logo-inverted.png",
             "type": "oai",
             "enabled": true
