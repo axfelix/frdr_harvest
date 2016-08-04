@@ -100,6 +100,23 @@ def rest_insert(record):
 	return response
 
 
+def initialize_database():
+	if configs['db']['type'] == "sqlite":
+		import sqlite3 as lite
+		litecon = lite.connect(configs['db']['filename'])
+		with litecon:
+			litecur = litecon.cursor()
+			litecur.execute("CREATE TABLE IF NOT EXISTS records (title TEXT, date TEXT, local_identifier TEXT, repository_url TEXT, PRIMARY KEY (local_identifier, repository_url))  WITHOUT ROWID")
+			litecur.execute("CREATE TABLE IF NOT EXISTS creators (local_identifier TEXT, repository_url TEXT, creator TEXT, is_contributor INTEGER)")
+			litecur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_creator ON creators (local_identifier, repository_url, creator)")
+			litecur.execute("CREATE TABLE IF NOT EXISTS subjects (local_identifier TEXT, repository_url TEXT, subject TEXT)")
+			litecur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_subject ON subjects (local_identifier, repository_url, subject)")
+			litecur.execute("CREATE TABLE IF NOT EXISTS rights (local_identifier TEXT, repository_url TEXT, rights TEXT)")
+			litecur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_rights ON rights (local_identifier, repository_url, rights)")
+			litecur.execute("CREATE TABLE IF NOT EXISTS descriptions (local_identifier TEXT, repository_url TEXT, description TEXT)")
+			litecur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_description ON descriptions (local_identifier, repository_url, description)")
+			litecur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, PRIMARY KEY (repository_url)) WITHOUT ROWID")
+
 def sqlite_writer(record, repository_url):
 	import sqlite3 as lite
 
@@ -107,43 +124,48 @@ def sqlite_writer(record, repository_url):
 	with litecon:
 		litecur = litecon.cursor()
 
-		litecur.execute("CREATE TABLE IF NOT EXISTS records (title TEXT, date TEXT, local_identifier TEXT, repository_url TEXT, PRIMARY KEY (local_identifier, repository_url))  WITHOUT ROWID")
-		litecur.execute("CREATE TABLE IF NOT EXISTS creators (local_identifier TEXT, repository_url TEXT, creator TEXT, is_contributor INTEGER)")
-		litecur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_creator ON creators (local_identifier, repository_url, creator)")
-		litecur.execute("CREATE TABLE IF NOT EXISTS subjects (local_identifier TEXT, repository_url TEXT, subject TEXT)")
-		litecur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_subject ON subjects (local_identifier, repository_url, subject)")
-		litecur.execute("CREATE TABLE IF NOT EXISTS rights (local_identifier TEXT, repository_url TEXT, rights TEXT)")
-		litecur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_rights ON rights (local_identifier, repository_url, rights)")
-		litecur.execute("CREATE TABLE IF NOT EXISTS descriptions (local_identifier TEXT, repository_url TEXT, description TEXT)")
-		litecur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_description ON descriptions (local_identifier, repository_url, description)")
-
 		try:
 			litecur.execute("INSERT INTO records (title, date, local_identifier, repository_url) VALUES(?,?,?,?)", (record["title"][0], record["date"][0], record["identifier"][0], repository_url))
-
-			for creator in record["creator"]:
-				litecur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"][0], repository_url, creator, 0))
-
-			if "contributor" in record:
-				for contributor in record["contributor"]:
-					litecur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"][0], repository_url, contributor, 1))
-
-			if "subject" in record:
-				for subject in record["subject"]:
-					litecur.execute("INSERT INTO subjects (local_identifier, repository_url, subject) VALUES (?,?,?)", (record["identifier"][0], repository_url, subject))
-
-			if "rights" in record:
-				for rights in record["rights"]:
-					litecur.execute("INSERT INTO rights (local_identifier, repository_url, rights) VALUES (?,?,?)", (record["identifier"][0], repository_url, rights))
-
-			if "description" in record:
-				for description in record["description"]:
-					litecur.execute("INSERT INTO descriptions (local_identifier, repository_url, description) VALUES (?,?,?)", (record["identifier"][0], repository_url, description))
-
-			return record["identifier"]
-
 		except lite.IntegrityError:
 			# record already present in repo
 			return None
+	
+		if "creator" in record:
+			for creator in record["creator"]:
+				try:
+					litecur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"][0], repository_url, creator, 0))
+				except lite.IntegrityError:
+					pass
+
+		if "contributor" in record:
+			for contributor in record["contributor"]:
+				try:
+					litecur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"][0], repository_url, contributor, 1))
+				except lite.IntegrityError:
+					pass
+
+		if "subject" in record:
+			for subject in record["subject"]:
+				try:
+					litecur.execute("INSERT INTO subjects (local_identifier, repository_url, subject) VALUES (?,?,?)", (record["identifier"][0], repository_url, subject))
+				except lite.IntegrityError:
+					pass
+
+		if "rights" in record:
+			for rights in record["rights"]:
+				try:
+					litecur.execute("INSERT INTO rights (local_identifier, repository_url, rights) VALUES (?,?,?)", (record["identifier"][0], repository_url, rights))
+				except lite.IntegrityError:
+					pass
+
+		if "description" in record:
+			for description in record["description"]:
+				try:
+					litecur.execute("INSERT INTO descriptions (local_identifier, repository_url, description) VALUES (?,?,?)", (record["identifier"][0], repository_url, description))
+				except lite.IntegrityError:
+					pass
+
+		return record["identifier"]
 
 
 def sqlite_reader():
@@ -260,7 +282,6 @@ def unpack_metadata(record, repository_url):
 
 	if configs['db']['type'] == "sqlite":
 		sqlite_writer(record, repository_url)
-	# elif other dbtypes
 
 
 def sqlite_repo_writer(repository_url, repository_name, repository_thumbnail=""):
@@ -270,40 +291,11 @@ def sqlite_repo_writer(repository_url, repository_name, repository_thumbnail="")
 	with litecon:
 		litecur = litecon.cursor()
 
-		litecur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, PRIMARY KEY (repository_url)) WITHOUT ROWID")
 		try:
 			litecur.execute("INSERT INTO repositories (repository_url, repository_name, repository_thumbnail) VALUES (?,?,?)", (repository_url, repository_name, repository_thumbnail))
 		except lite.IntegrityError:
 			# record already present in repo
 			return None
-
-
-def oai_harvest(repository_url, record_set):
-	sickle = Sickle(repository_url)
-
-	repository_name = sickle.Identify().repositoryName
-
-	if record_set is not None:
-		records = sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True, set=record_set)
-	else:
-		records = sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True)
-
-	if configs['db']['type'] == "sqlite":
-		sqlite_repo_writer(repository_url, repository_name)
-
-	item_count = 0
-	while records:
-		try:
-			record = records.next().metadata
-			unpack_metadata(record, repository_url)
-			item_count = item_count + 1
-		except AttributeError:
-			# probably not a valid OAI record
-			# Islandora throws this for non-object directories
-			pass
-		except StopIteration:
-			break
-	logger.info("Processed %s items in feed" , item_count)
 
 
 def oai_harvest_with_thumbnails(repository):
@@ -420,6 +412,7 @@ if __name__ == "__main__":
 	logger.setLevel(logging.DEBUG)
 
 	logger.info("Starting...")
+	initialize_database()
 
 	if arguments["--onlyexport"] == False:
 		configs = get_config_json()
@@ -442,7 +435,7 @@ if __name__ == "__main__":
 #		jsontoken = json.loads(tokenfile.read())
 #		access_token = jsontoken['access_token'].encode()
 
-	gmeta_filepath = "data/gmeta.json"
+	gmeta_filepath = configs['gmeta_filepath']
 	if configs['db']['type'] == "sqlite":
 		gmeta = sqlite_reader()
 

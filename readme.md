@@ -13,6 +13,7 @@ Configuration, including which repos are to be crawled, should be placed in data
         "pass": ""
     },
     "globus_rest_url": "",
+    "gmeta_filepath": "data/gmeta.json",
     "logging": {
         "filename": "logs/log.txt",
         "daysperfile": 1,
