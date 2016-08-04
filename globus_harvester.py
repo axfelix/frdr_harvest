@@ -53,11 +53,6 @@ def rate_limited(max_per_second):
 
     return decorate
 
-def shutdown_handler(signum, frame):
-	os.unlink('lockfile')
-	sys.exit(1)
-
-
 def get_config_json(repos_json="data/config.json"):
 	configdict = {}
 
@@ -106,7 +101,7 @@ def initialize_database():
 		litecon = lite.connect(configs['db']['filename'])
 		with litecon:
 			litecur = litecon.cursor()
-			litecur.execute("CREATE TABLE IF NOT EXISTS records (title TEXT, date TEXT, local_identifier TEXT, repository_url TEXT, PRIMARY KEY (local_identifier, repository_url))  WITHOUT ROWID")
+			litecur.execute("CREATE TABLE IF NOT EXISTS records (title TEXT, date TEXT, modified_timestamp NUMERIC, local_identifier TEXT, repository_url TEXT, PRIMARY KEY (local_identifier, repository_url)) WITHOUT ROWID")
 			litecur.execute("CREATE TABLE IF NOT EXISTS creators (local_identifier TEXT, repository_url TEXT, creator TEXT, is_contributor INTEGER)")
 			litecur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_creator ON creators (local_identifier, repository_url, creator)")
 			litecur.execute("CREATE TABLE IF NOT EXISTS subjects (local_identifier TEXT, repository_url TEXT, subject TEXT)")
@@ -117,7 +112,7 @@ def initialize_database():
 			litecur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_description ON descriptions (local_identifier, repository_url, description)")
 			litecur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, PRIMARY KEY (repository_url)) WITHOUT ROWID")
 
-def sqlite_writer(record, repository_url):
+def sqlite_write_header(record_id, repository_url):
 	import sqlite3 as lite
 
 	litecon = lite.connect(configs['db']['filename'])
@@ -125,7 +120,23 @@ def sqlite_writer(record, repository_url):
 		litecur = litecon.cursor()
 
 		try:
-			litecur.execute("INSERT INTO records (title, date, local_identifier, repository_url) VALUES(?,?,?,?)", (record["title"][0], record["date"][0], record["identifier"][0], repository_url))
+			litecur.execute("INSERT INTO records (title, date, modified_timestamp, local_identifier, repository_url) VALUES(?,?,?,?,?)", ("", "", 0, record_id, repository_url))
+		except lite.IntegrityError:
+			# record already present in repo
+			return None
+
+	return record_id
+
+
+def sqlite_write_record(record, repository_url):
+	import sqlite3 as lite
+
+	litecon = lite.connect(configs['db']['filename'])
+	with litecon:
+		litecur = litecon.cursor()
+
+		try:
+			litecur.execute("INSERT INTO records (title, date, modified_timestamp, local_identifier, repository_url) VALUES(?,?,?,?,?)", (record["title"][0], record["date"][0], time.time(), record["identifier"][0], repository_url))
 		except lite.IntegrityError:
 			# record already present in repo
 			return None
@@ -165,7 +176,7 @@ def sqlite_writer(record, repository_url):
 				except lite.IntegrityError:
 					pass
 
-		return record["identifier"]
+	return record["identifier"]
 
 
 def sqlite_reader():
@@ -281,7 +292,7 @@ def unpack_metadata(record, repository_url):
 		pass
 
 	if configs['db']['type'] == "sqlite":
-		sqlite_writer(record, repository_url)
+		sqlite_write_record(record, repository_url)
 
 
 def sqlite_repo_writer(repository_url, repository_name, repository_thumbnail=""):
@@ -341,7 +352,7 @@ def oai_harvest_with_thumbnails(repository):
 def ckan_get_record(ckanrepo, record_id):
 	return ckanrepo.action.package_show(id=record_id)
 
-def ckan_harvest(repository):
+def ckan_get_package_list(repository):
 	ckanrepo = ckanapi.RemoteCKAN(repository["url"])
 
 	if configs['db']['type'] == "sqlite":
@@ -349,47 +360,27 @@ def ckan_harvest(repository):
 
 	records = ckanrepo.action.package_list()
 
-	backoff_base = 90
-	error_count = 0
-	item_count = 0
-	log_update_interval = configs['update_log_after_numitems']
-	if 'update_log_after_numitems' in repository:
-		log_update_interval = repository["update_log_after_numitems"]
-
+	item_existing_count = 0
+	item_new_count = 0
 	for record_id in records:
-		got_item = False
-		while ((not got_item) and (error_count < configs['abort_repo_after_numerrors'])):
-			try:
-				record = ckanrepo.action.package_show(id=record_id)
-				got_item = True
-				item_count = item_count + 1
-				if (item_count % log_update_interval == 0):
-					tdelta = time.time() - repository["tstart"]
-					logger.info("Done %s items after %.1f seconds (%.1f items/sec)", item_count, tdelta, (item_count/tdelta))
+		result = sqlite_write_header(record_id, repository["url"])
+		if result == None:
+			item_existing_count = item_existing_count + 1
+		else:
+			item_new_count = item_new_count + 1
 
-			except ConnectionError:
-				error_count = error_count + 1
-				sleep_time = backoff_base * error_count * error_count
-				logger.error("Connection error, sleeping for %s seconds", sleep_time)
-				time.sleep(sleep_time)
-
-		oai_record = format_ckan_to_oai(record, record_id)
-		sqlite_writer(oai_record, repository["url"])
-	if (error_count == configs['abort_repo_after_numerrors']):
-		logger.error("** aborted after processing %s items **", item_count)
-	else:
-		logger.info("Processed %s items in feed", item_count)
+	logger.info("Found %s items in feed (%d existing, %d new)", (item_existing_count + item_new_count), item_existing_count, item_new_count)
 
 if __name__ == "__main__":
 
-	lockfile = open('lockfile','w')
-	try:
-		fcntl.flock(lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
-	except (OSError, IOError):
-		sys.stderr.write("ERROR: is harvester already running? (could not lock lockfile)\n")
-		sys.exit(-1)
+	if os.name == 'posix':
+		lockfile = open('lockfile','w')
+		try:
+			fcntl.flock(lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+		except (OSError, IOError):
+			sys.stderr.write("ERROR: is harvester already running? (could not lock lockfile)\n")
+			sys.exit(-1)
 
-	signal.signal(signal.SIGTERM, shutdown_handler)
 	tstart = time.time()
 	arguments = docopt(__doc__)
 
@@ -416,6 +407,8 @@ if __name__ == "__main__":
 
 	if arguments["--onlyexport"] == False:
 		configs = get_config_json()
+
+		# Find any new information in the repositories
 		for repository in configs['repos']:
 			logger.info("Repo: " + repository['name'])
 			if (repository["enabled"]):
@@ -423,9 +416,11 @@ if __name__ == "__main__":
 				if repository["type"] == "oai":
 					oai_harvest_with_thumbnails(repository)
 				elif repository["type"] == "ckan":
-					ckan_harvest(repository)
+					ckan_get_package_list(repository)
 			else:
 				logger.info("This repo is not enabled for harvesting")
+
+		# Process all existing records that have not yet been fetched
 
 	if arguments["--onlyharvest"] == True:
 		raise SystemExit
@@ -446,6 +441,7 @@ if __name__ == "__main__":
 	tdelta = time.time() - tstart
 	logger.info("Done after %.1f seconds", tdelta)
 
-	fcntl.flock(lockfile, fcntl.LOCK_UN)
-	lockfile.close()
-	os.unlink('lockfile')
+	if os.name == 'posix':
+		fcntl.flock(lockfile, fcntl.LOCK_UN)
+		lockfile.close()
+		os.unlink('lockfile')
