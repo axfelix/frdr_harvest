@@ -133,7 +133,7 @@ def sqlite_write_header(record_id, repository_url):
 	return record_id
 
 
-@rate_limited(10)
+@rate_limited(5)
 def ckan_update_record(record):
 	logger.debug("Updating record %s from repo at %s",record['local_identifier'],record['repository_url'])
 	ckanrepo = ckanapi.RemoteCKAN(record['repository_url'])
@@ -159,20 +159,26 @@ def update_stale_records():
 		stale_timestamp = int(time.time() - configs['record_refresh_days']*86400)
 		recordset = []
 		litecon = lite.connect(configs['db']['filename'])
-		litecon.row_factory = lite.Row
-		litecur = litecon.cursor()
-		records = litecur.execute("""SELECT r1.title, r1.date, r1.modified_timestamp, r1.local_identifier, r1.repository_url, r2.repository_type
-			FROM records r1, repositories r2 
-			where r1.repository_url = r2.repository_url and r1.modified_timestamp < ?
-			LIMIT ?""", (stale_timestamp,configs['max_records_updated_per_run'])).fetchall()
+		with litecon:
+			litecon.row_factory = lite.Row
+			litecur = litecon.cursor()
+			records = litecur.execute("""SELECT r1.title, r1.date, r1.modified_timestamp, r1.local_identifier, r1.repository_url, r2.repository_type
+				FROM records r1, repositories r2 
+				where r1.repository_url = r2.repository_url and r1.modified_timestamp < ?
+				LIMIT ?""", (stale_timestamp,configs['max_records_updated_per_run'])).fetchall()
 
-		for record in records:
-			if record["repository_type"] == "ckan":
-				status = ckan_update_record(record)
-				if not status:
-					logger.error("Aborting due to errors after %s items updated in %.1f seconds (%.1f items/sec)", record_count,(time.time() - tstart),record_count/(time.time() - tstart))
-					break
-			record_count = record_count + 1
+			for record in records:
+				if record_count == 0:
+					logger.info("Started processing for %d records", len(records))
+				if record["repository_type"] == "ckan":
+					status = ckan_update_record(record)
+					if not status:
+						logger.error("Aborting due to errors after %s items updated in %.1f seconds (%.1f items/sec)", record_count,(time.time() - tstart),record_count/(time.time() - tstart))
+						break
+				record_count = record_count + 1
+				if (record_count % configs['update_log_after_numitems'] == 0):
+					tdelta = time.time() - tstart
+					logger.info("Done %s items after %.1f seconds (%.1f items/sec)", record_count, tdelta, (record_count/tdelta))
 
 	logger.info("Updated %s items in %.1f seconds (%.1f items/sec)", record_count,(time.time() - tstart),record_count/(time.time() - tstart))
 
