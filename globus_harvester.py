@@ -115,7 +115,8 @@ def initialize_database():
 			litecur.execute("CREATE TABLE IF NOT EXISTS descriptions (local_identifier TEXT, repository_url TEXT, description TEXT)")
 			litecur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_description ON descriptions (local_identifier, repository_url, description)")
 			litecur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, repository_type TEXT, last_crawl_timestamp NUMERIC, PRIMARY KEY (repository_url)) WITHOUT ROWID")
-
+		if os.name == "posix":
+			os.chmod(configs['db']['filename'], 0o664 )
 
 def sqlite_write_header(record_id, repository_url):
 	import sqlite3 as lite
@@ -143,6 +144,8 @@ def ckan_update_record(record):
 		sqlite_write_record(oai_record, record['repository_url'],"replace")
 		return True
 	except:
+		if not 'error_count' in configs:
+			configs['error_count'] = 0
 		configs['error_count'] = configs['error_count'] + 1
 		if configs['error_count'] >= configs['abort_after_numerrors']:
 			return False
@@ -469,9 +472,9 @@ if __name__ == "__main__":
 
 	global configs 
 	configs = get_config_json()
+	configs['error_count'] = 0
 	if not 'update_log_after_numitems' in configs:
 		configs['update_log_after_numitems'] = 1000
-	configs['error_count'] = 0
 	if not 'abort_after_numerrors' in configs:
 		configs['abort_after_numerrors'] = 5
 	if not 'record_refresh_days' in configs:
