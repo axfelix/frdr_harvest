@@ -121,6 +121,23 @@ def initialize_database():
 			except:
 				pass
 
+
+def sqlite_touch_record(record):
+	import sqlite3 as lite
+
+	litecon = lite.connect(configs['db']['filename'])
+	with litecon:
+		litecur = litecon.cursor()
+
+		try:
+			litecur.execute("UPDATE records set modified_timestamp = ? where local_identifier = ? and repository_url = ?", (time.time(), record['local_identifier'], record['repository_url']))
+		except lite.IntegrityError:
+			# record already present in repo
+			return None
+
+	return record_id
+
+
 def sqlite_write_header(record_id, repository_url):
 	import sqlite3 as lite
 
@@ -146,6 +163,9 @@ def ckan_update_record(record):
 		oai_record = format_ckan_to_oai(ckan_record,record['local_identifier'])
 		sqlite_write_record(oai_record, record['repository_url'],"replace")
 		return True
+	except NotAuthorized:
+		# Not authorized means that we currently do not have permission to access the data but we may in the future (embargo)
+		sqlite_touch_record(record)
 	except:
 		if not 'error_count' in configs:
 			configs['error_count'] = 0
