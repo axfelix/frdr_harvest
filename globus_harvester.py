@@ -135,7 +135,7 @@ def sqlite_touch_record(record):
 			# record already present in repo
 			return None
 
-	return record_id
+	return True
 
 
 def sqlite_write_header(record_id, repository_url):
@@ -163,7 +163,7 @@ def ckan_update_record(record):
 		oai_record = format_ckan_to_oai(ckan_record,record['local_identifier'])
 		sqlite_write_record(oai_record, record['repository_url'],"replace")
 		return True
-	except NotAuthorized:
+	except ckanapi.errors.NotAuthorized:
 		# Not authorized means that we currently do not have permission to access the data but we may in the future (embargo)
 		sqlite_touch_record(record)
 	except:
