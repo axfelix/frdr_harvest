@@ -489,7 +489,7 @@ if __name__ == "__main__":
 		if (configs['logging']['level'].upper() == "ERROR"):
 			logger.setLevel(logging.ERROR)
 
-	logger.info("Starting...")
+	logger.info("Starting... (pid=%s)",os.getpid())
 	initialize_database()
 
 	if arguments["--onlyexport"] == False:
