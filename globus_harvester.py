@@ -116,7 +116,10 @@ def initialize_database():
 			litecur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_description ON descriptions (local_identifier, repository_url, description)")
 			litecur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, repository_type TEXT, last_crawl_timestamp NUMERIC, PRIMARY KEY (repository_url)) WITHOUT ROWID")
 		if os.name == "posix":
-			os.chmod(configs['db']['filename'], 0o664 )
+			try:
+				os.chmod(configs['db']['filename'], 0o664 )
+			except:
+				pass
 
 def sqlite_write_header(record_id, repository_url):
 	import sqlite3 as lite
