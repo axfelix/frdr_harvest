@@ -13,11 +13,18 @@ Configuration, including which repos are to be crawled, should be placed in data
         "pass": ""
     },
     "globus_rest_url": "",
+    "gmeta_filepath": "data/gmeta.json",
     "logging": {
         "filename": "logs/log.txt",
         "daysperfile": 1,
-        "keep": 7
+        "keep": 7,
+        "level": "INFO"
     },
+    "update_log_after_numitems": 100,
+    "abort_after_numerrors": 5,
+    "repo_refresh_days": 1,
+    "record_refresh_days": 30,
+    "max_records_updated_per_run": 500,
     "repos": [
         {
             "name": "SFU Radar",
@@ -25,7 +32,8 @@ Configuration, including which repos are to be crawled, should be placed in data
             "set": "",
             "thumbnail": "",
             "type": "oai",
-            "enabled": true
+            "update_log_after_numitems": 50,
+            "enabled": false
         },
         {
             "name": "Scholars Portal",
@@ -33,15 +41,15 @@ Configuration, including which repos are to be crawled, should be placed in data
             "set": "ugrdr",
             "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
             "type": "oai",
-            "enabled": true
+            "enabled": false
         },
         {
             "name": "UBC Circle",
             "url": "http://circle.library.ubc.ca/oai/request",
-            "set": "com_2429_622",
+            "set": "com_2429_287",
             "thumbnail": "https://circle-23jan2015.sites.olt.ubc.ca/files/2015/01/circle-logo-inverted.png",
             "type": "oai",
-            "enabled": true
+            "enabled": false
         },
         {
             "name": "Open Data Canada",
@@ -49,6 +57,8 @@ Configuration, including which repos are to be crawled, should be placed in data
             "set": "",
             "thumbnail": "",
             "type": "ckan",
+            "repo_refresh_days": 7,
+            "update_log_after_numitems": 2000,
             "enabled": false
         },
         {
