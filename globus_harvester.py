@@ -231,7 +231,6 @@ def update_repo_last_crawl(repository):
 		litecon = lite.connect(configs['db']['filename'])
 		with litecon:
 			litecur = litecon.cursor()
-			print("update repositories set last_crawl_timestamp = %s where repository_url = %s" % (int(time.time()),repository['url']))
 			litecur.execute("update repositories set last_crawl_timestamp = ? where repository_url = ?",(int(time.time()),repository['url']))
 
 
