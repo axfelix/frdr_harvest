@@ -199,14 +199,14 @@ def update_stale_records():
 				if record["repository_type"] == "ckan":
 					status = ckan_update_record(record)
 					if not status:
-						logger.error("Aborting due to errors after %s items updated in %.1f seconds (%.1f items/sec)", record_count,(time.time() - tstart),record_count/(time.time() - tstart))
+						logger.error("Aborting due to errors after %s items updated in %s (%.1f items/sec)", record_count, humanize_time(time.time() - tstart), record_count/(time.time() - tstart))
 						break
 				record_count = record_count + 1
 				if (record_count % configs['update_log_after_numitems'] == 0):
 					tdelta = time.time() - tstart
-					logger.info("Done %s items after %.1f seconds (%.1f items/sec)", record_count, tdelta, (record_count/tdelta))
+					logger.info("Done %s items after %s (%.1f items/sec)", record_count, humanize_time(tdelta), (record_count/tdelta))
 
-	logger.info("Updated %s items in %.1f seconds (%.1f items/sec)", record_count,(time.time() - tstart),record_count/(time.time() - tstart))
+	logger.info("Updated %s items in %s (%.1f items/sec)", record_count, humanize_time(time.time() - tstart),record_count/(time.time() - tstart))
 
 
 def get_repo_last_crawl(repository):
@@ -215,11 +215,12 @@ def get_repo_last_crawl(repository):
 	if configs['db']['type'] == "sqlite":
 		import sqlite3 as lite
 		litecon = lite.connect(configs['db']['filename'])
-		litecon.row_factory = lite.Row
-		litecur = litecon.cursor()
-		records = litecur.execute("select last_crawl_timestamp from repositories where repository_url = ?",[repository['url']]).fetchall()
-		for record in records:
-			last_crawl_timestamp = record['last_crawl_timestamp']
+		with litecon:
+			litecon.row_factory = lite.Row
+			litecur = litecon.cursor()
+			records = litecur.execute("select last_crawl_timestamp from repositories where repository_url = ?",[repository['url']]).fetchall()
+			for record in records:
+				last_crawl_timestamp = record['last_crawl_timestamp']
 
 	return last_crawl_timestamp
 
@@ -228,8 +229,10 @@ def update_repo_last_crawl(repository):
 	if configs['db']['type'] == "sqlite":
 		import sqlite3 as lite
 		litecon = lite.connect(configs['db']['filename'])
-		litecur = litecon.cursor()
-		litecur.execute("update repositories set last_crawl_timestamp = ? where repository_url = ?",(time.time(),repository['url']))
+		with litecon:
+			litecur = litecon.cursor()
+			print("update repositories set last_crawl_timestamp = %s where repository_url = %s" % (int(time.time()),repository['url']))
+			litecur.execute("update repositories set last_crawl_timestamp = ? where repository_url = ?",(int(time.time()),repository['url']))
 
 
 def sqlite_write_record(record, repository_url, mode = "insert"):
@@ -446,7 +449,7 @@ def oai_harvest_with_thumbnails(repository):
 			item_count = item_count + 1
 			if (item_count % log_update_interval == 0):
 				tdelta = time.time() - repository["tstart"]
-				logger.info("Done %s items after %.1f seconds (%.1f items/sec)", item_count, tdelta, (item_count/tdelta))
+				logger.info("Done %s items after %s (%.1f items/sec)", item_count, humanize_time(tdelta), (item_count/tdelta))
 		except AttributeError:
 			# probably not a valid OAI record
 			# Islandora throws this for non-object directories
@@ -476,24 +479,47 @@ def ckan_get_package_list(repository):
 			item_new_count = item_new_count + 1
 		if ((item_existing_count + item_new_count) % log_update_interval == 0):
 			tdelta = time.time() - repository["tstart"]
-			logger.info("Done %s item headers after %.1f seconds (%.1f items/sec)", (item_existing_count + item_new_count), tdelta, ((item_existing_count + item_new_count)/tdelta))
+			logger.info("Done %s item headers after %s (%.1f items/sec)", (item_existing_count + item_new_count), humanize_time(tdelta), ((item_existing_count + item_new_count)/tdelta))
 
 	logger.info("Found %s items in feed (%d existing, %d new)", (item_existing_count + item_new_count), item_existing_count, item_new_count)
+
+
+def humanize_time(amount):
+
+	INTERVALS = [ 1, 60, 3600, 86400, 604800, 2629800, 31557600 ]
+	NAMES = [('second', 'seconds'),	('minute', 'minutes'), ('hour', 'hours'),
+		('day', 'days'), ('week', 'weeks'), ('month', 'months'), ('year', 'years')]
+	result = ""
+	amount = int(amount)
+
+	for i in range(len(NAMES)-1, -1, -1):
+		a = amount // INTERVALS[i]
+		if a > 0: 
+			result = result + str(a) + " " + str(NAMES[i][1 % a]) + " "
+			amount -= a * INTERVALS[i]
+
+	result = str.strip(result)
+	return result
+
 
 if __name__ == "__main__":
 
 	if os.name == 'posix':
 		lockfile = open('lockfile','w')
 		try:
+			os.chmod('lockfile', 0o664 )
+		except:
+			pass
+		try:
 			fcntl.flock(lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
 		except (OSError, IOError):
 			sys.stderr.write("ERROR: is harvester already running? (could not lock lockfile)\n")
-			sys.exit(-1)
+			raise SystemExit
 
 	tstart = time.time()
 	arguments = docopt(__doc__)
 
-	global configs 
+	global configs
 	configs = get_config_json()
 	configs['error_count'] = 0
 	if not 'update_log_after_numitems' in configs:
@@ -529,9 +555,13 @@ if __name__ == "__main__":
 
 		# Find any new information in the repositories
 		for repository in configs['repos']:
-			logger.info("Repo: " + repository['name'])
+			repository["tstart"] = time.time()
+			repository["last_crawl"] = get_repo_last_crawl(repository)
+			if repository["last_crawl"] == 0:
+				logger.info("Repo: " + repository['name'] + " (last harvested: never)" )
+			else:
+				logger.info("Repo: " + repository['name'] + " (last harvested: %s ago)",humanize_time(repository["tstart"] - repository["last_crawl"]) )
 			if (repository["enabled"]):
-				repository["tstart"] = time.time()
 				repo_refresh_days = configs['repo_refresh_days']
 				if 'repo_refresh_days' in repository:
 					repo_refresh_days = repository['repo_refresh_days']
@@ -542,7 +572,7 @@ if __name__ == "__main__":
 						ckan_get_package_list(repository)
 					update_repo_last_crawl(repository)
 				else:
-					logger.info("This repo is not yet due to be harvested again")
+					logger.info("This repo is not yet due to be harvested (last harvest: %s ago)",humanize_time(repository["tstart"] - repository["last_crawl"]) )
 			else:
 				logger.info("This repo is not enabled for harvesting")
 
@@ -566,7 +596,7 @@ if __name__ == "__main__":
 		gmetafile.write(json.dumps({"_gmeta":gmeta}))
 
 	tdelta = time.time() - tstart
-	logger.info("Done after %.1f seconds", tdelta)
+	logger.info("Done after %s", humanize_time(tdelta))
 
 	if os.name == 'posix':
 		fcntl.flock(lockfile, fcntl.LOCK_UN)
