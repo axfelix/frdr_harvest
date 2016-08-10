@@ -9,7 +9,6 @@ Usage:
 from docopt import docopt
 import sys
 import signal
-import fcntl
 import json
 import requests
 import re
@@ -504,6 +503,7 @@ def humanize_time(amount):
 if __name__ == "__main__":
 
 	if os.name == 'posix':
+		import fcntl
 		lockfile = open('lockfile','w')
 		try:
 			os.chmod('lockfile', 0o664 )
