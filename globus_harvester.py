@@ -68,11 +68,6 @@ def construct_local_url(record):
 		local_url = re.sub("\/oai2", "/islandora/object/", record["repository_url"]) + record["local_identifier"]
 		return local_url
 
-	# handle -- safer to catch these by URL regex, though slower
-	#if "http://hdl.handle.net" in local_identifier:
-	#	local_url = local_identifier
-	#	return local_url
-
 	# doi
 	doi = re.search("(doi|DOI):\s?\S+", record["local_identifier"])
 	if doi:
@@ -80,13 +75,14 @@ def construct_local_url(record):
 		local_url = re.sub("(doi|DOI):\s?", "http://dx.doi.org/", doi)
 		return local_url
 
-	# CKAN records
+	# If the item has a source URL, use it (CKAN, Scholars Portal)
 	if ('source_url' in record) and record['source_url']:
 		return record['source_url']
 
 	# URL is in the identifier
 	local_url = re.search("(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?", record["local_identifier"])
-	if local_url: return local_url.group(0)
+	if local_url: 
+		return local_url.group(0)
 
 	local_url = None
 	return local_url
@@ -217,7 +213,7 @@ def oai_update_record(record):
 		metadata = single_record.metadata
 		if 'identifier' in metadata.keys() and isinstance(metadata['identifier'], list):
 			if "http" in metadata['identifier'][0].lower():
-				metadata['dc:source'] = metadata['identifier']
+				metadata['dc:source'] = metadata['identifier'][0]
 		metadata['identifier'] = single_record.header.identifier
 		oai_record = unpack_oai_metadata(metadata)
 		sqlite_write_record(oai_record, record['repository_url'],"replace")
@@ -304,6 +300,11 @@ def update_repo_last_crawl(repository):
 def sqlite_write_record(record, repository_url, mode = "insert"):
 	import sqlite3 as lite
 
+	logger.debug("RECORD: %s", record)
+
+	if record == None:
+		return None
+
 	litecon = lite.connect(configs['db']['filename'])
 	with litecon:
 		litecur = litecon.cursor()
@@ -321,37 +322,67 @@ def sqlite_write_record(record, repository_url, mode = "insert"):
 			return None
 	
 		if "creator" in record:
-			for creator in record["creator"]:
+			if isinstance(record["creator"], list):
+				for creator in record["creator"]:
+					try:
+						litecur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"], repository_url, creator, 0))
+					except lite.IntegrityError:
+						pass
+			else:
 				try:
-					litecur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"], repository_url, creator, 0))
+					litecur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"], repository_url, record["creator"], 0))
 				except lite.IntegrityError:
 					pass
 
 		if "contributor" in record:
-			for contributor in record["contributor"]:
+			if isinstance(record["contributor"], list):
+				for contributor in record["contributor"]:
+					try:
+						litecur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"], repository_url, contributor, 1))
+					except lite.IntegrityError:
+						pass
+			else:
 				try:
-					litecur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"], repository_url, contributor, 1))
+					litecur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"], repository_url, record["contributor"], 1))
 				except lite.IntegrityError:
 					pass
 
 		if "subject" in record:
-			for subject in record["subject"]:
+			if isinstance(record["subject"], list):
+				for subject in record["subject"]:
+					try:
+						litecur.execute("INSERT INTO subjects (local_identifier, repository_url, subject) VALUES (?,?,?)", (record["identifier"], repository_url, subject))
+					except lite.IntegrityError:
+						pass
+			else:
 				try:
-					litecur.execute("INSERT INTO subjects (local_identifier, repository_url, subject) VALUES (?,?,?)", (record["identifier"], repository_url, subject))
+					litecur.execute("INSERT INTO subjects (local_identifier, repository_url, subject) VALUES (?,?,?)", (record["identifier"], repository_url, record["subject"]))
 				except lite.IntegrityError:
 					pass
 
 		if "rights" in record:
-			for rights in record["rights"]:
+			if isinstance(record["rights"], list):
+				for rights in record["rights"]:
+					try:
+						litecur.execute("INSERT INTO rights (local_identifier, repository_url, rights) VALUES (?,?,?)", (record["identifier"], repository_url, rights))
+					except lite.IntegrityError:
+						pass
+			else:
 				try:
-					litecur.execute("INSERT INTO rights (local_identifier, repository_url, rights) VALUES (?,?,?)", (record["identifier"], repository_url, rights))
+					litecur.execute("INSERT INTO rights (local_identifier, repository_url, rights) VALUES (?,?,?)", (record["identifier"], repository_url, record["rights"]))
 				except lite.IntegrityError:
 					pass
 
 		if "description" in record:
-			for description in record["description"]:
+			if isinstance(record["description"], list):
+				for description in record["description"]:
+					try:
+						litecur.execute("INSERT INTO descriptions (local_identifier, repository_url, description) VALUES (?,?,?)", (record["identifier"], repository_url, description))
+					except lite.IntegrityError:
+						pass
+			else:
 				try:
-					litecur.execute("INSERT INTO descriptions (local_identifier, repository_url, description) VALUES (?,?,?)", (record["identifier"], repository_url, description))
+					litecur.execute("INSERT INTO descriptions (local_identifier, repository_url, description) VALUES (?,?,?)", (record["identifier"], repository_url, record["description"]))
 				except lite.IntegrityError:
 					pass
 
@@ -473,11 +504,8 @@ def unpack_oai_metadata(record):
 				valid_id = idstring
 		record["identifier"] = valid_id
 
-	# Unpack remaining dictionary so we are left with one canonical value per key
-	for key in record.keys():
-		if isinstance(record[key], list):
-			firstitem = record[key][0]
-			record[key] = firstitem
+	if isinstance(record["title"], list):
+		record["title"] = record["title"][0]
 
 	return record
 
@@ -524,7 +552,7 @@ def oai_harvest_with_thumbnails(repository):
 			metadata = record.metadata
 			if 'identifier' in metadata.keys() and isinstance(metadata['identifier'], list):
 				if "http" in metadata['identifier'][0].lower():
-					metadata['dc:source'] = metadata['identifier']
+					metadata['dc:source'] = metadata['identifier'][0]
 			metadata['identifier'] = record.header.identifier
 			oai_record = unpack_oai_metadata(metadata)
 			sqlite_write_record(oai_record, repository["url"])
