@@ -300,8 +300,6 @@ def update_repo_last_crawl(repository):
 def sqlite_write_record(record, repository_url, mode = "insert"):
 	import sqlite3 as lite
 
-	logger.debug("RECORD: %s", record)
-
 	if record == None:
 		return None
 
@@ -473,10 +471,20 @@ def format_ckan_to_oai(ckan_record, local_identifier):
 
 
 def unpack_oai_metadata(record):
-	if 'creator' not in record.keys():
+	if 'identifier' not in record.keys():
 		return None
 
-	if 'identifier' not in record.keys():
+	# If there are multiple identifiers, and one of them contains a link, then prefer it
+	# Otherwise just take the first one
+	if isinstance(record["identifier"], list):
+		valid_id = record["identifier"][0] 
+		for idstring in record["identifier"]:
+			if "http" in idstring.lower():
+				valid_id = idstring
+		record["identifier"] = valid_id
+
+	if 'creator' not in record.keys():
+		logger.debug("Item %s is missing creator - will not be added", record["identifier"])
 		return None
 
 	# If date is undefined add an empty key
@@ -496,14 +504,6 @@ def unpack_oai_metadata(record):
 	if datestring:
 		record["date"] = datestring.group(0).replace("/","-")
 		
-	# Look for the identifier that has http in it
-	if isinstance(record["identifier"], list):
-		valid_id = record["identifier"][0] 
-		for idstring in record["identifier"]:
-			if "http" in idstring.lower():
-				valid_id = idstring
-		record["identifier"] = valid_id
-
 	if isinstance(record["title"], list):
 		record["title"] = record["title"][0]
 
