@@ -15,6 +15,7 @@ import re
 import csv
 import os
 from sickle import Sickle
+from sickle.oaiexceptions import BadArgument, CannotDisseminateFormat, IdDoesNotExist, NoSetHierarchy, BadResumptionToken, NoRecordsMatch, OAIError
 import ckanapi
 import time
 import logging
@@ -204,17 +205,27 @@ def ckan_update_record(record):
 @rate_limited(5)
 def oai_update_record(record):
 	logger.debug("Updating record %s from repo at %s",record['local_identifier'],record['repository_url'])
+
 	sickle = Sickle(record["repository_url"])
+	single_record = sickle.GetRecord(identifier=record["local_identifier"],metadataPrefix="oai_dc")
+
+	metadata = single_record.metadata
+	if 'identifier' in metadata.keys() and isinstance(metadata['identifier'], list):
+		if "http" in metadata['identifier'][0].lower():
+			metadata['dc:source'] = metadata['identifier']
+	metadata['identifier'] = single_record.header.identifier
+	oai_record = unpack_oai_metadata(metadata)
 
 	try:
-		raw_record = sickle.GetRecord(identifier=record["local_identifier"],metadataPrefix="oai_dc")
-		logger.debug("RAW RECORD:")
-		logger.debug(raw_record)
-		oai_record = unpack_oai_metadata(raw_record)
+
 		sqlite_write_record(oai_record, record['repository_url'],"replace")
+
 		return True
+
+	except IdDoesNotExist:
+		# Item no longer in this repo
+		sqlite_delete_record(record)
 	except:
-		# Not sure how to tell deleted items from random other OAI errors yet
 		logger.error("Updating item failed")
 		if not 'error_count' in configs:
 			configs['error_count'] = 0
@@ -294,15 +305,15 @@ def sqlite_write_record(record, repository_url, mode = "insert"):
 	litecon = lite.connect(configs['db']['filename'])
 	with litecon:
 		litecur = litecon.cursor()
+		verb = "INSERT"
+		if mode == "replace":
+			verb = "REPLACE"
 
 		try:
-			if mode == "replace":
-				if 'dc:source' in record:
-					litecur.execute("REPLACE INTO records (title, date, modified_timestamp, source_url, deleted, local_identifier, repository_url) VALUES(?,?,?,?,?,?,?)", (record["title"], record["date"], time.time(), record["dc:source"], 0, record["identifier"], repository_url))				
-				else:
-					litecur.execute("REPLACE INTO records (title, date, modified_timestamp, deleted, local_identifier, repository_url) VALUES(?,?,?,?,?,?)", (record["title"], record["date"], time.time(), 0, record["identifier"], repository_url))				
+			if 'dc:source' in record:
+				litecur.execute(verb + " INTO records (title, date, modified_timestamp, source_url, deleted, local_identifier, repository_url) VALUES(?,?,?,?,?,?,?)", (record["title"], record["date"], time.time(), record["dc:source"], 0, record["identifier"], repository_url))				
 			else:
-				litecur.execute("INSERT INTO records (title, date, modified_timestamp, deleted, local_identifier, repository_url) VALUES(?,?,?,?,?,?)", (record["title"], record["date"], time.time(), 0, record["identifier"], repository_url))
+				litecur.execute(verb + " INTO records (title, date, modified_timestamp, deleted, local_identifier, repository_url) VALUES(?,?,?,?,?,?)", (record["title"], record["date"], time.time(), 0, record["identifier"], repository_url))				
 		except lite.IntegrityError:
 			# record already present in repo
 			return None
@@ -507,8 +518,13 @@ def oai_harvest_with_thumbnails(repository):
 
 	while records:
 		try:
-			record = records.next().metadata
-			oai_record = unpack_oai_metadata(record)
+			record = records.next()
+			metadata = record.metadata
+			if 'identifier' in metadata.keys() and isinstance(metadata['identifier'], list):
+				if "http" in metadata['identifier'][0].lower():
+					metadata['dc:source'] = metadata['identifier']
+			metadata['identifier'] = record.header.identifier
+			oai_record = unpack_oai_metadata(metadata)
 			sqlite_write_record(oai_record, repository["url"])
 			item_count = item_count + 1
 			if (item_count % log_update_interval == 0):
@@ -520,7 +536,7 @@ def oai_harvest_with_thumbnails(repository):
 			pass
 		except StopIteration:
 			break
-		if item_count > 0:
+		if item_count > 10:
 			break
 	logger.info("Processed %s items in feed", item_count)
 
