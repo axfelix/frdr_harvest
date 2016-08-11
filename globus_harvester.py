@@ -182,18 +182,22 @@ def sqlite_write_header(record_id, repository_url):
 @rate_limited(5)
 def ckan_update_record(record):
 	logger.debug("Updating record %s from repo at %s",record['local_identifier'],record['repository_url'])
-	ckanrepo = ckanapi.RemoteCKAN(record['repository_url'])
+
 	try:
+		ckanrepo = ckanapi.RemoteCKAN(record['repository_url'])
 		ckan_record = ckanrepo.action.package_show(id=record['local_identifier'])
 		oai_record = format_ckan_to_oai(ckan_record,record['local_identifier'])
 		sqlite_write_record(oai_record, record['repository_url'],"replace")
 		return True
+
 	except ckanapi.errors.NotAuthorized:
 		# Not authorized means that we currently do not have permission to access the data but we may in the future (embargo)
 		sqlite_touch_record(record)
+
 	except ckanapi.errors.NotFound:
 		# Not found means this record was deleted
 		sqlite_delete_record(record)
+
 	except:
 		if not 'error_count' in configs:
 			configs['error_count'] = 0
@@ -206,25 +210,23 @@ def ckan_update_record(record):
 def oai_update_record(record):
 	logger.debug("Updating record %s from repo at %s",record['local_identifier'],record['repository_url'])
 
-	sickle = Sickle(record["repository_url"])
-	single_record = sickle.GetRecord(identifier=record["local_identifier"],metadataPrefix="oai_dc")
-
-	metadata = single_record.metadata
-	if 'identifier' in metadata.keys() and isinstance(metadata['identifier'], list):
-		if "http" in metadata['identifier'][0].lower():
-			metadata['dc:source'] = metadata['identifier']
-	metadata['identifier'] = single_record.header.identifier
-	oai_record = unpack_oai_metadata(metadata)
-
 	try:
+		sickle = Sickle(record["repository_url"])
+		single_record = sickle.GetRecord(identifier=record["local_identifier"],metadataPrefix="oai_dc")
 
+		metadata = single_record.metadata
+		if 'identifier' in metadata.keys() and isinstance(metadata['identifier'], list):
+			if "http" in metadata['identifier'][0].lower():
+				metadata['dc:source'] = metadata['identifier']
+		metadata['identifier'] = single_record.header.identifier
+		oai_record = unpack_oai_metadata(metadata)
 		sqlite_write_record(oai_record, record['repository_url'],"replace")
-
 		return True
 
 	except IdDoesNotExist:
 		# Item no longer in this repo
 		sqlite_delete_record(record)
+
 	except:
 		logger.error("Updating item failed")
 		if not 'error_count' in configs:
