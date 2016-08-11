@@ -104,7 +104,7 @@ def initialize_database():
 		litecon = lite.connect(configs['db']['filename'])
 		with litecon:
 			litecur = litecon.cursor()
-			litecur.execute("CREATE TABLE IF NOT EXISTS records (title TEXT, date TEXT, modified_timestamp NUMERIC, source_url TEXT, local_identifier TEXT, repository_url TEXT, PRIMARY KEY (local_identifier, repository_url)) WITHOUT ROWID")
+			litecur.execute("CREATE TABLE IF NOT EXISTS records (title TEXT, date TEXT, modified_timestamp NUMERIC DEFAULT 0, source_url TEXT, deleted NUMERIC DEFAULT 0, local_identifier TEXT, repository_url TEXT, PRIMARY KEY (local_identifier, repository_url)) WITHOUT ROWID")
 			litecur.execute("CREATE TABLE IF NOT EXISTS creators (local_identifier TEXT, repository_url TEXT, creator TEXT, is_contributor INTEGER)")
 			litecur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_creator ON creators (local_identifier, repository_url, creator)")
 			litecur.execute("CREATE TABLE IF NOT EXISTS subjects (local_identifier TEXT, repository_url TEXT, subject TEXT)")
@@ -121,7 +121,7 @@ def initialize_database():
 				pass
 
 
-def sqlite_touch_record(record):
+def sqlite_delete_record(record):
 	import sqlite3 as lite
 
 	litecon = lite.connect(configs['db']['filename'])
@@ -129,10 +129,35 @@ def sqlite_touch_record(record):
 		litecur = litecon.cursor()
 
 		try:
+			litecur.execute("UPDATE records set deleted = 1 where local_identifier = ? and repository_url = ?", (record['local_identifier'], record['repository_url']))
+		except:
+			logger.error("Unable to mark as deleted record %s in repository %s", record['local_identifier'], record['repository_url'] )
+			return False
+
+		try:
+			litecur.execute("DELETE from creators where local_identifier = ? and repository_url = ?", (record['local_identifier'], record['repository_url']))
+			litecur.execute("DELETE from subjects where local_identifier = ? and repository_url = ?", (record['local_identifier'], record['repository_url']))
+			litecur.execute("DELETE from rights where local_identifier = ? and repository_url = ?", (record['local_identifier'], record['repository_url']))
+			litecur.execute("DELETE from descriptions where local_identifier = ? and repository_url = ?", (record['local_identifier'], record['repository_url']))
+		except:
+			logger.error("Unable to delete related table rows for record %s in repository %s", record['local_identifier'], record['repository_url'] )
+			return False
+
+	logger.debug("Marked as deleted: record %s in repository %s", record['local_identifier'], record['repository_url'] )
+	return True
+
+
+def sqlite_touch_record(record):
+	import sqlite3 as lite
+
+	litecon = lite.connect(configs['db']['filename'])
+	with litecon:
+		litecur = litecon.cursor()
+		try:
 			litecur.execute("UPDATE records set modified_timestamp = ? where local_identifier = ? and repository_url = ?", (time.time(), record['local_identifier'], record['repository_url']))
-		except lite.IntegrityError:
-			# record already present in repo
-			return None
+		except:
+			logger.error("Unable to update modified_timestamp for record %s in repository %s", record['local_identifier'], record['repository_url'] )
+			return False
 
 	return True
 
@@ -165,7 +190,32 @@ def ckan_update_record(record):
 	except ckanapi.errors.NotAuthorized:
 		# Not authorized means that we currently do not have permission to access the data but we may in the future (embargo)
 		sqlite_touch_record(record)
+	except ckanapi.errors.NotFound:
+		# Not found means this record was deleted
+		sqlite_delete_record(record)
 	except:
+		if not 'error_count' in configs:
+			configs['error_count'] = 0
+		configs['error_count'] = configs['error_count'] + 1
+		if configs['error_count'] >= configs['abort_after_numerrors']:
+			return False
+
+
+@rate_limited(5)
+def oai_update_record(record):
+	logger.debug("Updating record %s from repo at %s",record['local_identifier'],record['repository_url'])
+	sickle = Sickle(record["repository_url"])
+
+	try:
+		raw_record = sickle.GetRecord(identifier=record["local_identifier"],metadataPrefix="oai_dc")
+		logger.debug("RAW RECORD:")
+		logger.debug(raw_record)
+		oai_record = unpack_oai_metadata(raw_record)
+		sqlite_write_record(oai_record, record['repository_url'],"replace")
+		return True
+	except:
+		# Not sure how to tell deleted items from random other OAI errors yet
+		logger.error("Updating item failed")
 		if not 'error_count' in configs:
 			configs['error_count'] = 0
 		configs['error_count'] = configs['error_count'] + 1
@@ -197,6 +247,11 @@ def update_stale_records():
 					logger.info("Started processing for %d records", len(records))
 				if record["repository_type"] == "ckan":
 					status = ckan_update_record(record)
+					if not status:
+						logger.error("Aborting due to errors after %s items updated in %s (%.1f items/sec)", record_count, humanize_time(time.time() - tstart), record_count/(time.time() - tstart))
+						break
+				if record["repository_type"] == "oai":
+					status = oai_update_record(record)
 					if not status:
 						logger.error("Aborting due to errors after %s items updated in %s (%.1f items/sec)", record_count, humanize_time(time.time() - tstart), record_count/(time.time() - tstart))
 						break
@@ -243,11 +298,11 @@ def sqlite_write_record(record, repository_url, mode = "insert"):
 		try:
 			if mode == "replace":
 				if 'dc:source' in record:
-					litecur.execute("REPLACE INTO records (title, date, modified_timestamp, source_url, local_identifier, repository_url) VALUES(?,?,?,?,?,?)", (record["title"][0], record["date"][0], time.time(), record["dc:source"][0], record["identifier"][0], repository_url))				
+					litecur.execute("REPLACE INTO records (title, date, modified_timestamp, source_url, deleted, local_identifier, repository_url) VALUES(?,?,?,?,?,?,?)", (record["title"], record["date"], time.time(), record["dc:source"], 0, record["identifier"], repository_url))				
 				else:
-					litecur.execute("REPLACE INTO records (title, date, modified_timestamp, local_identifier, repository_url) VALUES(?,?,?,?,?)", (record["title"][0], record["date"][0], time.time(), record["identifier"][0], repository_url))				
+					litecur.execute("REPLACE INTO records (title, date, modified_timestamp, deleted, local_identifier, repository_url) VALUES(?,?,?,?,?,?)", (record["title"], record["date"], time.time(), 0, record["identifier"], repository_url))				
 			else:
-				litecur.execute("INSERT INTO records (title, date, modified_timestamp, local_identifier, repository_url) VALUES(?,?,?,?,?)", (record["title"][0], record["date"][0], time.time(), record["identifier"][0], repository_url))
+				litecur.execute("INSERT INTO records (title, date, modified_timestamp, deleted, local_identifier, repository_url) VALUES(?,?,?,?,?,?)", (record["title"], record["date"], time.time(), 0, record["identifier"], repository_url))
 		except lite.IntegrityError:
 			# record already present in repo
 			return None
@@ -255,35 +310,35 @@ def sqlite_write_record(record, repository_url, mode = "insert"):
 		if "creator" in record:
 			for creator in record["creator"]:
 				try:
-					litecur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"][0], repository_url, creator, 0))
+					litecur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"], repository_url, creator, 0))
 				except lite.IntegrityError:
 					pass
 
 		if "contributor" in record:
 			for contributor in record["contributor"]:
 				try:
-					litecur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"][0], repository_url, contributor, 1))
+					litecur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"], repository_url, contributor, 1))
 				except lite.IntegrityError:
 					pass
 
 		if "subject" in record:
 			for subject in record["subject"]:
 				try:
-					litecur.execute("INSERT INTO subjects (local_identifier, repository_url, subject) VALUES (?,?,?)", (record["identifier"][0], repository_url, subject))
+					litecur.execute("INSERT INTO subjects (local_identifier, repository_url, subject) VALUES (?,?,?)", (record["identifier"], repository_url, subject))
 				except lite.IntegrityError:
 					pass
 
 		if "rights" in record:
 			for rights in record["rights"]:
 				try:
-					litecur.execute("INSERT INTO rights (local_identifier, repository_url, rights) VALUES (?,?,?)", (record["identifier"][0], repository_url, rights))
+					litecur.execute("INSERT INTO rights (local_identifier, repository_url, rights) VALUES (?,?,?)", (record["identifier"], repository_url, rights))
 				except lite.IntegrityError:
 					pass
 
 		if "description" in record:
 			for description in record["description"]:
 				try:
-					litecur.execute("INSERT INTO descriptions (local_identifier, repository_url, description) VALUES (?,?,?)", (record["identifier"][0], repository_url, description))
+					litecur.execute("INSERT INTO descriptions (local_identifier, repository_url, description) VALUES (?,?,?)", (record["identifier"], repository_url, description))
 				except lite.IntegrityError:
 					pass
 
@@ -292,18 +347,11 @@ def sqlite_write_record(record, repository_url, mode = "insert"):
 
 def sqlite_reader():
 	import sqlite3 as lite
-
-	# TODO: improve deleted record tracking
-	deleted_records = []
-	if os.path.isfile('data/deleted.db'):
-		litecon = lite.connect('data/deleted.db')
-		deleted_records = litecon.execute("SELECT local_identifier, repository_url FROM records").fetchall()
-
 	litecon = lite.connect(configs['db']['filename'])
 	gmeta = []
 
 	# Only select records that have complete data
-	records = litecon.execute("SELECT title, date, source_url, local_identifier, repository_url FROM records where modified_timestamp > 0")
+	records = litecon.execute("SELECT title, date, source_url, deleted, local_identifier, repository_url FROM records where title != '' ")
 
 	for record in records:
 		record = dict(zip([tuple[0] for tuple in records.description], record))
@@ -311,8 +359,7 @@ def sqlite_reader():
 		if record["dc:source"] is None:
 			continue
 
-		deleted_tuple = (record["local_identifier"], record["repository_url"])
-		if deleted_tuple in deleted_records:
+		if record["deleted"] == 1:
 			gmeta_data = {record["dc:source"] : {"mimetype": "application/json", "content": None}}
 			gmeta.append(gmeta_data)
 			continue
@@ -353,8 +400,6 @@ def sqlite_reader():
 		record["dc:date"] = record["date"]
 		record.pop("date", None)
 
-		#api_response = rest_insert(record)
-
 		record["@context"] = {"dc" : "http://dublincore.org/documents/dcmi-terms", "nrdr" : "http://nrdr-ednr.ca/schema/1.0/"}
 		gmeta_data = {record["dc:source"] : {"mimetype": "application/json", "content": record}}
 		gmeta.append(gmeta_data)
@@ -366,44 +411,64 @@ def format_ckan_to_oai(ckan_record, local_identifier):
 	record = {}
 
 	if ('author' in ckan_record) and ckan_record['author']:
-		record["creator"] = [ckan_record['author']]
+		record["creator"] = ckan_record['author']
 	elif ('maintainer' in ckan_record) and ckan_record['maintainer']:
-		record["creator"] = [ckan_record['maintainer']]
+		record["creator"] = ckan_record['maintainer']
 	else:
-		record["creator"] = [ckan_record['organization']['title']]
+		record["creator"] = ckan_record['organization']['title']
 
-	record["identifier"] = [local_identifier]
-	record["title"] = [ckan_record['title']]
-	record["description"] = [ckan_record['notes']]
-	record["date"] = [ckan_record['date_published']]
+	record["identifier"] = local_identifier
+	record["title"] = ckan_record['title']
+	record["description"] = ckan_record['notes']
+	record["date"] = ckan_record['date_published']
 	record["subject"] = ckan_record['subject']
-	record["rights"] = [ckan_record['attribution']]
-	record["dc:source"] = [ckan_record['url']]
+	record["rights"] = ckan_record['attribution']
+	record["dc:source"] = ckan_record['url']
 
 	return record
 
 
-def unpack_metadata(record, repository_url):
+def unpack_oai_metadata(record):
 	if 'creator' not in record.keys():
-		# if there's no author, probably not a valid record
 		return None
 
-	# if date is undefined, add an empty key
+	if 'identifier' not in record.keys():
+		return None
+
+	# If date is undefined add an empty key
 	if 'date' not in record.keys():
-		record["date"] = ['']
+		record["date"] = ""
 
-	# if multiple dates, just grab the most recent (DSpace workaround)
-	try:
-		if record["date"][0][0]:
-			record["date"] = record["date"][0]
-	except:
-		pass
+	# If there are multiple dates choose the longest one (likely the most specific)
+	if isinstance(record["date"], list):
+		valid_date = record["date"][0]
+		for datestring in record["date"]:
+			if len(datestring) > len(valid_date):
+				valid_date = datestring
+		record["date"] = valid_date
 
-	if configs['db']['type'] == "sqlite":
-		sqlite_write_record(record, repository_url)
+	# Convert long dates into YYYY-MM-DD
+	datestring = re.search("(\d{4}[-/]\d{2}[-/]\d{2})", record["date"])
+	if datestring:
+		record["date"] = datestring.group(0).replace("/","-")
+		
+	# Look for the identifier that has http in it
+	if isinstance(record["identifier"], list):
+		valid_id = record["identifier"][0] 
+		for idstring in record["identifier"]:
+			if "http" in idstring.lower():
+				valid_id = idstring
+		record["identifier"] = valid_id
 
+	# Unpack remaining dictionary so we are left with one canonical value per key
+	for key in record.keys():
+		if isinstance(record[key], list):
+			firstitem = record[key][0]
+			record[key] = firstitem
 
-def sqlite_repo_writer(repository_url, repository_name, repository_type, repository_thumbnail=""):
+	return record
+
+def sqlite_create_repo(repository_url, repository_name, repository_type, repository_thumbnail=""):
 	import sqlite3 as lite
 
 	litecon = lite.connect(configs['db']['filename'])
@@ -433,7 +498,7 @@ def oai_harvest_with_thumbnails(repository):
 			logger.info("No items were found")
 
 	if configs['db']['type'] == "sqlite":
-		sqlite_repo_writer(repository["url"], repository["name"], "oai", repository["thumbnail"])
+		sqlite_create_repo(repository["url"], repository["name"], "oai", repository["thumbnail"])
 
 	item_count = 0
 	log_update_interval = configs['update_log_after_numitems']
@@ -443,7 +508,8 @@ def oai_harvest_with_thumbnails(repository):
 	while records:
 		try:
 			record = records.next().metadata
-			unpack_metadata(record, repository["url"])
+			oai_record = unpack_oai_metadata(record)
+			sqlite_write_record(oai_record, repository["url"])
 			item_count = item_count + 1
 			if (item_count % log_update_interval == 0):
 				tdelta = time.time() - repository["tstart"]
@@ -454,13 +520,16 @@ def oai_harvest_with_thumbnails(repository):
 			pass
 		except StopIteration:
 			break
+		if item_count > 0:
+			break
 	logger.info("Processed %s items in feed", item_count)
+
 
 def ckan_get_package_list(repository):
 	ckanrepo = ckanapi.RemoteCKAN(repository["url"])
 
 	if configs['db']['type'] == "sqlite":
-		sqlite_repo_writer(repository["url"], repository["name"], "ckan", repository["thumbnail"])
+		sqlite_create_repo(repository["url"], repository["name"], "ckan", repository["thumbnail"])
 
 	records = ckanrepo.action.package_list()
 
@@ -497,6 +566,8 @@ def humanize_time(amount):
 			amount -= a * INTERVALS[i]
 
 	result = str.strip(result)
+	if result == "":
+		result = "0 seconds"
 	return result
 
 
@@ -529,6 +600,8 @@ if __name__ == "__main__":
 		configs['record_refresh_days'] = 30
 	if not 'repo_refresh_days' in configs:
 		configs['repo_refresh_days'] = 1
+	if not 'temp_filepath' in configs:
+		configs['temp_filepath'] = "data/temp.json"
 
 	logdir = os.path.dirname(configs['logging']['filename'])
 	if not os.path.exists(logdir):
@@ -550,8 +623,6 @@ if __name__ == "__main__":
 	initialize_database()
 
 	if arguments["--onlyexport"] == False:
-		configs = get_config_json()
-
 		# Find any new information in the repositories
 		for repository in configs['repos']:
 			repository["tstart"] = time.time()
@@ -571,7 +642,7 @@ if __name__ == "__main__":
 						ckan_get_package_list(repository)
 					update_repo_last_crawl(repository)
 				else:
-					logger.info("This repo is not yet due to be harvested (last harvest: %s ago)",humanize_time(repository["tstart"] - repository["last_crawl"]) )
+					logger.info("This repo is not yet due to be harvested")
 			else:
 				logger.info("This repo is not enabled for harvesting")
 
@@ -587,12 +658,22 @@ if __name__ == "__main__":
 #		access_token = jsontoken['access_token'].encode()
 
 	gmeta_filepath = configs['gmeta_filepath']
+	temp_filepath = configs['temp_filepath']
 	if configs['db']['type'] == "sqlite":
 		gmeta = sqlite_reader()
 
-	with open(gmeta_filepath, "w") as gmetafile:
-		logger.info("Writing gmeta file")
-		gmetafile.write(json.dumps({"_gmeta":gmeta}))
+	try:
+		with open(temp_filepath, "w") as tempfile:
+			logger.info("Writing gmeta file")
+			tempfile.write(json.dumps({"_gmeta":gmeta}))
+	except:
+		logger.error("Unable to write gmeta data to temporary file: %s", temp_filepath)
+
+	try:
+		os.remove(gmeta_filepath)
+		os.rename(temp_filepath, gmeta_filepath)
+	except:
+		logger.error("Unable to move temp file %s into gmeta file location %s", temp_filepath, gmeta_filepath)
 
 	tdelta = time.time() - tstart
 	logger.info("Done after %s", humanize_time(tdelta))
