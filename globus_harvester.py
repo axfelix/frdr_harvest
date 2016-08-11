@@ -536,8 +536,7 @@ def oai_harvest_with_thumbnails(repository):
 			pass
 		except StopIteration:
 			break
-		if item_count > 10:
-			break
+
 	logger.info("Processed %s items in feed", item_count)
 
 
