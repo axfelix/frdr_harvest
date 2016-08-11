@@ -647,6 +647,8 @@ if __name__ == "__main__":
 		configs['repo_refresh_days'] = 1
 	if not 'temp_filepath' in configs:
 		configs['temp_filepath'] = "data/temp.json"
+	if not 'gmeta_filepath' in configs:
+		configs['gmeta_filepath'] = "data/gmeta.json"
 
 	logdir = os.path.dirname(configs['logging']['filename'])
 	if not os.path.exists(logdir):
