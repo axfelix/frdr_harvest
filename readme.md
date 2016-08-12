@@ -30,7 +30,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "SFU Radar",
             "url": "http://researchdata.sfu.ca/oai2",
             "set": "",
-            "thumbnail": "",
+            "thumbnail": "http://static.lib.sfu.ca/clf2013/sfu-logo.png",
             "type": "oai",
             "update_log_after_numitems": 50,
             "item_url_pattern": "http://researchdata.sfu.ca/islandora/object/%id%",
@@ -56,14 +56,14 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Open Data Canada",
             "url": "http://open.canada.ca/data",
             "set": "",
-            "thumbnail": "",
+            "thumbnail": "http://open.canada.ca/data/static/img/leaves/fivestar.png",
             "type": "ckan",
             "repo_refresh_days": 7,
             "update_log_after_numitems": 2000,
             "enabled": false
         },
         {
-            "name": "Canadian Polar Data Network",
+            "name": "Polar Data Network",
             "url": "http://www.polardata.ca/oai/provider",
             "set": "",
             "thumbnail": "https://polardata.ca/images/ccin-hori.gif",
@@ -74,7 +74,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "NRDR",
             "url": "https://rdmtest1.computecanada.ca/oai/request",
             "set": "",
-            "thumbnail": "",
+            "thumbnail": "https://rdmtest1.computecanada.ca/jspui/image/logo.png",
             "type": "oai",
             "enabled": false
         }
