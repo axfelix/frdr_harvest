@@ -63,19 +63,31 @@ def get_config_json(repos_json="data/config.json"):
 
 
 def construct_local_url(record):
-	# islandora
-	if "/oai2" in record["repository_url"]:
-		local_url = re.sub("\/oai2", "/islandora/object/", record["repository_url"]) + record["local_identifier"]
-		return local_url
+	item_id = record["local_identifier"]
 
-	# doi
+	for repository in configs['repos']:
+		if repository['url'] == record['repository_url']:
+			if 'item_id_to_url' in repository.keys():
+				for step in repository['item_id_to_url']:
+					if step['action'] == "replace":
+						item_id = item_id.replace(step['data'][0], step['data'][1])
+					if step['action'] == "prepend":
+						item_id = "" + step['data'][0] + item_id
+					if step['action'] == "append":
+						item_id = "" + item_id + step['data'][0]
+
+	# Check if the item_id has already been turned into a url
+	if "http" in item_id.lower():
+		return item_id
+
+	# Check if the identifier is a DOI
 	doi = re.search("(doi|DOI):\s?\S+", record["local_identifier"])
 	if doi:
 		doi = doi.group(0).rstrip('\.')
 		local_url = re.sub("(doi|DOI):\s?", "http://dx.doi.org/", doi)
 		return local_url
 
-	# If the item has a source URL, use it (CKAN, Scholars Portal)
+	# If the item has a source URL, use it
 	if ('source_url' in record) and record['source_url']:
 		return record['source_url']
 
@@ -272,8 +284,8 @@ def update_stale_records():
 	logger.info("Updated %s items in %s (%.1f items/sec)", record_count, humanize_time(time.time() - tstart),record_count/(time.time() - tstart))
 
 
-def get_repo_last_crawl(repository):
-	last_crawl_timestamp = 0
+def get_repo_data(repository, column):
+	returnvalue = False
 
 	if configs['db']['type'] == "sqlite":
 		import sqlite3 as lite
@@ -281,11 +293,11 @@ def get_repo_last_crawl(repository):
 		with litecon:
 			litecon.row_factory = lite.Row
 			litecur = litecon.cursor()
-			records = litecur.execute("select last_crawl_timestamp from repositories where repository_url = ?",[repository['url']]).fetchall()
+			records = litecur.execute("select " + column + " from repositories where repository_url = ?",[repository['url']]).fetchall()
 			for record in records:
-				last_crawl_timestamp = record['last_crawl_timestamp']
+				returnvalue = record[column]
 
-	return last_crawl_timestamp
+	return returnvalue
 
 
 def update_repo_last_crawl(repository):
@@ -673,7 +685,7 @@ if __name__ == "__main__":
 		# Find any new information in the repositories
 		for repository in configs['repos']:
 			repository["tstart"] = time.time()
-			repository["last_crawl"] = get_repo_last_crawl(repository)
+			repository["last_crawl"] = get_repo_data(repository, "last_crawl_timestamp")
 			if repository["last_crawl"] == 0:
 				logger.info("Repo: " + repository['name'] + " (last harvested: never)" )
 			else:
@@ -682,7 +694,7 @@ if __name__ == "__main__":
 				repo_refresh_days = configs['repo_refresh_days']
 				if 'repo_refresh_days' in repository:
 					repo_refresh_days = repository['repo_refresh_days']
-				if (get_repo_last_crawl(repository) + repo_refresh_days*86400) < repository["tstart"]:
+				if (repository["last_crawl"] + repo_refresh_days*86400) < repository["tstart"]:
 					if repository["type"] == "oai":
 						oai_harvest_with_thumbnails(repository)
 					elif repository["type"] == "ckan":
