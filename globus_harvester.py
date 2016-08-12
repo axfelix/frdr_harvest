@@ -269,19 +269,19 @@ def update_stale_records():
 				if record["repository_type"] == "ckan":
 					status = ckan_update_record(record)
 					if not status:
-						logger.error("Aborting due to errors after %s items updated in %s (%.1f items/sec)", record_count, humanize_time(time.time() - tstart), record_count/(time.time() - tstart))
+						logger.error("Aborting due to errors after %s items updated in %s (%.1f items/sec)", record_count, humanize_time(time.time() - tstart), record_count/(time.time() - tstart + 0.1))
 						break
 				if record["repository_type"] == "oai":
 					status = oai_update_record(record)
 					if not status:
-						logger.error("Aborting due to errors after %s items updated in %s (%.1f items/sec)", record_count, humanize_time(time.time() - tstart), record_count/(time.time() - tstart))
+						logger.error("Aborting due to errors after %s items updated in %s (%.1f items/sec)", record_count, humanize_time(time.time() - tstart), record_count/(time.time() - tstart + 0.1))
 						break
 				record_count = record_count + 1
 				if (record_count % configs['update_log_after_numitems'] == 0):
-					tdelta = time.time() - tstart
+					tdelta = time.time() - tstart + 0.1
 					logger.info("Done %s items after %s (%.1f items/sec)", record_count, humanize_time(tdelta), (record_count/tdelta))
 
-	logger.info("Updated %s items in %s (%.1f items/sec)", record_count, humanize_time(time.time() - tstart),record_count/(time.time() - tstart))
+	logger.info("Updated %s items in %s (%.1f items/sec)", record_count, humanize_time(time.time() - tstart),record_count/(time.time() - tstart + 0.1))
 
 
 def get_repo_data(repository, column):
@@ -405,7 +405,9 @@ def sqlite_reader():
 	gmeta = []
 
 	# Only select records that have complete data
-	records = litecon.execute("SELECT title, date, source_url, deleted, local_identifier, repository_url FROM records where title != '' ")
+	records = litecon.execute("""SELECT r1.title, r1.date, r1.source_url, r1.deleted, r1.local_identifier, r1.repository_url, r2.repository_name as "nrdr:origin.id", r2.repository_thumbnail as "nrdr:origin.icon"
+			FROM records r1, repositories r2 
+			WHERE r1.title != '' and r1.repository_url = r2.repository_url """)
 
 	for record in records:
 		record = dict(zip([tuple[0] for tuple in records.description], record))
@@ -440,12 +442,6 @@ def sqlite_reader():
 			litecur.execute("SELECT description FROM descriptions WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
 			record["dc:description"] = litecur.fetchall()
 
-			litecur.execute("SELECT repository_name FROM repositories WHERE repository_url=?", (record["repository_url"],))
-			record["nrdr:origin.id"] = litecur.fetchall()
-
-			litecur.execute("SELECT repository_thumbnail FROM repositories WHERE repository_url=?", (record["repository_url"],))
-			record["nrdr:origin.icon"] = litecur.fetchall()
-
 			record.pop("repository_url", None)
 			record.pop("local_identifier", None)
 
@@ -453,6 +449,7 @@ def sqlite_reader():
 		record.pop("title", None)
 		record["dc:date"] = record["date"]
 		record.pop("date", None)
+		record.pop("source_url", None)
 
 		record["@context"] = {"dc" : "http://dublincore.org/documents/dcmi-terms", "nrdr" : "http://nrdr-ednr.ca/schema/1.0/"}
 		gmeta_data = {record["dc:source"] : {"mimetype": "application/json", "content": record}}
@@ -570,7 +567,7 @@ def oai_harvest_with_thumbnails(repository):
 			sqlite_write_record(oai_record, repository["url"])
 			item_count = item_count + 1
 			if (item_count % log_update_interval == 0):
-				tdelta = time.time() - repository["tstart"]
+				tdelta = time.time() - repository["tstart"] + 0.1
 				logger.info("Done %s items after %s (%.1f items/sec)", item_count, humanize_time(tdelta), (item_count/tdelta))
 		except AttributeError:
 			# probably not a valid OAI record
@@ -602,7 +599,7 @@ def ckan_get_package_list(repository):
 		else:
 			item_new_count = item_new_count + 1
 		if ((item_existing_count + item_new_count) % log_update_interval == 0):
-			tdelta = time.time() - repository["tstart"]
+			tdelta = time.time() - repository["tstart"] + 0.1
 			logger.info("Done %s item headers after %s (%.1f items/sec)", (item_existing_count + item_new_count), humanize_time(tdelta), ((item_existing_count + item_new_count)/tdelta))
 
 	logger.info("Found %s items in feed (%d existing, %d new)", (item_existing_count + item_new_count), item_existing_count, item_new_count)
@@ -730,6 +727,10 @@ if __name__ == "__main__":
 
 	try:
 		os.remove(gmeta_filepath)
+	except:
+		pass
+
+	try:
 		os.rename(temp_filepath, gmeta_filepath)
 	except:
 		logger.error("Unable to move temp file %s into gmeta file location %s", temp_filepath, gmeta_filepath)
