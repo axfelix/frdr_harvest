@@ -18,13 +18,13 @@ Configuration, including which repos are to be crawled, should be placed in data
         "filename": "logs/log.txt",
         "daysperfile": 1,
         "keep": 7,
-        "level": "INFO"
+        "level": "DEBUG"
     },
-    "update_log_after_numitems": 100,
+    "update_log_after_numitems": 10,
     "abort_after_numerrors": 5,
     "repo_refresh_days": 1,
     "record_refresh_days": 30,
-    "max_records_updated_per_run": 500,
+    "max_records_updated_per_run": 40,
     "repos": [
         {
             "name": "SFU Radar",
@@ -33,6 +33,20 @@ Configuration, including which repos are to be crawled, should be placed in data
             "thumbnail": "",
             "type": "oai",
             "update_log_after_numitems": 50,
+            "item_id_to_url": [
+                {
+                    "action": "replace",
+                    "data" : [ "oai:researchdata.sfu.ca:", ""  ]
+                },
+                {
+                    "action": "replace",
+                    "data" : [ "_", ":"  ]
+                },
+                {
+                    "action": "prepend",
+                    "data" : [ "http://researchdata.sfu.ca/islandora/object/"  ]
+                }
+            ],
             "enabled": false
         },
         {
