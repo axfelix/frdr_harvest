@@ -450,6 +450,7 @@ def sqlite_reader():
 		record["dc:date"] = record["date"]
 		record.pop("date", None)
 		record.pop("source_url", None)
+		record.pop("deleted", None)
 
 		record["@context"] = {"dc" : "http://dublincore.org/documents/dcmi-terms", "nrdr" : "http://nrdr-ednr.ca/schema/1.0/"}
 		gmeta_data = {record["dc:source"] : {"mimetype": "application/json", "content": record}}
