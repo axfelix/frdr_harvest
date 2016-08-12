@@ -24,6 +24,10 @@ import threading
 from functools import wraps
 from logging.handlers import TimedRotatingFileHandler
 
+from harvester.objects import HarvestRepo
+from harvester.utils import DBInterface
+from harvester.utils import TimeFormatter
+
 def rate_limited(max_per_second):
     """
     Decorator that make functions not be called faster than a set rate
@@ -273,35 +277,19 @@ def update_stale_records():
 				if record["repository_type"] == "ckan":
 					status = ckan_update_record(record)
 					if not status:
-						logger.error("Aborting due to errors after %s items updated in %s (%.1f items/sec)", record_count, humanize_time(time.time() - tstart), record_count/(time.time() - tstart + 0.1))
+						logger.error("Aborting due to errors after %s items updated in %s (%.1f items/sec)", record_count, F.humanize(time.time() - tstart), record_count/(time.time() - tstart + 0.1))
 						break
 				if record["repository_type"] == "oai":
 					status = oai_update_record(record)
 					if not status:
-						logger.error("Aborting due to errors after %s items updated in %s (%.1f items/sec)", record_count, humanize_time(time.time() - tstart), record_count/(time.time() - tstart + 0.1))
+						logger.error("Aborting due to errors after %s items updated in %s (%.1f items/sec)", record_count, F.humanize(time.time() - tstart), record_count/(time.time() - tstart + 0.1))
 						break
 				record_count = record_count + 1
 				if (record_count % configs['update_log_after_numitems'] == 0):
 					tdelta = time.time() - tstart + 0.1
-					logger.info("Done %s items after %s (%.1f items/sec)", record_count, humanize_time(tdelta), (record_count/tdelta))
+					logger.info("Done %s items after %s (%.1f items/sec)", record_count, F.humanize(tdelta), (record_count/tdelta))
 
-	logger.info("Updated %s items in %s (%.1f items/sec)", record_count, humanize_time(time.time() - tstart),record_count/(time.time() - tstart + 0.1))
-
-
-def get_repo_data(repository, column):
-	returnvalue = False
-
-	if configs['db']['type'] == "sqlite":
-		import sqlite3 as lite
-		litecon = lite.connect(configs['db']['filename'])
-		with litecon:
-			litecon.row_factory = lite.Row
-			litecur = litecon.cursor()
-			records = litecur.execute("select " + column + " from repositories where repository_url = ?",[repository['url']]).fetchall()
-			for record in records:
-				returnvalue = record[column]
-
-	return returnvalue
+	logger.info("Updated %s items in %s (%.1f items/sec)", record_count, F.humanize(time.time() - tstart),record_count/(time.time() - tstart + 0.1))
 
 
 def update_repo_last_crawl(repository):
@@ -573,7 +561,7 @@ def oai_harvest_with_thumbnails(repository):
 			item_count = item_count + 1
 			if (item_count % log_update_interval == 0):
 				tdelta = time.time() - repository["tstart"] + 0.1
-				logger.info("Done %s items after %s (%.1f items/sec)", item_count, humanize_time(tdelta), (item_count/tdelta))
+				logger.info("Done %s items after %s (%.1f items/sec)", item_count, F.humanize(tdelta), (item_count/tdelta))
 		except AttributeError:
 			# probably not a valid OAI record
 			# Islandora throws this for non-object directories
@@ -605,29 +593,9 @@ def ckan_get_package_list(repository):
 			item_new_count = item_new_count + 1
 		if ((item_existing_count + item_new_count) % log_update_interval == 0):
 			tdelta = time.time() - repository["tstart"] + 0.1
-			logger.info("Done %s item headers after %s (%.1f items/sec)", (item_existing_count + item_new_count), humanize_time(tdelta), ((item_existing_count + item_new_count)/tdelta))
+			logger.info("Done %s item headers after %s (%.1f items/sec)", (item_existing_count + item_new_count), F.humanize(tdelta), ((item_existing_count + item_new_count)/tdelta))
 
 	logger.info("Found %s items in feed (%d existing, %d new)", (item_existing_count + item_new_count), item_existing_count, item_new_count)
-
-
-def humanize_time(amount):
-
-	INTERVALS = [ 1, 60, 3600, 86400, 604800, 2629800, 31557600 ]
-	NAMES = [('second', 'seconds'),	('minute', 'minutes'), ('hour', 'hours'),
-		('day', 'days'), ('week', 'weeks'), ('month', 'months'), ('year', 'years')]
-	result = ""
-	amount = int(amount)
-
-	for i in range(len(NAMES)-1, -1, -1):
-		a = amount // INTERVALS[i]
-		if a > 0: 
-			result = result + str(a) + " " + str(NAMES[i][1 % a]) + " "
-			amount -= a * INTERVALS[i]
-
-	result = str.strip(result)
-	if result == "":
-		result = "0 seconds"
-	return result
 
 
 if __name__ == "__main__":
@@ -664,6 +632,12 @@ if __name__ == "__main__":
 	if not 'gmeta_filepath' in configs:
 		configs['gmeta_filepath'] = "data/gmeta.json"
 
+	global DB 
+	DB = DBInterface(configs['db'])
+
+	global F
+	F = TimeFormatter()
+
 	logdir = os.path.dirname(configs['logging']['filename'])
 	if not os.path.exists(logdir):
 		os.makedirs(logdir)
@@ -686,26 +660,12 @@ if __name__ == "__main__":
 	if arguments["--onlyexport"] == False:
 		# Find any new information in the repositories
 		for repository in configs['repos']:
-			repository["tstart"] = time.time()
-			repository["last_crawl"] = get_repo_data(repository, "last_crawl_timestamp")
-			if repository["last_crawl"] == 0:
-				logger.info("Repo: " + repository['name'] + " (last harvested: never)" )
-			else:
-				logger.info("Repo: " + repository['name'] + " (last harvested: %s ago)",humanize_time(repository["tstart"] - repository["last_crawl"]) )
-			if (repository["enabled"]):
-				repo_refresh_days = configs['repo_refresh_days']
-				if 'repo_refresh_days' in repository:
-					repo_refresh_days = repository['repo_refresh_days']
-				if (repository["last_crawl"] + repo_refresh_days*86400) < repository["tstart"]:
-					if repository["type"] == "oai":
-						oai_harvest_with_thumbnails(repository)
-					elif repository["type"] == "ckan":
-						ckan_get_package_list(repository)
-					update_repo_last_crawl(repository)
-				else:
-					logger.info("This repo is not yet due to be harvested")
-			else:
-				logger.info("This repo is not enabled for harvesting")
+			repo = HarvestRepo(repository)
+			repo.setDefaults(configs)
+			repo.setLogger(logger)
+			repo.setDatabase(DB)
+			repo.setFormatter(F)
+			repo.crawl()
 
 		# Process all existing records that have not yet been fetched
 		update_stale_records()
@@ -741,7 +701,7 @@ if __name__ == "__main__":
 		logger.error("Unable to move temp file %s into gmeta file location %s", temp_filepath, gmeta_filepath)
 
 	tdelta = time.time() - tstart
-	logger.info("Done after %s", humanize_time(tdelta))
+	logger.info("Done after %s", F.humanize(tdelta))
 
 	if os.name == 'posix':
 		fcntl.flock(lockfile, fcntl.LOCK_UN)
