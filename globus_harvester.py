@@ -63,22 +63,26 @@ def get_config_json(repos_json="data/config.json"):
 
 
 def construct_local_url(record):
-	item_id = record["local_identifier"]
+	# Check if the local_identifier has already been turned into a url
+	if "http" in record["local_identifier"].lower():
+		return record["local_identifier"]
+
+	# Check for OAI format of identifier (oai:domain:id)
+	oai_id = None
+	oai_search = re.search("oai:(.+):(.+)", record["local_identifier"])
+	if oai_search:
+		oai_id = oai_search.group(2)
+		# TODO: determine if this is needed for all repos, or just SFU?
+		oai_id = oai_id.replace("_",":")
 
 	for repository in configs['repos']:
 		if repository['url'] == record['repository_url']:
-			if 'item_id_to_url' in repository.keys():
-				for step in repository['item_id_to_url']:
-					if step['action'] == "replace":
-						item_id = item_id.replace(step['data'][0], step['data'][1])
-					if step['action'] == "prepend":
-						item_id = "" + step['data'][0] + item_id
-					if step['action'] == "append":
-						item_id = "" + item_id + step['data'][0]
-
-	# Check if the item_id has already been turned into a url
-	if "http" in item_id.lower():
-		return item_id
+			if 'item_url_pattern' in repository.keys():
+				if oai_id:
+					local_url = re.sub("(\%id\%)", oai_id, repository['item_url_pattern'])
+				else:
+					local_url = re.sub("(\%id\%)", record["local_identifier"], repository['item_url_pattern'])
+				return local_url
 
 	# Check if the identifier is a DOI
 	doi = re.search("(doi|DOI):\s?\S+", record["local_identifier"])

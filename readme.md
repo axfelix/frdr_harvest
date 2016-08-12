@@ -33,20 +33,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "thumbnail": "",
             "type": "oai",
             "update_log_after_numitems": 50,
-            "item_id_to_url": [
-                {
-                    "action": "replace",
-                    "data" : [ "oai:researchdata.sfu.ca:", ""  ]
-                },
-                {
-                    "action": "replace",
-                    "data" : [ "_", ":"  ]
-                },
-                {
-                    "action": "prepend",
-                    "data" : [ "http://researchdata.sfu.ca/islandora/object/"  ]
-                }
-            ],
+            "item_url_pattern": "http://researchdata.sfu.ca/islandora/object/%id%",
             "enabled": false
         },
         {
