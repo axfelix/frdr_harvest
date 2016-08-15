@@ -159,7 +159,7 @@ class HarvestRepository:
 		""" This method to be overridden """
 		return True
 
-	def update_stale_records(self, repo_type):
+	def update_stale_records(self):
 		""" This method will be called by a child class only, so that it uses its own _update_record() method """
 		record_count = 0
 		tstart = time.time()
@@ -173,8 +173,8 @@ class HarvestRepository:
 			cur = con.cursor()
 			records = cur.execute("""SELECT r1.title, r1.date, r1.modified_timestamp, r1.local_identifier, r1.repository_url, r2.repository_type
 				FROM records r1, repositories r2 
-				where r1.repository_url = r2.repository_url and r1.modified_timestamp < ? and r2.repository_type = ?
-				LIMIT ?""", (stale_timestamp,repo_type, self.max_records_updated_per_run)).fetchall()
+				where r1.repository_url = r2.repository_url and r1.modified_timestamp < ? and r2.repository_url = ?
+				LIMIT ?""", (stale_timestamp,self.url, self.max_records_updated_per_run)).fetchall()
 
 			for record in records:
 				if record_count == 0:
