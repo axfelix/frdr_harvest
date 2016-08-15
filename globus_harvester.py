@@ -13,7 +13,6 @@ import requests
 import os
 import time
 
-from harvester.HarvestRepository import HarvestRepository
 from harvester.OAIRepository import OAIRepository
 from harvester.CKANRepository import CKANRepository
 from harvester.DBInterface import DBInterface
@@ -33,7 +32,7 @@ def get_config_json(repos_json="data/config.json"):
 
 if __name__ == "__main__":
 
-	LOCK = Lock()
+	instance_lock = Lock()
 	tstart = time.time()
 	arguments = docopt(__doc__)
 
@@ -47,11 +46,11 @@ if __name__ == "__main__":
 	configs['temp_filepath'] = configs.get('temp_filepath', "data/temp.json")
 	configs['gmeta_filepath'] = configs.get('gmeta_filepath', "data/gmeta.json")
 
-	LOG = HarvestLogger(configs['logging'])
-	LOG.info("Starting... (pid=%s)" % (os.getpid()) )
+	main_log = HarvestLogger(configs['logging'])
+	main_log.info("Starting... (pid=%s)" % (os.getpid()) )
 
-	DB = DBInterface(configs['db'])
-	DB.setLogger(LOG)
+	dbh = DBInterface(configs['db'])
+	dbh.setLogger(main_log)
 
 	if arguments["--onlyexport"] == False:
 		# Find any new information in the repositories
@@ -61,8 +60,8 @@ if __name__ == "__main__":
 			elif repoconfig['type'] == "ckan":
 				repo = CKANRepository(repoconfig)
 			repo.setDefaults(configs)
-			repo.setLogger(LOG)
-			repo.setDatabase(DB)
+			repo.setLogger(main_log)
+			repo.setDatabase(dbh)
 			repo.crawl()
 
 		# Process all existing records that have not yet been fetched
@@ -77,10 +76,10 @@ if __name__ == "__main__":
 
 	try:
 		with open(temp_filepath, "w") as tempfile:
-			LOG.info("Writing gmeta file")
+			main_log.info("Writing gmeta file")
 			tempfile.write(json.dumps({"_gmeta":gmeta}))
 	except:
-		LOG.error("Unable to write gmeta data to temporary file: %s" % (temp_filepath) )
+		main_log.error("Unable to write gmeta data to temporary file: %s" % (temp_filepath) )
 
 	try:
 		os.remove(gmeta_filepath)
@@ -90,10 +89,9 @@ if __name__ == "__main__":
 	try:
 		os.rename(temp_filepath, gmeta_filepath)
 	except:
-		LOG.error("Unable to move temp file %s into gmeta file location %s" % (temp_filepath, gmeta_filepath) )
+		main_log.error("Unable to move temp file %s into gmeta file location %s" % (temp_filepath, gmeta_filepath) )
 
-	tdelta = time.time() - tstart
-	TF = TimeFormatter()
-	LOG.info("Done after %s" % (TF.humanize(tdelta)) )
+	formatter = TimeFormatter()
+	main_log.info("Done after %s" % (formatter.humanize(time.time() - tstart)) )
 
-	LOCK.unlock()
+	instance_lock.unlock()
