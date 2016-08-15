@@ -63,9 +63,7 @@ if __name__ == "__main__":
 			repo.setLogger(main_log)
 			repo.setDatabase(dbh)
 			repo.crawl()
-
-		# Process all existing records that have not yet been fetched
-		repo.update_stale_records()
+			repo.update_stale_records(repoconfig['type'])
 
 	if arguments["--onlyharvest"] == True:
 		raise SystemExit

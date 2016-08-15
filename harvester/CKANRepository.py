@@ -74,7 +74,7 @@ class CKANRepository(HarvestRepository):
 
 	@_rate_limited(5)
 	def _update_record(self,record):
-		self.logger.debug("Updating record %s from repo at %s" % (record['local_identifier'],self.url) )
+		self.logger.debug("Updating CKAN record %s from repo at %s" % (record['local_identifier'],self.url) )
 
 		try:
 			ckanrepo = ckanapi.RemoteCKAN(self.url)

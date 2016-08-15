@@ -7,7 +7,7 @@ class HarvestRepository:
 
 	def __init__(self, params):
 		self.url = params.get('url', None)
-		self.type = params.get('type', 'oai')
+		self.type = params.get('type', None)
 		self.name = params.get('name', None)
 		self.set = params.get('set', None)
 		self.thumbnail = params.get('thumbnail', None)
@@ -43,9 +43,9 @@ class HarvestRepository:
 		self.last_crawl = self.db.get_repo_last_crawl(self.url)
 
 		if self.last_crawl == 0:
-			self.logger.info("Repo: " + self.name + " (last harvested: never)" )
+			self.logger.info("Repo: %s, type: %s, (last harvested: never)" % (self.name, self.type ) )
 		else:
-			self.logger.info("Repo: " + self.name + " (last harvested: %s ago)" % (self.formatter.humanize(self.tstart - self.last_crawl) ) )
+			self.logger.info("Repo: %s, type: %s, (last harvested: %s ago)" % (self.name, self.type, self.formatter.humanize(self.tstart - self.last_crawl) ) )
 
 		if (self.enabled):
 			if (self.last_crawl + self.repo_refresh_days*86400) < self.tstart:
@@ -159,7 +159,8 @@ class HarvestRepository:
 		""" This method to be overridden """
 		return True
 
-	def update_stale_records(self):
+	def update_stale_records(self, repo_type):
+		""" This method will be called by a child class only, so that it uses its own _update_record() method """
 		record_count = 0
 		tstart = time.time()
 		self.logger.info("Looking for stale records to update")
@@ -172,8 +173,8 @@ class HarvestRepository:
 			cur = con.cursor()
 			records = cur.execute("""SELECT r1.title, r1.date, r1.modified_timestamp, r1.local_identifier, r1.repository_url, r2.repository_type
 				FROM records r1, repositories r2 
-				where r1.repository_url = r2.repository_url and r1.modified_timestamp < ?
-				LIMIT ?""", (stale_timestamp,self.max_records_updated_per_run)).fetchall()
+				where r1.repository_url = r2.repository_url and r1.modified_timestamp < ? and r2.repository_type = ?
+				LIMIT ?""", (stale_timestamp,repo_type, self.max_records_updated_per_run)).fetchall()
 
 			for record in records:
 				if record_count == 0:
