@@ -205,7 +205,7 @@ class DBInterface:
 			if "geospatial" in record:
 				for coordinates in record["geospatial"]["coordinates"][0]:
 					try:
-						cur.execute("INSERT INTO tags (local_identifier, repository_url, coordinate_type, lat, lon) VALUES (?,?,?,?,?)", (record["identifier"], repository_url, record["geospatial"]["type"], coordinates[0], coordinates[1]))
+						cur.execute("INSERT INTO geospatial (local_identifier, repository_url, coordinate_type, lat, lon) VALUES (?,?,?,?,?)", (record["identifier"], repository_url, record["geospatial"]["type"], coordinates[0], coordinates[1]))
 					except self.sqlite3.IntegrityError:
 						pass
 

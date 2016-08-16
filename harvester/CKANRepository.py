@@ -38,7 +38,7 @@ class CKANRepository(HarvestRepository):
 		record["identifier"] = local_identifier
 		record["title"] = ckan_record['title']
 		record["description"] = ckan_record['notes']
-		record["fra_description"] = ckan_record['notes_fra']
+		record["fra_description"] = ckan_record.get("notes_fra", "")
 		record["date"] = ckan_record['date_published']
 		record["subject"] = ckan_record['subject']
 		record["rights"] = [ckan_record['attribution'], ckan_record['license_title'], ckan_record['license_url']]
