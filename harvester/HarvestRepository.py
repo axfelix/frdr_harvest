@@ -102,9 +102,9 @@ class HarvestRepository:
 		gmeta = []
 
 		# Only select records that have complete data
-		records = con.execute("""SELECT r1.title, r1.date, r1.source_url, r1.deleted, r1.local_identifier, r1.repository_url, r2.repository_name as "nrdr:origin.id", r2.repository_thumbnail as "nrdr:origin.icon"
-				FROM records r1, repositories r2 
-				WHERE r1.title != '' and r1.repository_url = r2.repository_url """)
+		records = con.execute("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr:origin.id", repos.repository_thumbnail as "nrdr:origin.icon"
+				FROM records recs, repositories repos 
+				WHERE recs.title != '' and recs.repository_url = repos.repository_url """)
 
 		for record in records:
 			record = dict(zip([tuple[0] for tuple in records.description], record))
@@ -139,6 +139,11 @@ class HarvestRepository:
 				litecur.execute("SELECT description FROM descriptions WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
 				record["dc:description"] = litecur.fetchall()
 
+				litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+				record["nrdr:tags"] = litecur.fetchall()
+
+				# TODO: add geospatial
+
 				record.pop("repository_url", None)
 				record.pop("local_identifier", None)
 
@@ -146,6 +151,10 @@ class HarvestRepository:
 			record.pop("title", None)
 			record["dc:date"] = record["date"]
 			record.pop("date", None)
+			record["nrdr:contact"] = record["contact"]
+			record.pop("contact", None)
+			record["nrdr:series"] = record["series"]
+			record.pop("series", None)
 			record.pop("source_url", None)
 			record.pop("deleted", None)
 
@@ -171,9 +180,9 @@ class HarvestRepository:
 		with con:
 			con.row_factory = self.db.getRow()
 			cur = con.cursor()
-			records = cur.execute("""SELECT r1.title, r1.date, r1.modified_timestamp, r1.local_identifier, r1.repository_url, r2.repository_type
-				FROM records r1, repositories r2 
-				where r1.repository_url = r2.repository_url and r1.modified_timestamp < ? and r2.repository_url = ?
+			records = cur.execute("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.modified_timestamp, recs.local_identifier, recs.repository_url, repos.repository_type
+				FROM records recs, repositories repos 
+				where recs.repository_url = repos.repository_url and recs.modified_timestamp < ? and repos.repository_url = ?
 				LIMIT ?""", (stale_timestamp,self.url, self.max_records_updated_per_run)).fetchall()
 
 			for record in records:

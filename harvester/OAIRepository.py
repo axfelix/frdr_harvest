@@ -83,6 +83,9 @@ class OAIRepository(HarvestRepository):
 		if isinstance(record["title"], list):
 			record["title"] = record["title"][0]
 
+		record["contact"] = ""
+		record["series"] = ""
+
 		return record
 
 	def _rate_limited(max_per_second):
