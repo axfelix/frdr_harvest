@@ -27,6 +27,9 @@ class CKANRepository(HarvestRepository):
 	def format_ckan_to_oai(self,ckan_record, local_identifier):
 		record = {}
 
+		if not 'date_published' in ckan_record:
+			return None;
+
 		if ('author' in ckan_record) and ckan_record['author']:
 			record["creator"] = ckan_record['author']
 		elif ('maintainer' in ckan_record) and ckan_record['maintainer']:
@@ -94,7 +97,8 @@ class CKANRepository(HarvestRepository):
 			ckanrepo = ckanapi.RemoteCKAN(self.url)
 			ckan_record = ckanrepo.action.package_show(id=record['local_identifier'])
 			oai_record = self.format_ckan_to_oai(ckan_record,record['local_identifier'])
-			self.db.write_record(oai_record, self.url,"replace")
+			if oai_record:
+				self.db.write_record(oai_record, self.url,"replace")
 			return True
 
 		except ckanapi.errors.NotAuthorized:
