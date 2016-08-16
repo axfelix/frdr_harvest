@@ -38,21 +38,15 @@ class CKANRepository(HarvestRepository):
 			record["creator"] = ckan_record['organization']['title']
 
 		record["identifier"] = local_identifier
-		record["title"] = ckan_record['title']
-		record["description"] = ckan_record['notes']
+		record["title"] = ckan_record.get("title", "")
+		record["description"] = ckan_record.get("notes", "")
 		record["date"] = ckan_record['date_published']
 		record["subject"] = ckan_record['subject']
 		record["rights"] = [ckan_record['attribution'], ckan_record['license_title'], ckan_record['license_url']]
 		record["dc:source"] = ckan_record['url']
 
-		if ('author_email' in ckan_record) and ckan_record['author_email']:
-			record["contact"] = ckan_record['author_email']
-		elif ('maintainer_email' in ckan_record) and ckan_record['maintainer_email']:
-			record["contact"] = ckan_record['maintainer_email']
-		else:
-			record["contact"] = ""
-
-		record["series"] = ckan_record["data_series_name"]
+		record["contact"] = ckan_record.get("author_email", ckan_record.get("maintainer_email", ""))
+		record["series"] = ckan_record.get("data_series_name", "")
 		record["tags"] = []
 		for tag in ckan_record["tags"]:
 			record["tags"].append(tag["display_name"])
