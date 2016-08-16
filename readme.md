@@ -1,4 +1,4 @@
-This is a repository crawler which outputs gmeta.json files for indexing by Globus. It currently only supports Dublin Core records.
+This is a repository crawler which outputs gmeta.json files for indexing by Globus. It currently supports OAI-DC and CKAN repositories.
 
 Configuration, including which repos are to be crawled, should be placed in data/config.json, in a structure like to this:
 
