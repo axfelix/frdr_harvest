@@ -93,10 +93,14 @@ class Exporter(object):
 				litecur.execute("SELECT description FROM descriptions WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
 				record["dc:description"] = litecur.fetchall()
 
+				litecur.execute("SELECT description FROM fra_descriptions WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+				record["nrdr:fra_description"] = litecur.fetchall()
+
 				litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
 				record["nrdr:tags"] = litecur.fetchall()
 
-				# TODO: add geospatial
+				litecur.execute("SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+				record["nrdr:geospatial"] = litecur.fetchall()
 
 				record.pop("repository_url", None)
 				record.pop("local_identifier", None)

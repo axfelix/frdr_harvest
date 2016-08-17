@@ -2,6 +2,7 @@ from harvester.HarvestRepository import HarvestRepository
 from functools import wraps
 import ckanapi
 import time
+import json
 
 class CKANRepository(HarvestRepository):
 	""" CKAN Repository """
@@ -44,6 +45,7 @@ class CKANRepository(HarvestRepository):
 		record["identifier"] = local_identifier
 		record["title"] = ckan_record.get("title", "")
 		record["description"] = ckan_record.get("notes", "")
+		record["fra_description"] = ckan_record.get("notes_fra", "")
 		record["date"] = ckan_record['date_published']
 		record["subject"] = ckan_record['subject']
 		record["rights"] = [ckan_record['attribution'], ckan_record['license_title'], ckan_record['license_url']]
@@ -55,7 +57,10 @@ class CKANRepository(HarvestRepository):
 		for tag in ckan_record["tags"]:
 			record["tags"].append(tag["display_name"])
 
-		# TODO: add geospatial
+		if ('geometry' in ckan_record) and ckan_record['geometry']:
+			record["geospatial"] = ckan_record['geometry']
+		elif ('spatial' in ckan_record) and ckan_record['spatial']:
+			record["geospatial"] = json.loads(ckan_record["spatial"])
 
 		return record
 
