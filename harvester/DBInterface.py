@@ -30,7 +30,7 @@ class DBInterface:
 				cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_tag ON tags (local_identifier, repository_url, tag)")
 				cur.execute("CREATE TABLE IF NOT EXISTS geospatial (local_identifier TEXT, repository_url TEXT, coordinate_type TEXT, lat NUMERIC, lon NUMERIC)")
 				cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_lat_lon ON geospatial (local_identifier, repository_url, lat, lon)")
-				cur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, repository_type TEXT, last_crawl_timestamp NUMERIC, PRIMARY KEY (repository_url)) WITHOUT ROWID")
+				cur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, repository_type TEXT, last_crawl_timestamp NUMERIC, item_url_pattern TEXT, PRIMARY KEY (repository_url)) WITHOUT ROWID")
 			if os.name == "posix":
 				try:
 					os.chmod(configs['db']['filename'], 0o664 )
@@ -54,13 +54,13 @@ class DBInterface:
 			return self.sqlite3.Row
 
 
-	def create_repo(self, repository_url, repository_name, repository_type, repository_thumbnail=""):
+	def create_repo(self, repository_url, repository_name, repository_type, repository_thumbnail="", item_url_pattern=""):
 		con = self.getConnection()
 		with con:
 			cur = con.cursor()
 
 			try:
-				cur.execute("INSERT INTO repositories (repository_url, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp) VALUES (?,?,?,?,?)", (repository_url, repository_name, repository_type, repository_thumbnail, time.time()))
+				cur.execute("INSERT OR REPLACE INTO repositories (repository_url, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern) VALUES (?,?,?,?,?,?)", (repository_url, repository_name, repository_type, repository_thumbnail, time.time(), item_url_pattern))
 			except self.sqlite3.IntegrityError:
 				# record already present in repo
 				return None

@@ -7,28 +7,39 @@ import time
 
 class OAIRepository(HarvestRepository):
 	""" OAI Repository """
+	
+	def __init__(self, params):
+		super(OAIRepository, self).__init__(params)
+		self.sickle = Sickle(self.url)
+					
 	def _crawl(self):
-		sickle = Sickle(self.url)
 		records = []
 
 		try:
 			if not self.set:
-				records = sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True)
+				records = self.sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True)
 			else:
-				records = sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True, set=self.set)
+				records = self.sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True, set=self.set)
 		except:
 			self.logger.info("No items were found")
 
-		self.db.create_repo(self.url, self.name, "oai", self.thumbnail)
+		self.db.create_repo(self.url, self.name, "oai", self.thumbnail, self.item_url_pattern)
 
 		item_count = 0
 		while records:
 			try:
 				record = records.next()
 				metadata = record.metadata
-				if 'identifier' in metadata.keys() and isinstance(metadata['identifier'], list):
-					if "http" in metadata['identifier'][0].lower():
-						metadata['dc:source'] = metadata['identifier'][0]
+				
+				# Search for a hyperlink in the list of identifiers
+				if 'identifier' in metadata.keys():
+					if not isinstance(metadata['identifier'], list):
+						metadata['identifier'] = [metadata['identifier']]
+					for idt in metadata['identifier']:
+						if "http" in idt.lower():
+							metadata['dc:source'] = idt
+				
+				# Use the header id for the database key (needed later for OAI GetRecord calls)
 				metadata['identifier'] = record.header.identifier
 				oai_record = self.unpack_oai_metadata(metadata)
 				self.db.write_record(oai_record, self.url)
@@ -36,10 +47,12 @@ class OAIRepository(HarvestRepository):
 				if (item_count % self.update_log_after_numitems == 0):
 					tdelta = time.time() - self.tstart + 0.1
 					self.logger.info("Done %s items after %s (%.1f items/sec)" %  (item_count, self.formatter.humanize(tdelta), (item_count/tdelta)) )
+					
 			except AttributeError:
 				# probably not a valid OAI record
 				# Islandora throws this for non-object directories
 				pass
+				
 			except StopIteration:
 				break
 
@@ -121,8 +134,7 @@ class OAIRepository(HarvestRepository):
 		self.logger.debug("Updating OAI record %s from repo at %s" % (record['local_identifier'],record['repository_url']) )
 
 		try:
-			sickle = Sickle(self.url)
-			single_record = sickle.GetRecord(identifier=record["local_identifier"],metadataPrefix="oai_dc")
+			single_record = self.sickle.GetRecord(identifier=record["local_identifier"],metadataPrefix="oai_dc")
 
 			metadata = single_record.metadata
 			if 'identifier' in metadata.keys() and isinstance(metadata['identifier'], list):
@@ -133,12 +145,14 @@ class OAIRepository(HarvestRepository):
 			sqlite_write_record(oai_record, self.url,"replace")
 			return True
 
-		except IdDoesNotExist:
+		except self.sickle.IdDoesNotExist:
 			# Item no longer in this repo
 			self.db.delete_record(record)
 
 		except:
 			self.logger.error("Updating item failed")
 			self.error_count =  self.error_count + 1
-			if self.error_count >= self.abort_after_numerrors:
-				return False
+			if self.error_count < self.abort_after_numerrors:
+				return True
+
+		return False
