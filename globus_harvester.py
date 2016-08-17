@@ -19,6 +19,7 @@ from harvester.DBInterface import DBInterface
 from harvester.HarvestLogger import HarvestLogger
 from harvester.TimeFormatter import TimeFormatter
 from harvester.Lock import Lock
+from harvester.Exporter import Exporter
 
 
 def get_config_json(repos_json="data/config.json"):
@@ -38,7 +39,6 @@ if __name__ == "__main__":
 
 	global configs
 	configs = get_config_json()
-	configs['error_count'] = 0
 	configs['update_log_after_numitems'] = configs.get('update_log_after_numitems', 1000)
 	configs['abort_after_numerrors'] = configs.get('abort_after_numerrors', 5)
 	configs['record_refresh_days'] = configs.get('record_refresh_days', 30)
@@ -70,7 +70,8 @@ if __name__ == "__main__":
 
 	gmeta_filepath = configs['gmeta_filepath']
 	temp_filepath = configs['temp_filepath']
-	gmeta = repo.read_gmeta()
+	exporter = Exporter(dbh, main_log)
+	gmeta = exporter.generate_gmeta()
 
 	try:
 		with open(temp_filepath, "w") as tempfile:

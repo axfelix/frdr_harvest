@@ -5,10 +5,14 @@ import time
 
 class CKANRepository(HarvestRepository):
 	""" CKAN Repository """
+
+	def __init__(self, params):
+		super(CKANRepository, self).__init__(params)
+		self.ckanrepo = ckanapi.RemoteCKAN(self.url)
+		
 	def _crawl(self):
-		ckanrepo = ckanapi.RemoteCKAN(self.url)
-		self.db.create_repo(self.url, self.name, "ckan", self.thumbnail)
-		records = ckanrepo.action.package_list()
+		self.db.create_repo(self.url, self.name, "ckan", self.thumbnail, self.item_url_pattern)
+		records = self.ckanrepo.action.package_list()
 
 		item_existing_count = 0
 		item_new_count = 0
@@ -88,19 +92,18 @@ class CKANRepository(HarvestRepository):
 		self.logger.debug("Updating CKAN record %s from repo at %s" % (record['local_identifier'],self.url) )
 
 		try:
-			ckanrepo = ckanapi.RemoteCKAN(self.url)
-			ckan_record = ckanrepo.action.package_show(id=record['local_identifier'])
+			ckan_record = self.ckanrepo.action.package_show(id=record['local_identifier'])
 			oai_record = self.format_ckan_to_oai(ckan_record,record['local_identifier'])
 			if oai_record:
 				self.db.write_record(oai_record, self.url,"replace")
 			return True
 
-		except ckanapi.errors.NotAuthorized:
+		except self.ckanrepo.ckanapi.errors.NotAuthorized:
 			# Not authorized means that we currently do not have permission to access the data but we may in the future (embargo)
 			self.db.touch_record(record)
 			return True
 
-		except ckanapi.errors.NotFound:
+		except self.ckanrepo.ckanapi.errors.NotFound:
 			# Not found means this record was deleted
 			self.db.delete_record(record)
 			return True
@@ -108,7 +111,8 @@ class CKANRepository(HarvestRepository):
 		except:
 			self.logger.error("Updating item failed")
 			self.error_count =  self.error_count + 1
-			if self.error_count >= self.abort_after_numerrors:
-				return False
+			if self.error_count < self.abort_after_numerrors:
+				return True
 
 		return False
+

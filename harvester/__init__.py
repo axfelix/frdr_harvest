@@ -1,1 +1,1 @@
-__all__ = [ "HarvestRepository", "OAIRepository", "CKANRepository", "DBInterface", "TimeFormatter", "HarvestLogger", "Lock" ]
+__all__ = [ "HarvestRepository", "OAIRepository", "CKANRepository", "DBInterface", "TimeFormatter", "HarvestLogger", "Lock", "Exporter" ]
