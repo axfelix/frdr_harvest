@@ -1,15 +1,19 @@
 """Globus Harvester.
 
 Usage:
-  globus_harvester.py 
-  globus_harvester.py [--onlyharvest | --onlyexport]
+  globus_harvester.py [--onlyharvest | --onlyexport] [--export-filepath=<file>] [--export-format=<format>]
+
+Options:
+  --onlyharvest             Just harvest new items, do not export anything.
+  --onlyexport              Just export existing items, do not harvest anything.
+  --export-filepath=<file>  The path to export the data to.
+  --export-format=<format>  The export format (gmeta or rifcs).
 
 """
 
 from docopt import docopt
 import sys
 import json
-import requests
 import os
 import time
 
@@ -44,10 +48,11 @@ if __name__ == "__main__":
 	configs['record_refresh_days'] = configs.get('record_refresh_days', 30)
 	configs['repo_refresh_days'] = configs.get('repo_refresh_days', 1)
 	configs['temp_filepath'] = configs.get('temp_filepath', "data/temp.json")
-	configs['gmeta_filepath'] = configs.get('gmeta_filepath', "data/gmeta.json")
+	configs['export_filepath'] = configs.get('export_filepath', "data/gmeta.json")
+	configs['export_format'] = configs.get('export_format', "gmeta")
 
 	main_log = HarvestLogger(configs['logging'])
-	main_log.info("Starting... (pid=%s)" % (os.getpid()) )
+	main_log.info("Starting... (pid=%s)" % (os.getpid()))
 
 	dbh = DBInterface(configs['db'])
 	dbh.setLogger(main_log)
@@ -68,29 +73,17 @@ if __name__ == "__main__":
 	if arguments["--onlyharvest"] == True:
 		raise SystemExit
 
-	gmeta_filepath = configs['gmeta_filepath']
+	if arguments["--export-format"]:
+		configs['export_format'] = arguments["--export-format"]
+	if arguments["--export-filepath"]:
+		configs['export_filepath'] = arguments["--export-filepath"]
+
 	temp_filepath = configs['temp_filepath']
+
 	exporter = Exporter(dbh, main_log)
-	gmeta = exporter.generate_gmeta()
-
-	try:
-		with open(temp_filepath, "w") as tempfile:
-			main_log.info("Writing gmeta file")
-			tempfile.write(json.dumps({"_gmeta":gmeta}))
-	except:
-		main_log.error("Unable to write gmeta data to temporary file: %s" % (temp_filepath) )
-
-	try:
-		os.remove(gmeta_filepath)
-	except:
-		pass
-
-	try:
-		os.rename(temp_filepath, gmeta_filepath)
-	except:
-		main_log.error("Unable to move temp file %s into gmeta file location %s" % (temp_filepath, gmeta_filepath) )
+	exporter.export_to_file(configs['export_format'], configs['export_filepath'], configs['temp_filepath'])
 
 	formatter = TimeFormatter()
-	main_log.info("Done after %s" % (formatter.humanize(time.time() - tstart)) )
+	main_log.info("Done after %s" % (formatter.humanize(time.time() - tstart)))
 
 	instance_lock.unlock()
