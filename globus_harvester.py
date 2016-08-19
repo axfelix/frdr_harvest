@@ -1,8 +1,13 @@
 """Globus Harvester.
 
 Usage:
-  globus_harvester.py 
-  globus_harvester.py [--onlyharvest | --onlyexport]
+  globus_harvester.py [--onlyharvest | --onlyexport] [--export-filepath=<file>] [--export-format=<format>]
+
+Options:
+  --onlyharvest             Just harvest new items, do not export anything.
+  --onlyexport              Just export existing items, do not harvest anything.
+  --export-filepath=<file>  The path to export the data to.
+  --export-format=<format>  The export format (gmeta or rifcs).
 
 """
 
@@ -44,7 +49,8 @@ if __name__ == "__main__":
 	configs['record_refresh_days'] = configs.get('record_refresh_days', 30)
 	configs['repo_refresh_days'] = configs.get('repo_refresh_days', 1)
 	configs['temp_filepath'] = configs.get('temp_filepath', "data/temp.json")
-	configs['gmeta_filepath'] = configs.get('gmeta_filepath', "data/gmeta.json")
+	configs['export_filepath'] = configs.get('export_filepath', "data/gmeta.json")
+	configs['export_format'] = configs.get('export_format', "gmeta")
 
 	main_log = HarvestLogger(configs['logging'])
 	main_log.info("Starting... (pid=%s)" % (os.getpid()) )
@@ -68,27 +74,36 @@ if __name__ == "__main__":
 	if arguments["--onlyharvest"] == True:
 		raise SystemExit
 
-	gmeta_filepath = configs['gmeta_filepath']
+	export_filepath = arguments.get("--export-filepath", configs['export_filepath'])
+	export_format = arguments.get("--export-format", configs['export_format'])
 	temp_filepath = configs['temp_filepath']
 	exporter = Exporter(dbh, main_log)
-	gmeta = exporter.generate_gmeta()
+
+	if export_format == "gmeta":
+		output = json.dumps({"_gmeta":exporter.generate_gmeta()})
+
+	if export_format == "rifcs":
+		output = exporter.generate_rifcs()
+
+	with open(temp_filepath, "w") as tempfile:
+		main_log.info("Writing output file")
+		tempfile.write(output.encode('utf-8') )
 
 	try:
-		with open(temp_filepath, "w") as tempfile:
-			main_log.info("Writing gmeta file")
-			tempfile.write(json.dumps({"_gmeta":gmeta}))
+		pass
+
 	except:
-		main_log.error("Unable to write gmeta data to temporary file: %s" % (temp_filepath) )
+		main_log.error("Unable to write output data to temporary file: %s" % (temp_filepath) )
 
 	try:
-		os.remove(gmeta_filepath)
+		os.remove(export_filepath)
 	except:
 		pass
 
 	try:
-		os.rename(temp_filepath, gmeta_filepath)
+		os.rename(temp_filepath, export_filepath)
 	except:
-		main_log.error("Unable to move temp file %s into gmeta file location %s" % (temp_filepath, gmeta_filepath) )
+		main_log.error("Unable to move temp file %s into output file location %s" % (temp_filepath, export_filepath) )
 
 	formatter = TimeFormatter()
 	main_log.info("Done after %s" % (formatter.humanize(time.time() - tstart)) )

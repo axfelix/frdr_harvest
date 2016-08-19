@@ -1,5 +1,6 @@
 import time
 import re
+from string import Template
 
 class Exporter(object):
 	""" Read records from the database and export to given formats """
@@ -123,4 +124,87 @@ class Exporter(object):
 		self.logger.info("gmeta size: %s items" % (len(gmeta)) )
 		return gmeta
 
+
+	def generate_rifcs(self):
+		self.logger.info("Exporter: generate_rifcs called")
+		rifcs_header_xml = open("templates/rifcs_header.xml").read()
+		rifcs_footer_xml = open("templates/rifcs_footer.xml").read()
+		rifcs_object_xml = open("templates/rifcs_object.xml").read()
+		rifcs_object_template = Template( rifcs_object_xml )
+		con = self.db.getConnection()
+		rifcs = ""
+		rec_start = 0
+		rec_limit = 500
+		found_records = True
+
+		while found_records:
+			found_records = False
+
+			# Select a window of records at a time
+			records = con.execute("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr_origin_id", repos.repository_thumbnail as "nrdr_origin_icon", repos.item_url_pattern
+					FROM records recs, repositories repos 
+					WHERE recs.title != '' and recs.repository_url = repos.repository_url 
+					LIMIT ? OFFSET ?""", (rec_limit, rec_start))
+
+			num_records = 0
+			for record in records:
+				found_records = True
+				num_records += 1
+				record = dict(zip([tuple[0] for tuple in records.description], record))
+				record["dc_source"] = self.construct_local_url(record)
+				if record["dc_source"] is None:
+					continue
+
+				if record["deleted"] == 1:
+					# TODO: find out how RIF-CS represents deleted records
+					rifcs += ""
+					continue
+
+				with con:
+					con.row_factory = lambda cursor, row: row[0]
+					litecur = con.cursor()
+
+					litecur.execute("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=0", (record["local_identifier"], record["repository_url"]))
+					record["dc_contributor_author"] = litecur.fetchall()
+
+					litecur.execute("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=1", (record["local_identifier"], record["repository_url"]))
+					record["dc_contributor"] = litecur.fetchall()
+
+					litecur.execute("SELECT subject FROM subjects WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+					record["dc_subject"] = litecur.fetchall()
+
+					litecur.execute("SELECT rights FROM rights WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+					record["dc_rights"] = litecur.fetchall()
+
+					litecur.execute("SELECT description FROM descriptions WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+					record["dc_description"] = litecur.fetchall()
+
+					litecur.execute("SELECT description FROM fra_descriptions WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+					record["nrdr_fra_description"] = litecur.fetchall()
+
+					litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+					record["nrdr_tags"] = litecur.fetchall()
+
+					litecur.execute("SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+					record["nrdr_geospatial"] = litecur.fetchall()
+
+				record["dc_title"] = record["title"]
+				record["dc_date"] = record["date"]
+				record["nrdr_contact"] = record["contact"]
+				record["nrdr_series"] = record["series"]
+
+				#TODO: break this apart so that where multi-valued elements can exist in the XML, then multiple XML blocks are output
+				#Right now these are just being (wrongly) joined into a single string for testing purposes
+				for key, value in record.items():
+					if isinstance(value, list):
+						record[key] = ', '.join(fld or "" for fld in value)
+				rifcs += rifcs_object_template.substitute(record)
+
+			if found_records:
+				self.logger.info("Done records %s to %s" % (rec_start, (rec_start + num_records)))
+			rec_start += rec_limit
+		
+		rifcs = rifcs_header_xml + rifcs + rifcs_footer_xml
+		self.logger.info("rifcs size: %s bytes" % (len(rifcs)) )
+		return rifcs
 
