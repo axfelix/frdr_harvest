@@ -212,18 +212,21 @@ class Exporter(object):
 				self.logger.info("Done exporting records %s to %s" % (rec_start, (rec_start + num_records)))
 			rec_start += rec_limit
 		
+		#TODO: flush buffer to file after every block of records is done, so it doesn't get so large in memory
 		rifcs = rifcs_header_xml + rifcs + rifcs_footer_xml
 		self.logger.info("rifcs size: %s bytes" % (len(rifcs)) )
 		return rifcs
 		
 	def export_to_file(self, export_format, export_filepath, temp_filepath="tempfile"):
 		output = None
-		self.logger.debug("Exporting to: %s" % (export_format) )
+
 		if export_format == "gmeta":
-			output = json.dumps({"_gmeta":self._generate_gmeta()})	
-		if export_format == "rifcs":
+			output = json.dumps({"_gmeta":self._generate_gmeta()})
+		elif export_format == "rifcs":
 			output = self._generate_rifcs()
-			
+		else:
+			self.logger.error("Unknown export format: %s" % (export_format) )
+
 		if output:
 			try:
 				with open(temp_filepath, "w") as tempfile:
