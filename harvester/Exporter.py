@@ -1,15 +1,20 @@
 import time
 import re
+from string import Template
+import json
+import os
 
 class Exporter(object):
 	""" Read records from the database and export to given formats """
+	
+	__records_per_loop = 500
 
 	def __init__(self, db, log):
 		self.db = db
 		self.logger = log
 
 
-	def construct_local_url(self, record):
+	def _construct_local_url(self, record):
 		# Check if the local_identifier has already been turned into a url
 		if "http" in record["local_identifier"].lower():
 			return record["local_identifier"]
@@ -50,7 +55,7 @@ class Exporter(object):
 		return local_url
 
 
-	def generate_gmeta(self):
+	def _generate_gmeta(self):
 		self.logger.info("Exporter: generate_gmeta called")
 		con = self.db.getConnection()
 		gmeta = []
@@ -62,7 +67,7 @@ class Exporter(object):
 
 		for record in records:
 			record = dict(zip([tuple[0] for tuple in records.description], record))
-			record["dc:source"] = self.construct_local_url(record)
+			record["dc:source"] = self._construct_local_url(record)
 			if record["dc:source"] is None:
 				continue
 
@@ -123,4 +128,120 @@ class Exporter(object):
 		self.logger.info("gmeta size: %s items" % (len(gmeta)) )
 		return gmeta
 
+
+	def _generate_rifcs(self):
+		self.logger.info("Exporter: generate_rifcs called")
+		rifcs_header_xml = open("templates/rifcs_header.xml").read()
+		rifcs_footer_xml = open("templates/rifcs_footer.xml").read()
+		rifcs_object_xml = open("templates/rifcs_object.xml").read()
+		rifcs_object_template = Template( rifcs_object_xml )
+		con = self.db.getConnection()
+		rifcs = ""
+		rec_start = 0
+		rec_limit = self.__records_per_loop
+		found_records = True
+
+		while found_records:
+			found_records = False
+
+			# Select a window of records at a time
+			records = con.execute("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, 
+					repos.repository_name as "nrdr_origin_id", repos.repository_thumbnail as "nrdr_origin_icon", repos.item_url_pattern
+					FROM records recs, repositories repos 
+					WHERE recs.title != '' and recs.repository_url = repos.repository_url 
+					LIMIT ? OFFSET ?""", (rec_limit, rec_start))
+
+			num_records = 0
+			for record in records:
+				found_records = True
+				num_records += 1
+				record = dict(zip([tuple[0] for tuple in records.description], record))
+				record["dc_source"] = self._construct_local_url(record)
+				if record["dc_source"] is None:
+					continue
+
+				if record["deleted"] == 1:
+					# TODO: find out how RIF-CS represents deleted records
+					rifcs += ""
+					continue
+
+				with con:
+					con.row_factory = lambda cursor, row: row[0]
+					litecur = con.cursor()
+
+					litecur.execute("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=0", (record["local_identifier"], record["repository_url"]))
+					record["dc_contributor_author"] = litecur.fetchall()
+
+					litecur.execute("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=1", (record["local_identifier"], record["repository_url"]))
+					record["dc_contributor"] = litecur.fetchall()
+
+					litecur.execute("SELECT subject FROM subjects WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+					record["dc_subject"] = litecur.fetchall()
+
+					litecur.execute("SELECT rights FROM rights WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+					record["dc_rights"] = litecur.fetchall()
+
+					litecur.execute("SELECT description FROM descriptions WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+					record["dc_description"] = litecur.fetchall()
+
+					litecur.execute("SELECT description FROM fra_descriptions WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+					record["nrdr_fra_description"] = litecur.fetchall()
+
+					litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+					record["nrdr_tags"] = litecur.fetchall()
+
+					litecur.execute("SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=? AND repository_url=?", (record["local_identifier"], record["repository_url"]))
+					record["nrdr_geospatial"] = litecur.fetchall()
+
+				record["dc_title"] = record["title"]
+				record["dc_date"] = record["date"]
+				record["nrdr_contact"] = record["contact"]
+				record["nrdr_series"] = record["series"]
+
+				#TODO: break this apart so that where multi-valued elements can exist in the XML, then multiple XML blocks are output
+				#Right now these are just being (wrongly) joined into a single string for testing purposes
+				for key, value in record.items():
+					if isinstance(value, list):
+						record[key] = ', '.join(fld or "" for fld in value)
+						
+				#TODO: determine how some records end up with blank nrdr_origin_id
+				if 'nrdr_origin_id' in record.keys():
+					rifcs += rifcs_object_template.substitute(record)
+
+			if found_records:
+				self.logger.info("Done exporting records %s to %s" % (rec_start, (rec_start + num_records)))
+			rec_start += rec_limit
+		
+		#TODO: flush buffer to file after every block of records is done, so it doesn't get so large in memory
+		rifcs = rifcs_header_xml + rifcs + rifcs_footer_xml
+		self.logger.info("rifcs size: %s bytes" % (len(rifcs)) )
+		return rifcs
+		
+	def export_to_file(self, export_format, export_filepath, temp_filepath="tempfile"):
+		output = None
+
+		if export_format == "gmeta":
+			output = json.dumps({"_gmeta":self._generate_gmeta()})
+		elif export_format == "rifcs":
+			output = self._generate_rifcs()
+		else:
+			self.logger.error("Unknown export format: %s" % (export_format) )
+
+		if output:
+			try:
+				with open(temp_filepath, "w") as tempfile:
+					self.logger.info("Writing output file")
+					tempfile.write(output.encode('utf-8') )			
+			except:
+				self.logger.error("Unable to write output data to temporary file: %s" % (temp_filepath) )
+		
+			try:
+				os.remove(export_filepath)
+			except:
+				pass
+									
+			try:
+				os.rename(temp_filepath, export_filepath)
+			except:
+				self.logger.error("Unable to move temp file %s into output file location %s" % (temp_filepath, export_filepath) )		
 
