@@ -14,7 +14,6 @@ Options:
 from docopt import docopt
 import sys
 import json
-import requests
 import os
 import time
 
@@ -74,36 +73,15 @@ if __name__ == "__main__":
 	if arguments["--onlyharvest"] == True:
 		raise SystemExit
 
-	export_filepath = arguments.get("--export-filepath", configs['export_filepath'])
-	export_format = arguments.get("--export-format", configs['export_format'])
+	if arguments["--export-format"]:
+		configs['export_format'] = arguments["--export-format"]
+	if arguments["--export-filepath"]:
+		configs['export_filepath'] = arguments["--export-filepath"]
+		
 	temp_filepath = configs['temp_filepath']
+	
 	exporter = Exporter(dbh, main_log)
-
-	if export_format == "gmeta":
-		output = json.dumps({"_gmeta":exporter.generate_gmeta()})
-
-	if export_format == "rifcs":
-		output = exporter.generate_rifcs()
-
-	with open(temp_filepath, "w") as tempfile:
-		main_log.info("Writing output file")
-		tempfile.write(output.encode('utf-8') )
-
-	try:
-		pass
-
-	except:
-		main_log.error("Unable to write output data to temporary file: %s" % (temp_filepath) )
-
-	try:
-		os.remove(export_filepath)
-	except:
-		pass
-
-	try:
-		os.rename(temp_filepath, export_filepath)
-	except:
-		main_log.error("Unable to move temp file %s into output file location %s" % (temp_filepath, export_filepath) )
+	exporter.export_to_file(configs['export_format'], configs['export_filepath'], configs['temp_filepath'])
 
 	formatter = TimeFormatter()
 	main_log.info("Done after %s" % (formatter.humanize(time.time() - tstart)) )

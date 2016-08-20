@@ -1,16 +1,20 @@
 import time
 import re
 from string import Template
+import json
+import os
 
 class Exporter(object):
 	""" Read records from the database and export to given formats """
+	
+	__records_per_loop = 500
 
 	def __init__(self, db, log):
 		self.db = db
 		self.logger = log
 
 
-	def construct_local_url(self, record):
+	def _construct_local_url(self, record):
 		# Check if the local_identifier has already been turned into a url
 		if "http" in record["local_identifier"].lower():
 			return record["local_identifier"]
@@ -51,7 +55,7 @@ class Exporter(object):
 		return local_url
 
 
-	def generate_gmeta(self):
+	def _generate_gmeta(self):
 		self.logger.info("Exporter: generate_gmeta called")
 		con = self.db.getConnection()
 		gmeta = []
@@ -63,7 +67,7 @@ class Exporter(object):
 
 		for record in records:
 			record = dict(zip([tuple[0] for tuple in records.description], record))
-			record["dc:source"] = self.construct_local_url(record)
+			record["dc:source"] = self._construct_local_url(record)
 			if record["dc:source"] is None:
 				continue
 
@@ -125,7 +129,7 @@ class Exporter(object):
 		return gmeta
 
 
-	def generate_rifcs(self):
+	def _generate_rifcs(self):
 		self.logger.info("Exporter: generate_rifcs called")
 		rifcs_header_xml = open("templates/rifcs_header.xml").read()
 		rifcs_footer_xml = open("templates/rifcs_footer.xml").read()
@@ -134,14 +138,15 @@ class Exporter(object):
 		con = self.db.getConnection()
 		rifcs = ""
 		rec_start = 0
-		rec_limit = 500
+		rec_limit = self.__records_per_loop
 		found_records = True
 
 		while found_records:
 			found_records = False
 
 			# Select a window of records at a time
-			records = con.execute("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr_origin_id", repos.repository_thumbnail as "nrdr_origin_icon", repos.item_url_pattern
+			records = con.execute("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, 
+					repos.repository_name as "nrdr_origin_id", repos.repository_thumbnail as "nrdr_origin_icon", repos.item_url_pattern
 					FROM records recs, repositories repos 
 					WHERE recs.title != '' and recs.repository_url = repos.repository_url 
 					LIMIT ? OFFSET ?""", (rec_limit, rec_start))
@@ -151,7 +156,7 @@ class Exporter(object):
 				found_records = True
 				num_records += 1
 				record = dict(zip([tuple[0] for tuple in records.description], record))
-				record["dc_source"] = self.construct_local_url(record)
+				record["dc_source"] = self._construct_local_url(record)
 				if record["dc_source"] is None:
 					continue
 
@@ -198,13 +203,42 @@ class Exporter(object):
 				for key, value in record.items():
 					if isinstance(value, list):
 						record[key] = ', '.join(fld or "" for fld in value)
-				rifcs += rifcs_object_template.substitute(record)
+						
+				#TODO: determine how some records end up with blank nrdr_origin_id
+				if 'nrdr_origin_id' in record.keys():
+					rifcs += rifcs_object_template.substitute(record)
 
 			if found_records:
-				self.logger.info("Done records %s to %s" % (rec_start, (rec_start + num_records)))
+				self.logger.info("Done exporting records %s to %s" % (rec_start, (rec_start + num_records)))
 			rec_start += rec_limit
 		
 		rifcs = rifcs_header_xml + rifcs + rifcs_footer_xml
 		self.logger.info("rifcs size: %s bytes" % (len(rifcs)) )
 		return rifcs
+		
+	def export_to_file(self, export_format, export_filepath, temp_filepath="tempfile"):
+		output = None
+		self.logger.debug("Exporting to: %s" % (export_format) )
+		if export_format == "gmeta":
+			output = json.dumps({"_gmeta":self._generate_gmeta()})	
+		if export_format == "rifcs":
+			output = self._generate_rifcs()
+			
+		if output:
+			try:
+				with open(temp_filepath, "w") as tempfile:
+					self.logger.info("Writing output file")
+					tempfile.write(output.encode('utf-8') )			
+			except:
+				self.logger.error("Unable to write output data to temporary file: %s" % (temp_filepath) )
+		
+			try:
+				os.remove(export_filepath)
+			except:
+				pass
+									
+			try:
+				os.rename(temp_filepath, export_filepath)
+			except:
+				self.logger.error("Unable to move temp file %s into output file location %s" % (temp_filepath, export_filepath) )		
 
