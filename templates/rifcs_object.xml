@@ -1,0 +1,27 @@
+
+    <registryObject group="${nrdr_origin_id}">
+        <key>${dc_source}</key>
+        <originatingSource>${repository_url}</originatingSource>
+        <collection type="dataset">
+            <identifier type="uri">${dc_source}</identifier>
+            <location>
+                <address>
+                    <electronic type="url"><value>${dc_source}</value></electronic>
+                </address>
+            </location>
+            <name type="primary">
+                <namePart>${dc_title}</namePart>
+            </name>
+            <coverage>
+                <temporal>
+                    <date type="dateFrom" dateFormat="W3CDTF">${dc_date}</date>
+                    <date type="dateTo" dateFormat="W3CDTF">${dc_date}</date>
+                </temporal>
+            </coverage>
+            <description type="rights">${dc_rights}</description>
+            <description type="full">${dc_description}</description>
+            <citationInfo>
+                <fullCitation>${dc_contributor_author} ${dc_source}</fullCitation>
+            </citationInfo>
+        </collection>
+    </registryObject>
