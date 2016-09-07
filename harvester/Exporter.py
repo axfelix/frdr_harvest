@@ -5,7 +5,7 @@ import json
 import os
 import sys
 from lxml import etree
-
+import html
 
 class Exporter(object):
 	""" Read records from the database and export to given formats """
@@ -243,8 +243,9 @@ class Exporter(object):
 				# Right now these are just being (wrongly) joined into a single string for testing purposes
 				for key, value in record.items():
 					if isinstance(value, list):
-						record[key] = ', '.join(fld or "" for fld in value)
-
+						record[key] = html.escape(', '.join(fld or "" for fld in value))
+					if isinstance(value, str):
+						record[key] = html.escape(value)
 				# TODO: determine how some records end up with blank nrdr_origin_id
 				if 'nrdr_origin_id' in record.keys():
 					rifcs += rifcs_object_template.substitute(record)
