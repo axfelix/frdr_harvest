@@ -1,17 +1,19 @@
 from harvester.HarvestRepository import HarvestRepository
 from functools import wraps
 from sickle import Sickle
-from sickle.oaiexceptions import BadArgument, CannotDisseminateFormat, IdDoesNotExist, NoSetHierarchy, BadResumptionToken, NoRecordsMatch, OAIError
+from sickle.oaiexceptions import BadArgument, CannotDisseminateFormat, IdDoesNotExist, NoSetHierarchy, \
+	BadResumptionToken, NoRecordsMatch, OAIError
 import re
 import time
 
+
 class OAIRepository(HarvestRepository):
 	""" OAI Repository """
-	
+
 	def __init__(self, params):
 		super(OAIRepository, self).__init__(params)
 		self.sickle = Sickle(self.url)
-					
+
 	def _crawl(self):
 		records = []
 
@@ -30,7 +32,7 @@ class OAIRepository(HarvestRepository):
 			try:
 				record = records.next()
 				metadata = record.metadata
-				
+
 				# Search for a hyperlink in the list of identifiers
 				if 'identifier' in metadata.keys():
 					if not isinstance(metadata['identifier'], list):
@@ -38,7 +40,7 @@ class OAIRepository(HarvestRepository):
 					for idt in metadata['identifier']:
 						if "http" in idt.lower():
 							metadata['dc:source'] = idt
-				
+
 				# Use the header id for the database key (needed later for OAI GetRecord calls)
 				metadata['identifier'] = record.header.identifier
 				oai_record = self.unpack_oai_metadata(metadata)
@@ -46,34 +48,34 @@ class OAIRepository(HarvestRepository):
 				item_count = item_count + 1
 				if (item_count % self.update_log_after_numitems == 0):
 					tdelta = time.time() - self.tstart + 0.1
-					self.logger.info("Done %s items after %s (%.1f items/sec)" %  (item_count, self.formatter.humanize(tdelta), (item_count/tdelta)) )
-					
+					self.logger.info("Done %s items after %s (%.1f items/sec)" % (
+					item_count, self.formatter.humanize(tdelta), (item_count / tdelta)))
+
 			except AttributeError:
 				# probably not a valid OAI record
 				# Islandora throws this for non-object directories
 				pass
-				
+
 			except StopIteration:
 				break
 
-		self.logger.info("Processed %s items in feed" % (item_count) )
+		self.logger.info("Processed %s items in feed" % (item_count))
 
-
-	def unpack_oai_metadata(self,record):
+	def unpack_oai_metadata(self, record):
 		if 'identifier' not in record.keys():
 			return None
 
 		# If there are multiple identifiers, and one of them contains a link, then prefer it
 		# Otherwise just take the first one
 		if isinstance(record["identifier"], list):
-			valid_id = record["identifier"][0] 
+			valid_id = record["identifier"][0]
 			for idstring in record["identifier"]:
 				if "http" in idstring.lower():
 					valid_id = idstring
 			record["identifier"] = valid_id
 
 		if 'creator' not in record.keys():
-			self.logger.debug("Item %s is missing creator - will not be added" % (record["identifier"]) )
+			self.logger.debug("Item %s is missing creator - will not be added" % (record["identifier"]))
 			return None
 
 		# If date is undefined add an empty key
@@ -91,8 +93,8 @@ class OAIRepository(HarvestRepository):
 		# Convert long dates into YYYY-MM-DD
 		datestring = re.search("(\d{4}[-/]\d{2}[-/]\d{2})", record["date"])
 		if datestring:
-			record["date"] = datestring.group(0).replace("/","-")
-			
+			record["date"] = datestring.group(0).replace("/", "-")
+
 		if isinstance(record["title"], list):
 			record["title"] = record["title"][0]
 
@@ -130,11 +132,12 @@ class OAIRepository(HarvestRepository):
 		return decorate
 
 	@_rate_limited(5)
-	def _update_record(self,record):
-		self.logger.debug("Updating OAI record %s from repo at %s" % (record['local_identifier'],record['repository_url']) )
+	def _update_record(self, record):
+		self.logger.debug(
+			"Updating OAI record %s from repo at %s" % (record['local_identifier'], record['repository_url']))
 
 		try:
-			single_record = self.sickle.GetRecord(identifier=record["local_identifier"],metadataPrefix="oai_dc")
+			single_record = self.sickle.GetRecord(identifier=record["local_identifier"], metadataPrefix="oai_dc")
 
 			metadata = single_record.metadata
 			if 'identifier' in metadata.keys() and isinstance(metadata['identifier'], list):
@@ -142,7 +145,7 @@ class OAIRepository(HarvestRepository):
 					metadata['dc:source'] = metadata['identifier'][0]
 			metadata['identifier'] = single_record.header.identifier
 			oai_record = unpack_oai_metadata(metadata)
-			sqlite_write_record(oai_record, self.url,"replace")
+			sqlite_write_record(oai_record, self.url, "replace")
 			return True
 
 		except self.sickle.IdDoesNotExist:
@@ -151,7 +154,7 @@ class OAIRepository(HarvestRepository):
 
 		except:
 			self.logger.error("Updating item failed")
-			self.error_count =  self.error_count + 1
+			self.error_count = self.error_count + 1
 			if self.error_count < self.abort_after_numerrors:
 				return True
 
