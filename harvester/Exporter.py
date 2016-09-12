@@ -58,12 +58,7 @@ class Exporter(object):
 		return local_url
 
 
-	def _write_gmeta(self, batched_gmeta, gmeta_batches):
-		with open(("data/gmeta_" + str(gmeta_batches) + ".json"), "w") as gmetafile:
-			gmetafile.write(json.dumps({"_gmeta":batched_gmeta}))
-
-
-	def _generate_gmeta(self, batch_size):
+	def _generate_gmeta(self, batch_size, export_filepath, temp_filepath):
 		self.logger.info("Exporter: generate_gmeta called")
 		con = self.db.getConnection()
 		gmeta = []
@@ -78,7 +73,7 @@ class Exporter(object):
 		for record in records:
 			if records_assembled % batch_size == 0 and records_assembled!=0:
 				gmeta_batches += 1
-				self._write_gmeta(gmeta, gmeta_batches)
+				self._write_to_file(json.dumps({"_gmeta":gmeta}), export_filepath, temp_filepath, "gmeta", gmeta_batches)
 				del gmeta[:batch_size]
 
 			record = dict(zip([tuple[0] for tuple in records.description], record))
@@ -275,31 +270,50 @@ class Exporter(object):
 		self.logger.info("rifcs size: %s bytes" % (len(rifcs)))
 		return rifcs
 
-	def export_to_file(self, export_format, export_filepath, export_batch_size, temp_filepath="tempfile"):
+
+	def _write_to_file(self, output, export_filepath, temp_filepath, export_format, gmeta_batches=False):
+		try:
+			os.mkdir(temp_filepath)
+		except:
+			pass
+
+		if gmeta_batches:
+			export_basename = "gmeta_" + str(gmeta_batches) + ".json"
+		elif export_format == "gmeta":
+			export_basename = "gmeta.json"
+		elif export_format == "rifcs":
+			export_basename = "rifcs.xml"
+
+		temp_filename = os.path.join(temp_filepath, export_basename)
+
+		try:
+			with open(temp_filename, "w") as tempfile:
+				self.logger.info("Writing output file")
+				tempfile.write(output)
+		except:
+			self.logger.error("Unable to write output data to temporary file: %s" % (temp_filename))
+
+		try:
+			os.remove(export_filepath)
+		except:
+			pass
+
+		try:
+			os.rename(temp_filename, os.path.join(export_filepath, export_basename))
+		except:
+			self.logger.error(
+				"Unable to move temp file %s into output file location %s" % (temp_filename, export_filepath))
+
+
+	def export_to_file(self, export_format, export_filepath, export_batch_size, temp_filepath="temp"):
 		output = None
 
 		if export_format == "gmeta":
-			output = json.dumps({"_gmeta": self._generate_gmeta(export_batch_size)})
+			output = json.dumps({"_gmeta": self._generate_gmeta(export_batch_size, export_filepath, temp_filepath)})
 		elif export_format == "rifcs":
 			output = self._generate_rifcs()
 		else:
 			self.logger.error("Unknown export format: %s" % (export_format))
 
 		if output:
-			try:
-				with open(temp_filepath, "w") as tempfile:
-					self.logger.info("Writing output file")
-					tempfile.write(output)
-			except:
-				self.logger.error("Unable to write output data to temporary file: %s" % (temp_filepath))
-
-			try:
-				os.remove(export_filepath)
-			except:
-				pass
-
-			try:
-				os.rename(temp_filepath, export_filepath)
-			except:
-				self.logger.error(
-					"Unable to move temp file %s into output file location %s" % (temp_filepath, export_filepath))
+			self._write_to_file(output, export_filepath, temp_filepath, export_format)
