@@ -47,8 +47,9 @@ if __name__ == "__main__":
 	configs['abort_after_numerrors'] = configs.get('abort_after_numerrors', 5)
 	configs['record_refresh_days'] = configs.get('record_refresh_days', 30)
 	configs['repo_refresh_days'] = configs.get('repo_refresh_days', 1)
-	configs['temp_filepath'] = configs.get('temp_filepath', "data/temp.json")
-	configs['export_filepath'] = configs.get('export_filepath', "data/gmeta.json")
+	configs['temp_filepath'] = configs.get('temp_filepath', "temp")
+	configs['export_filepath'] = configs.get('export_filepath', "data")
+	configs['export_batch_size'] = configs.get('export_batch_size', 40000)
 	configs['export_format'] = configs.get('export_format', "gmeta")
 
 	main_log = HarvestLogger(configs['logging'])
@@ -81,7 +82,7 @@ if __name__ == "__main__":
 	temp_filepath = configs['temp_filepath']
 
 	exporter = Exporter(dbh, main_log)
-	exporter.export_to_file(configs['export_format'], configs['export_filepath'], configs['temp_filepath'])
+	exporter.export_to_file(configs['export_format'], configs['export_filepath'], configs['export_batch_size'], configs['temp_filepath'])
 
 	formatter = TimeFormatter()
 	main_log.info("Done after %s" % (formatter.humanize(time.time() - tstart)))
