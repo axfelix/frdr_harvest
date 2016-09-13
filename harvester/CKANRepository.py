@@ -3,6 +3,7 @@ from functools import wraps
 import ckanapi
 import time
 import json
+import re
 
 class CKANRepository(HarvestRepository):
 	""" CKAN Repository """
@@ -46,10 +47,12 @@ class CKANRepository(HarvestRepository):
 		record["title"] = ckan_record.get("title", "")
 		record["description"] = ckan_record.get("notes", "")
 		record["fra_description"] = ckan_record.get("notes_fra", "")
-		record["date"] = ckan_record['date_published']
 		record["subject"] = ckan_record['subject']
 		record["rights"] = [ckan_record['attribution'], ckan_record['license_title'], ckan_record['license_url']]
 		record["dc:source"] = ckan_record['url']
+
+		# Some CKAN records have a trailing null timestamp after date
+		record["date"] = re.sub(" 00:00:00", "", ckan_record['date_published'])
 
 		record["contact"] = ckan_record.get("author_email", ckan_record.get("maintainer_email", ""))
 		record["series"] = ckan_record.get("data_series_name", "")
