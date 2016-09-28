@@ -148,7 +148,7 @@ class OAIRepository(HarvestRepository):
 			self.db.write_record(oai_record, self.url, "replace")
 			return True
 
-		except self.sickle.IdDoesNotExist:
+		except IdDoesNotExist:
 			# Item no longer in this repo
 			self.db.delete_record(record)
 
