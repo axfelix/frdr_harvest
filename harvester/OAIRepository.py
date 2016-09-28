@@ -61,7 +61,7 @@ class OAIRepository(HarvestRepository):
 
 		self.logger.info("Processed %s items in feed" % (item_count))
 
-	def unpack_oai_metadata(self, record):
+	def _unpack_oai_metadata(self, record):
 		if 'identifier' not in record.keys():
 			return None
 
@@ -144,7 +144,7 @@ class OAIRepository(HarvestRepository):
 				if "http" in metadata['identifier'][0].lower():
 					metadata['dc:source'] = metadata['identifier'][0]
 			metadata['identifier'] = single_record.header.identifier
-			oai_record = unpack_oai_metadata(metadata)
+			oai_record = self.unpack_oai_metadata(metadata)
 			sqlite_write_record(oai_record, self.url, "replace")
 			return True
 
