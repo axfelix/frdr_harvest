@@ -43,7 +43,7 @@ class OAIRepository(HarvestRepository):
 
 				# Use the header id for the database key (needed later for OAI GetRecord calls)
 				metadata['identifier'] = record.header.identifier
-				oai_record = unpack_oai_metadata(metadata)
+				oai_record = self.unpack_oai_metadata(metadata)
 				self.db.write_record(oai_record, self.url)
 				item_count = item_count + 1
 				if (item_count % self.update_log_after_numitems == 0):
@@ -61,7 +61,7 @@ class OAIRepository(HarvestRepository):
 
 		self.logger.info("Processed %s items in feed" % (item_count))
 
-	def _unpack_oai_metadata(record):
+	def unpack_oai_metadata(self, record):
 		if 'identifier' not in record.keys():
 			return None
 
@@ -144,8 +144,8 @@ class OAIRepository(HarvestRepository):
 				if "http" in metadata['identifier'][0].lower():
 					metadata['dc:source'] = metadata['identifier'][0]
 			metadata['identifier'] = single_record.header.identifier
-			oai_record = unpack_oai_metadata(metadata)
-			sqlite_write_record(oai_record, self.url, "replace")
+			oai_record = self.unpack_oai_metadata(metadata)
+			self.db.write_record(oai_record, self.url, "replace")
 			return True
 
 		except self.sickle.IdDoesNotExist:
