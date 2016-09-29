@@ -106,12 +106,12 @@ class CKANRepository(HarvestRepository):
 				self.db.write_record(oai_record, self.url,"replace")
 			return True
 
-		except self.ckanrepo.ckanapi.errors.NotAuthorized:
+		except ckanapi.errors.NotAuthorized:
 			# Not authorized means that we currently do not have permission to access the data but we may in the future (embargo)
 			self.db.touch_record(record)
 			return True
 
-		except self.ckanrepo.ckanapi.errors.NotFound:
+		except ckanapi.errors.NotFound:
 			# Not found means this record was deleted
 			self.db.delete_record(record)
 			return True
