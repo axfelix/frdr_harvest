@@ -162,7 +162,8 @@ class DBInterface:
 					record["subject"] = [record["subject"]]
 				for subject in record["subject"]:
 					try:
-						cur.execute("INSERT INTO subjects (local_identifier, repository_url, subject) VALUES (?,?,?)", (record["identifier"], repository_url, subject))
+						if len(subject) > 0:
+							cur.execute("INSERT INTO subjects (local_identifier, repository_url, subject) VALUES (?,?,?)", (record["identifier"], repository_url, subject))
 					except self.sqlite3.IntegrityError:
 						pass
 

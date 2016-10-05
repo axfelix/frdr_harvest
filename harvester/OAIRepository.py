@@ -72,8 +72,8 @@ class OAIRepository(HarvestRepository):
 			record["title"] = record.get("titl")
 			record["creator"] = record.get("AuthEnty")
 			record["subject"] = record.get("keyword", [])
-			if "topcClas" in record.keys():
-					record['subject'].extend(record["topcClas"])
+			if "topcClas" in record.keys() and len(record["topcClas"]) > 0:
+					record['subject'].extend(filter(None,record["topcClas"]))
 			record["description"] = record.get("abstract")
 			record["publisher"] = record.get("producer")
 			record["contributor"] = record.get("othId")
