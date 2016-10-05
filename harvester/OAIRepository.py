@@ -13,21 +13,26 @@ class OAIRepository(HarvestRepository):
 	def __init__(self, params):
 		super(OAIRepository, self).__init__(params)
 		self.sickle = Sickle(self.url)
+		# TODO: better DDI implementation that doesn't simply flatten everything, see: https://sickle.readthedocs.io/en/latest/customizing.html
+		if 'metadataprefix' in params:
+			self.metadataPrefix = params['metadataprefix']
+		else:
+			self.metadataPrefix = "oai_dc"
 
 	def _crawl(self):
 		records = []
 
 		try:
 			if not self.set:
-				records = self.sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True)
+				records = self.sickle.ListRecords(metadataPrefix=self.metadataPrefix, ignore_deleted=True)
 			else:
-				records = self.sickle.ListRecords(metadataPrefix='oai_dc', ignore_deleted=True, set=self.set)
+				records = self.sickle.ListRecords(metadataPrefix=self.metadataPrefix, ignore_deleted=True, set=self.set)
 		except:
 			self.logger.info("No items were found")
 
 		self.db.create_repo(self.url, self.name, "oai", self.thumbnail, self.item_url_pattern)
-
 		item_count = 0
+
 		while records:
 			try:
 				record = records.next()
@@ -62,6 +67,37 @@ class OAIRepository(HarvestRepository):
 		self.logger.info("Processed %s items in feed" % (item_count))
 
 	def unpack_oai_metadata(self, record):
+		if self.metadataPrefix.lower() == "ddi":
+			# Mapping as per http://www.ddialliance.org/resources/ddi-profiles/dc
+			record["title"] = record.get("titl")
+			record["creator"] = record.get("AuthEnty")
+			record["subject"] = record.get("keyword", [])
+			if "topcClas" in record.keys():
+					record['subject'].extend(record["topcClas"])
+			record["description"] = record.get("abstract")
+			record["publisher"] = record.get("producer")
+			record["contributor"] = record.get("othId")
+			record["date"] = record.get("prodDate")
+			record["type"] = record.get("dataKind")
+			record["identifier"] = record.get("IDNo")
+			record["rights"] = record.get("copyright")
+			
+# TODO: make this geospatial match up with DBInterface implementation
+#
+#			if "northBL" in record.keys():
+#				# This record has geoSpatial bounding lines
+#				record['geospatial'] = []
+#				record['geospatial'].append({})
+#				record['geospatial'][0]['type'] = "polygon"
+#				record['geospatial'][0]['coordinates'] = []
+#				# Convert into an array of closed bounding box points (clockwise polygon)
+#				record['geospatial'][0]['coordinates'].append([record.get('southBL', 0), record.get('westBL',0)])
+#				record['geospatial'][0]['coordinates'].append([record.get('northBL', 0), record.get('westBL',0)])
+#				record['geospatial'][0]['coordinates'].append([record.get('northBL', 0), record.get('eastBL',0)])
+#				record['geospatial'][0]['coordinates'].append([record.get('southBL', 0), record.get('eastBL',0)])
+#				record['geospatial'][0]['coordinates'].append([record.get('southBL', 0), record.get('westBL',0)])
+#
+
 		if 'identifier' not in record.keys():
 			return None
 
@@ -98,8 +134,13 @@ class OAIRepository(HarvestRepository):
 		if isinstance(record["title"], list):
 			record["title"] = record["title"][0]
 
-		record["contact"] = ""
-		record["series"] = ""
+		if "contact" not in record.keys():
+			record["contact"] = ""
+		if isinstance(record["contact"], list):
+			record["contact"] = record["contact"][0]
+
+		if "series" not in record.keys():
+			record["series"] = ""
 
 		return record
 

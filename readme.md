@@ -78,6 +78,15 @@ Configuration, including which repos are to be crawled, should be placed in data
             "thumbnail": "https://rdmtest1.computecanada.ca/jspui/image/logo.png",
             "type": "oai",
             "enabled": false
+        },
+        {
+            "name": "U of A Dataverse",
+            "url": "https://dataverse.library.ualberta.ca/dvn/OAIHandler",
+            "set": "",
+            "thumbnail": "https://dataverse.library.ualberta.ca/dvn/resources/images/ua-lib-logo.png",
+            "type": "oai",
+            "metadataprefix": "ddi",
+            "enabled": true
         }
     ]
 }
