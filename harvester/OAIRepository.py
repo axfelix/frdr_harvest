@@ -100,6 +100,8 @@ class OAIRepository(HarvestRepository):
 
 		if 'identifier' not in record.keys():
 			return None
+		if record["date"] is None:
+			return None
 
 		# If there are multiple identifiers, and one of them contains a link, then prefer it
 		# Otherwise just take the first one
