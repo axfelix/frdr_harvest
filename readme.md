@@ -86,7 +86,14 @@ Configuration, including which repos are to be crawled, should be placed in data
             "thumbnail": "https://dataverse.library.ualberta.ca/dvn/resources/images/ua-lib-logo.png",
             "type": "oai",
             "metadataprefix": "ddi",
-            "enabled": true
+            "enabled": false
+        },
+        {
+            "name": "Concordia Spectrum Research Repository",
+            "url": "http://spectrum.library.concordia.ca/cgi/oai2",
+            "set": "74797065733D64617461736574",
+            "type": "oai",
+            "enabled": false
         }
     ]
 }
