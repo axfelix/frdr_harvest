@@ -87,6 +87,17 @@ class Exporter(object):
 				continue
 
 			with con:
+				litecur = con.cursor()
+				litecur.execute(
+					"SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=? AND repository_url=?",
+					(record["local_identifier"], record["repository_url"]))
+				geodata = litecur.fetchall()
+				record["nrdr:geospatial"] = []
+
+				for coordinate in geodata:
+					record["nrdr:geospatial"].append({"type":"Feature", "geometry":{"type":coordinate[0], "coordinates": [coordinate[1], coordinate[2]]}})
+
+			with con:
 				con.row_factory = lambda cursor, row: row[0]
 				litecur = con.cursor()
 
@@ -122,12 +133,7 @@ class Exporter(object):
 
 				litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=?",
 								(record["local_identifier"], record["repository_url"]))
-				record["nrdr:tags"] = litecur.fetchall()
-
-				litecur.execute(
-					"SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=? AND repository_url=?",
-					(record["local_identifier"], record["repository_url"]))
-				record["nrdr:geospatial"] = litecur.fetchall()
+				record["nrdr:tags"] = litecur.fetchall()				
 
 				record.pop("repository_url", None)
 				record.pop("local_identifier", None)
