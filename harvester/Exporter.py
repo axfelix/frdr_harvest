@@ -6,6 +6,7 @@ import os
 import sys
 from lxml import etree
 import html
+import sqlite3
 
 class Exporter(object):
 	""" Read records from the database and export to given formats """
@@ -87,6 +88,7 @@ class Exporter(object):
 				continue
 
 			with con:
+				con.row_factory = sqlite3.Row
 				litecur = con.cursor()
 				litecur.execute(
 					"SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=? AND repository_url=?",
