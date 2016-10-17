@@ -34,7 +34,7 @@ class CKANRepository(HarvestRepository):
 		record = {}
 
 		if not 'date_published' in ckan_record:
-			return None;
+			return None
 
 		if ('author' in ckan_record) and ckan_record['author']:
 			record["creator"] = ckan_record['author']
@@ -48,14 +48,25 @@ class CKANRepository(HarvestRepository):
 		record["description"] = ckan_record.get("notes", "")
 		record["fra_description"] = ckan_record.get("notes_fra", "")
 		record["subject"] = ckan_record['subject']
-		record["rights"] = [ckan_record['attribution'], ckan_record['license_title'], ckan_record['license_url']]
-		record["dc:source"] = ckan_record['url']
+
+		# Open Data Canada API now returns a mangled unicode-escaped-keyed-dict-as-string; regex is the only solution
+		record["dc:source"] = re.search("(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?", ckan_record["url"]).group(0)
+
+		record["rights"] = [ckan_record['license_title']]
+		record["rights"].append(ckan_record.get("license_url", ""))
+		record["rights"].append(ckan_record.get("attribution", ""))
+		record["rights"] = " - ".join(record["rights"])
 
 		# Some CKAN records have a trailing null timestamp after date
 		record["date"] = re.sub(" 00:00:00", "", ckan_record['date_published'])
 
 		record["contact"] = ckan_record.get("author_email", ckan_record.get("maintainer_email", ""))
-		record["series"] = ckan_record.get("data_series_name", "")
+
+		try: 
+			record["series"] = ckan_record["data_series_name"]["en"]
+		except:
+			record["series"] = ckan_record.get("data_series_name", "")
+
 		record["tags"] = []
 		for tag in ckan_record["tags"]:
 			record["tags"].append(tag["display_name"])
