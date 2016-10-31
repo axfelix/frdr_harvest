@@ -46,6 +46,10 @@ class OAIRepository(HarvestRepository):
 						if "http" in idt.lower():
 							metadata['dc:source'] = idt
 
+				# EPrints workaround for using header datestamp in lieu of date
+				if 'date' not in metadata.keys() and record.header.datestamp:
+					metadata["date"] = record.header.datestamp
+
 				# Use the header id for the database key (needed later for OAI GetRecord calls)
 				metadata['identifier'] = record.header.identifier
 				oai_record = self.unpack_oai_metadata(metadata)
@@ -81,7 +85,18 @@ class OAIRepository(HarvestRepository):
 			record["type"] = record.get("dataKind")
 			record["identifier"] = record.get("IDNo")
 			record["rights"] = record.get("copyright")
-			
+
+		if self.metadataPrefix.lower() == "fgdc":
+			#record["title"] = record.get("title")
+			record["creator"] = record.get("origin")
+			record["subject"] = record.get("themekey")
+			record["description"] = record.get("abstract")
+			record["publisher"] = record.get("cntorg")
+			record["date"] = [record.get("begdate"), record.get("enddate")]
+			record["type"] = record.get("geoform")
+			record["identifier"] = record.get("onlink")
+			record["rights"] = record.get("distliab")
+
 # TODO: make this geospatial match up with DBInterface implementation
 #
 #			if "northBL" in record.keys():
@@ -100,6 +115,7 @@ class OAIRepository(HarvestRepository):
 
 		if 'identifier' not in record.keys():
 			return None
+
 		if record["date"] is None:
 			return None
 
@@ -144,6 +160,13 @@ class OAIRepository(HarvestRepository):
 		if "series" not in record.keys():
 			record["series"] = ""
 
+		# EPrints workaround for liberal use of dc:identifier
+		# Rather not hardcode a single source URL for this
+		if self.url == "http://spectrum.library.concordia.ca/cgi/oai2":
+			for relation in record["relation"]:
+				if "http://spectrum.library.concordia.ca" in relation:
+					record["dc:source"] = relation
+
 		return record
 
 	def _rate_limited(max_per_second):
@@ -186,6 +209,11 @@ class OAIRepository(HarvestRepository):
 			if 'identifier' in metadata.keys() and isinstance(metadata['identifier'], list):
 				if "http" in metadata['identifier'][0].lower():
 					metadata['dc:source'] = metadata['identifier'][0]
+
+			# EPrints workaround for using header datestamp in lieu of date
+			if 'date' not in metadata.keys() and record.header.datestamp:
+				metadata["date"] = record.header.datestamp
+
 			metadata['identifier'] = single_record.header.identifier
 			oai_record = self.unpack_oai_metadata(metadata)
 			self.db.write_record(oai_record, self.url, "replace")
