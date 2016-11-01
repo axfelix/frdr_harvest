@@ -69,6 +69,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "set": "",
             "thumbnail": "https://polardata.ca/images/ccin-hori.gif",
             "type": "oai",
+            "metadataprefix": "fgdc",
             "enabled": false
         },
         {

@@ -97,6 +97,13 @@ class OAIRepository(HarvestRepository):
 			record["identifier"] = record.get("onlink")
 			record["rights"] = record.get("distliab")
 
+			if "bounding" in record.keys():
+				# Sometimes point data is hacked in as a bounding box
+				if record["westbc"] == record["eastbc"] and record["northbc"] == record["southbc"]:
+					record["geospatial"] = {"type": "Point", "coordinates": [[[record["westbc"][0], record["northbc"][0]]]]}
+				else:
+					record["geospatial"] = {"type": "Polygon", "coordinates": [[[record["westbc"][0], record["northbc"][0]], [record["eastbc"][0], record["northbc"][0]], [record["westbc"][0], record["southbc"][0]], [record["eastbc"][0], record["southbc"][0]]]]}
+
 # TODO: make this geospatial match up with DBInterface implementation
 #
 #			if "northBL" in record.keys():
@@ -144,8 +151,12 @@ class OAIRepository(HarvestRepository):
 					valid_date = datestring
 			record["date"] = valid_date
 
+		# If date is still a one-value list, make it a string
+		if isinstance(record["date"], list):
+			record["date"] = record["date"][0]
+
 		# Convert long dates into YYYY-MM-DD
-		datestring = re.search("(\d{4}[-/]\d{2}[-/]\d{2})", record["date"])
+		datestring = re.search("(\d{4}[-/]?\d{2}[-/]?\d{2})", record["date"])
 		if datestring:
 			record["date"] = datestring.group(0).replace("/", "-")
 
