@@ -88,13 +88,9 @@ class OAIRepository(HarvestRepository):
 
 			if "northBL" in record.keys():
 				# This record has geoSpatial bounding lines
-				record['geospatial'] = {"type": "Polygon"}
-				record['geospatial']['coordinates'] = []
 				# Convert into an array of closed bounding box points (clockwise polygon)
-				record['geospatial']['coordinates'].append([record.get('southBL', 0), record.get('westBL',0)])
-				record['geospatial']['coordinates'].append([record.get('northBL', 0), record.get('westBL',0)])
-				record['geospatial']['coordinates'].append([record.get('northBL', 0), record.get('eastBL',0)])
-				record['geospatial']['coordinates'].append([record.get('southBL', 0), record.get('eastBL',0)])
+				record["geospatial"] = {"type": "Polygon", "coordinates": [[[record["northBL"][0], record["westBL"][0]], [record["northBL"][0], record["eastBL"][0]], [record["southBL"][0], record["westBL"][0]], [record["southBL"][0], record["eastBL"][0]]]]}
+
 
 
 		if self.metadataPrefix.lower() == "fgdc":
