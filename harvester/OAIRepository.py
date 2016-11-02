@@ -86,6 +86,17 @@ class OAIRepository(HarvestRepository):
 			record["identifier"] = record.get("IDNo")
 			record["rights"] = record.get("copyright")
 
+			if "northBL" in record.keys():
+				# This record has geoSpatial bounding lines
+				record['geospatial'] = {"type": "Polygon"}
+				record['geospatial']['coordinates'] = []
+				# Convert into an array of closed bounding box points (clockwise polygon)
+				record['geospatial']['coordinates'].append([record.get('southBL', 0), record.get('westBL',0)])
+				record['geospatial']['coordinates'].append([record.get('northBL', 0), record.get('westBL',0)])
+				record['geospatial']['coordinates'].append([record.get('northBL', 0), record.get('eastBL',0)])
+				record['geospatial']['coordinates'].append([record.get('southBL', 0), record.get('eastBL',0)])
+
+
 		if self.metadataPrefix.lower() == "fgdc":
 			#record["title"] = record.get("title")
 			record["creator"] = record.get("origin")
@@ -100,25 +111,10 @@ class OAIRepository(HarvestRepository):
 			if "bounding" in record.keys():
 				# Sometimes point data is hacked in as a bounding box
 				if record["westbc"] == record["eastbc"] and record["northbc"] == record["southbc"]:
-					record["geospatial"] = {"type": "Point", "coordinates": [[[record["westbc"][0], record["northbc"][0]]]]}
+					record["geospatial"] = {"type": "Point", "coordinates": [[[record["northbc"][0], record["westbc"][0]]]]}
 				else:
-					record["geospatial"] = {"type": "Polygon", "coordinates": [[[record["westbc"][0], record["northbc"][0]], [record["eastbc"][0], record["northbc"][0]], [record["westbc"][0], record["southbc"][0]], [record["eastbc"][0], record["southbc"][0]]]]}
+					record["geospatial"] = {"type": "Polygon", "coordinates": [[[record["northbc"][0], record["westbc"][0]], [record["northbc"][0], record["eastbc"][0]], [record["southbc"][0], record["westbc"][0]], [record["southbc"][0], record["eastbc"][0]]]]}
 
-# TODO: make this geospatial match up with DBInterface implementation
-#
-#			if "northBL" in record.keys():
-#				# This record has geoSpatial bounding lines
-#				record['geospatial'] = []
-#				record['geospatial'].append({})
-#				record['geospatial'][0]['type'] = "polygon"
-#				record['geospatial'][0]['coordinates'] = []
-#				# Convert into an array of closed bounding box points (clockwise polygon)
-#				record['geospatial'][0]['coordinates'].append([record.get('southBL', 0), record.get('westBL',0)])
-#				record['geospatial'][0]['coordinates'].append([record.get('northBL', 0), record.get('westBL',0)])
-#				record['geospatial'][0]['coordinates'].append([record.get('northBL', 0), record.get('eastBL',0)])
-#				record['geospatial'][0]['coordinates'].append([record.get('southBL', 0), record.get('eastBL',0)])
-#				record['geospatial'][0]['coordinates'].append([record.get('southBL', 0), record.get('westBL',0)])
-#
 
 		if 'identifier' not in record.keys():
 			return None
