@@ -92,7 +92,6 @@ class OAIRepository(HarvestRepository):
 				record["geospatial"] = {"type": "Polygon", "coordinates": [[[record["northBL"][0], record["westBL"][0]], [record["northBL"][0], record["eastBL"][0]], [record["southBL"][0], record["westBL"][0]], [record["southBL"][0], record["eastBL"][0]]]]}
 
 
-
 		if self.metadataPrefix.lower() == "fgdc":
 			#record["title"] = record.get("title")
 			record["creator"] = record.get("origin")
@@ -110,6 +109,16 @@ class OAIRepository(HarvestRepository):
 					record["geospatial"] = {"type": "Point", "coordinates": [[[record["northbc"][0], record["westbc"][0]]]]}
 				else:
 					record["geospatial"] = {"type": "Polygon", "coordinates": [[[record["northbc"][0], record["westbc"][0]], [record["northbc"][0], record["eastbc"][0]], [record["southbc"][0], record["westbc"][0]], [record["southbc"][0], record["eastbc"][0]]]]}
+
+
+		if self.metadataPrefix.lower() == "frdr":
+			record["coverage"] = record.get("geolocationPlace")
+
+			if "geolocationPoint" in record.keys():
+				record["geospatial"] = {"type": "Point", "coordinates": record["geolocationPoint"][0].split()}
+			
+			if "geolocationBox" in record.keys():
+				record["geospatial"] = {"type": "Polygon", "coordinates": record["geolocationBox"][0].split()}
 
 
 		if 'identifier' not in record.keys():
