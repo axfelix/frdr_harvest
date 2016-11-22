@@ -115,10 +115,11 @@ class OAIRepository(HarvestRepository):
 			record["coverage"] = record.get("geolocationPlace")
 
 			if "geolocationPoint" in record.keys():
-				record["geospatial"] = {"type": "Point", "coordinates": record["geolocationPoint"][0].split()}
+				record["geospatial"] = {"type": "Point", "coordinates": [record["geolocationPoint"][0].split()]}
 			
 			if "geolocationBox" in record.keys():
-				record["geospatial"] = {"type": "Polygon", "coordinates": record["geolocationBox"][0].split()}
+				boxcoordinates = record["geolocationBox"][0].split()
+				record["geospatial"] = {"type": "Polygon", "coordinates": [[boxcoordinates[x:x+2] for x in range (0, len(boxcoordinates),2)]]}
 
 
 		if 'identifier' not in record.keys():

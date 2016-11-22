@@ -78,6 +78,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "set": "",
             "thumbnail": "https://rdmtest1.computecanada.ca/jspui/image/logo.png",
             "type": "oai",
+            "metadataprefix": "frdr",
             "enabled": false
         },
         {

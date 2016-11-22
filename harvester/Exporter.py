@@ -95,9 +95,16 @@ class Exporter(object):
 					(record["local_identifier"], record["repository_url"]))
 				geodata = litecur.fetchall()
 				record["nrdr:geospatial"] = []
+				polycoordinates = []
 
 				for coordinate in geodata:
-					record["nrdr:geospatial"].append({"type":"Feature", "geometry":{"type":coordinate[0], "coordinates": [coordinate[1], coordinate[2]]}})
+					if coordinate[0] == "Polygon":
+						polycoordinates.append([coordinate[1], coordinate[2]])
+					else:
+						record["nrdr:geospatial"].append({"type":"Feature", "geometry":{"type":coordinate[0], "coordinates": [coordinate[1], coordinate[2]]}})
+
+				if polycoordinates:
+					record["nrdr:geospatial"].append({"type":"Feature", "geometry":{"type":"Polygon", "coordinates": polycoordinates}})
 
 			with con:
 				con.row_factory = lambda cursor, row: row[0]
