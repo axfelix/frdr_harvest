@@ -256,7 +256,7 @@ class Exporter(object):
 
 					litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='en'",
 									(record["local_identifier"], record["repository_url"]))
-					record["nrdr_tags"] = litecur.fetchall()
+					record["nrdr:tags"] = litecur.fetchall()
 
 					litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='fr'",
 									(record["local_identifier"], record["repository_url"]))
