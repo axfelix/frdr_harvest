@@ -138,11 +138,15 @@ class Exporter(object):
 				litecur.execute(
 					"SELECT description FROM fra_descriptions WHERE local_identifier=? AND repository_url=?",
 					(record["local_identifier"], record["repository_url"]))
-				record["nrdr:fra_description"] = litecur.fetchall()
+				record["nrdr:description_fr"] = litecur.fetchall()
 
-				litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=?",
+				litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='en'",
 								(record["local_identifier"], record["repository_url"]))
-				record["nrdr:tags"] = litecur.fetchall()				
+				record["nrdr:tags"] = litecur.fetchall()
+
+				litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='fr'",
+								(record["local_identifier"], record["repository_url"]))
+				record["nrdr:tags_fr"] = litecur.fetchall()	
 
 				record.pop("repository_url", None)
 				record.pop("local_identifier", None)
@@ -250,9 +254,13 @@ class Exporter(object):
 						(record["local_identifier"], record["repository_url"]))
 					record["nrdr_fra_description"] = litecur.fetchall()
 
-					litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=?",
+					litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='en'",
 									(record["local_identifier"], record["repository_url"]))
 					record["nrdr_tags"] = litecur.fetchall()
+
+					litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='fr'",
+									(record["local_identifier"], record["repository_url"]))
+					record["nrdr:tags_fr"] = litecur.fetchall()
 
 					litecur.execute(
 						"SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=? AND repository_url=?",

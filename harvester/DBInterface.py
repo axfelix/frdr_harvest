@@ -34,7 +34,7 @@ class DBInterface:
 				cur.execute("CREATE TABLE IF NOT EXISTS fra_descriptions (local_identifier TEXT, repository_url TEXT, description TEXT)")
 				cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_description ON fra_descriptions (local_identifier, repository_url, description)")
 
-				cur.execute("CREATE TABLE IF NOT EXISTS tags (local_identifier TEXT, repository_url TEXT, tag TEXT)")
+				cur.execute("CREATE TABLE IF NOT EXISTS tags (local_identifier TEXT, repository_url TEXT, tag TEXT, language TEXT)")
 				cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_tag ON tags (local_identifier, repository_url, tag)")
 
 				cur.execute("CREATE TABLE IF NOT EXISTS geospatial (local_identifier TEXT, repository_url TEXT, coordinate_type TEXT, lat NUMERIC, lon NUMERIC)")
@@ -199,7 +199,7 @@ class DBInterface:
 					record["tags"] = [record["tags"]]
 				for tag in record["tags"]:
 					try:
-						cur.execute("INSERT INTO tags (local_identifier, repository_url, tag) VALUES (?,?,?)", (record["identifier"], repository_url, tag))
+						cur.execute("INSERT INTO tags (local_identifier, repository_url, tag, language) VALUES (?,?,?,?)", (record["identifier"], repository_url, tag, "en"))
 					except self.sqlite3.IntegrityError:
 						pass
 
@@ -208,7 +208,7 @@ class DBInterface:
 					record["tags_fr"] = [record["tags_fr"]]
 				for tag_fr in record["tags_fr"]:
 					try:
-						cur.execute("INSERT INTO tags (local_identifier, repository_url, tag) VALUES (?,?,?)", (record["identifier"], repository_url, tag_fr))
+						cur.execute("INSERT INTO tags (local_identifier, repository_url, tag, language) VALUES (?,?,?,?)", (record["identifier"], repository_url, tag_fr, "fr"))
 					except self.sqlite3.IntegrityError:
 						pass
 
