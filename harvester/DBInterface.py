@@ -185,12 +185,12 @@ class DBInterface:
 					except self.sqlite3.IntegrityError:
 						pass
 
-			if "fra_description" in record:
-				if not isinstance(record["fra_description"], list):
-					record["fra_description"] = [record["fra_description"]]
-				for fra_description in record["fra_description"]:
+			if "description_fr" in record:
+				if not isinstance(record["description_fr"], list):
+					record["description_fr"] = [record["description_fr"]]
+				for description_fr in record["description_fr"]:
 					try:
-						cur.execute("INSERT INTO fra_descriptions (local_identifier, repository_url, description) VALUES (?,?,?)", (record["identifier"], repository_url, fra_description))
+						cur.execute("INSERT INTO fra_descriptions (local_identifier, repository_url, description) VALUES (?,?,?)", (record["identifier"], repository_url, description_fr))
 					except self.sqlite3.IntegrityError:
 						pass
 
@@ -200,6 +200,15 @@ class DBInterface:
 				for tag in record["tags"]:
 					try:
 						cur.execute("INSERT INTO tags (local_identifier, repository_url, tag) VALUES (?,?,?)", (record["identifier"], repository_url, tag))
+					except self.sqlite3.IntegrityError:
+						pass
+
+			if "tags_fr" in record:
+				if not isinstance(record["tags_fr"], list):
+					record["tags_fr"] = [record["tags_fr"]]
+				for tag_fr in record["tags_fr"]:
+					try:
+						cur.execute("INSERT INTO tags (local_identifier, repository_url, tag) VALUES (?,?,?)", (record["identifier"], repository_url, tag_fr))
 					except self.sqlite3.IntegrityError:
 						pass
 

@@ -73,7 +73,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "enabled": false
         },
         {
-            "name": "NRDR",
+            "name": "FRDR",
             "url": "https://rdmtest1.computecanada.ca/oai/request",
             "set": "",
             "thumbnail": "https://rdmtest1.computecanada.ca/jspui/image/logo.png",
@@ -94,6 +94,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Concordia Spectrum Research Repository",
             "url": "http://spectrum.library.concordia.ca/cgi/oai2",
             "set": "74797065733D64617461736574",
+            "thumbnail": "http://spectrum.library.concordia.ca/images/custom-logo.jpg",
             "type": "oai",
             "enabled": false
         }
