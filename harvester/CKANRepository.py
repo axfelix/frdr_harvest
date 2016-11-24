@@ -41,13 +41,24 @@ class CKANRepository(HarvestRepository):
 		elif ('maintainer' in ckan_record) and ckan_record['maintainer']:
 			record["creator"] = ckan_record['maintainer']
 		else:
-			record["creator"] = ckan_record['organization']['title']
+			record["creator"] = ckan_record['organization'].get('title',"")
 
 		record["identifier"] = local_identifier
-		record["title"] = ckan_record.get("title", "")
-		record["description"] = ckan_record.get("notes", "")
-		record["fra_description"] = ckan_record.get("notes_fra", "")
-		record["subject"] = ckan_record['subject']
+
+		if isinstance(ckan_record.get("title_translated", ""), dict):
+			record["title"] = ckan_record["title_translated"].get("en","")
+			record["title_fr"] = ckan_record["title_translated"].get("fr","")
+		else:
+			record["title"] = ckan_record.get("title", "")
+
+		if isinstance(ckan_record.get("notes_translated", ""), dict):
+			record["description"] = ckan_record["notes_translated"].get("en","")
+			record["description_fr"] = ckan_record["notes_translated"].get("fr","")
+		else:
+			record["description"] = ckan_record.get("notes", "")
+			record["description_fr"] = ckan_record.get("notes_fra", "")
+
+		record["subject"] = ckan_record.get('subject',"")
 
 		# Open Data Canada API now returns a mangled unicode-escaped-keyed-dict-as-string; regex is the only solution
 		record["dc:source"] = re.search("(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?", ckan_record["url"]).group(0)
@@ -68,8 +79,15 @@ class CKANRepository(HarvestRepository):
 			record["series"] = ckan_record.get("data_series_name", "")
 
 		record["tags"] = []
-		for tag in ckan_record["tags"]:
-			record["tags"].append(tag["display_name"])
+		record["tags_fr"] = []
+		if isinstance(ckan_record.get("keywords", ""), dict):
+			for tag in ckan_record["keywords"]["en"]:
+					record["tags"].append(tag)
+			for tag in ckan_record["keywords"]["fr"]:
+					record["tags_fr"].append(tag)
+		else:
+			for tag in ckan_record["tags"]:
+				record["tags"].append(tag["display_name"])
 
 		if ('geometry' in ckan_record) and ckan_record['geometry']:
 			record["geospatial"] = ckan_record['geometry']
