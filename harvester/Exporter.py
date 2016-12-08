@@ -4,18 +4,17 @@ from string import Template
 import json
 import os
 import sys
-from lxml import etree
 import html
-import sqlite3
 
 class Exporter(object):
 	""" Read records from the database and export to given formats """
 
 	__records_per_loop = 500
 
-	def __init__(self, db, log):
+	def __init__(self, db, log, params):
 		self.db = db
 		self.logger = log
+		self.dbtype = params.get('type', None)
 
 	def _construct_local_url(self, record):
 		# Check if the local_identifier has already been turned into a url
@@ -88,8 +87,14 @@ class Exporter(object):
 				continue
 
 			with con:
-				con.row_factory = sqlite3.Row
-				litecur = con.cursor()
+				if self.dbtype == "sqlite":
+					from sqlite3 import Row
+					con.row_factory = Row
+					litecur = con.cursor()
+				elif self.dbtype == "postgres":
+					from psycopg2 import cursor as TupleCursor
+					litecur = con.TupleCursor
+
 				litecur.execute(
 					"SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=? AND repository_url=?",
 					(record["local_identifier"], record["repository_url"]))
@@ -107,12 +112,16 @@ class Exporter(object):
 					record["nrdr:geospatial"].append({"type":"Feature", "geometry":{"type":"Polygon", "coordinates": polycoordinates}})
 
 			with con:
-				con.row_factory = lambda cursor, row: row[0]
-				litecur = con.cursor()
+				if self.dbtype == "sqlite":
+					con.row_factory = lambda cursor, row: row[0]
+					litecur = con.cursor()
+				elif self.dbtype == "postgres":
+					from psycopg2.extras import DictCursor as DictCursor
+					litecur = con.cursor(cursor_factory=DictCursor)
+
 
 				# attach the other values to the dict
 				# TODO: investigate doing this purely in SQL
-
 				litecur.execute(
 					"SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=0",
 					(record["local_identifier"], record["repository_url"]))
@@ -138,11 +147,15 @@ class Exporter(object):
 				litecur.execute(
 					"SELECT description FROM fra_descriptions WHERE local_identifier=? AND repository_url=?",
 					(record["local_identifier"], record["repository_url"]))
-				record["nrdr:fra_description"] = litecur.fetchall()
+				record["nrdr:description_fr"] = litecur.fetchall()
 
-				litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=?",
+				litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='en'",
 								(record["local_identifier"], record["repository_url"]))
-				record["nrdr:tags"] = litecur.fetchall()				
+				record["nrdr:tags"] = litecur.fetchall()
+
+				litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='fr'",
+								(record["local_identifier"], record["repository_url"]))
+				record["nrdr:tags_fr"] = litecur.fetchall()	
 
 				record.pop("repository_url", None)
 				record.pop("local_identifier", None)
@@ -173,7 +186,7 @@ class Exporter(object):
 		with open('schema/registryObjects.xsd', 'r') as f:
 			schema_root = etree.XML(f.read())
 		schema = etree.XMLSchema(schema_root)
-		# Generate parwser and fix any XML bugs from the templating.
+		# Generate parser and fix any XML bugs from the templating.
 		xmlparser = etree.XMLParser(schema=schema, recover = True)
 		try:
 			etree.fromstring(rifcs, xmlparser)
@@ -219,8 +232,12 @@ class Exporter(object):
 					continue
 
 				with con:
-					con.row_factory = lambda cursor, row: row[0]
-					litecur = con.cursor()
+					if self.dbtype == "sqlite":
+						con.row_factory = lambda cursor, row: row[0]
+						litecur = con.cursor()
+					elif self.dbtype == "postgres":
+						from psycopg2.extras import DictCursor as DictCursor
+						litecur = con.cursor(cursor_factory=DictCursor)
 
 					litecur.execute(
 						"SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=0",
@@ -250,9 +267,13 @@ class Exporter(object):
 						(record["local_identifier"], record["repository_url"]))
 					record["nrdr_fra_description"] = litecur.fetchall()
 
-					litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=?",
+					litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='en'",
 									(record["local_identifier"], record["repository_url"]))
-					record["nrdr_tags"] = litecur.fetchall()
+					record["nrdr:tags"] = litecur.fetchall()
+
+					litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='fr'",
+									(record["local_identifier"], record["repository_url"]))
+					record["nrdr:tags_fr"] = litecur.fetchall()
 
 					litecur.execute(
 						"SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=? AND repository_url=?",
@@ -326,6 +347,7 @@ class Exporter(object):
 		if export_format == "gmeta":
 			output = json.dumps({"_gmeta": self._generate_gmeta(export_batch_size, export_filepath, temp_filepath)})
 		elif export_format == "rifcs":
+			from lxml import etree
 			output = self._generate_rifcs()
 		else:
 			self.logger.error("Unknown export format: %s" % (export_format))
