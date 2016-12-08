@@ -62,11 +62,11 @@ if __name__ == "__main__":
 		# Find any new information in the repositories
 		for repoconfig in configs['repos']:
 			if repoconfig['type'] == "oai":
-				repo = OAIRepository(repoconfig)
+				repo = OAIRepository(configs)
 			elif repoconfig['type'] == "ckan":
-				repo = CKANRepository(repoconfig)
-			repo.setDefaults(configs)
+				repo = CKANRepository(configs)
 			repo.setLogger(main_log)
+			repo.setRepoParams(repoconfig)
 			repo.setDatabase(dbh)
 			repo.crawl()
 			repo.update_stale_records()

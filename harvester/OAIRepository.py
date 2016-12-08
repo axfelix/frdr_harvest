@@ -10,14 +10,10 @@ import time
 class OAIRepository(HarvestRepository):
 	""" OAI Repository """
 
-	def __init__(self, params):
-		super(OAIRepository, self).__init__(params)
+	def setRepoParams(self, repoParams):
+		self.metadataPrefix = "oai_dc"
+		super(OAIRepository, self).setRepoParams(repoParams)
 		self.sickle = Sickle(self.url)
-		# TODO: better DDI implementation that doesn't simply flatten everything, see: https://sickle.readthedocs.io/en/latest/customizing.html
-		if 'metadataprefix' in params:
-			self.metadataPrefix = params['metadataprefix']
-		else:
-			self.metadataPrefix = "oai_dc"
 
 	def _crawl(self):
 		records = []
@@ -72,6 +68,7 @@ class OAIRepository(HarvestRepository):
 
 	def unpack_oai_metadata(self, record):
 		if self.metadataPrefix.lower() == "ddi":
+			# TODO: better DDI implementation that doesn't simply flatten everything, see: https://sickle.readthedocs.io/en/latest/customizing.html
 			# Mapping as per http://www.ddialliance.org/resources/ddi-profiles/dc
 			record["title"] = record.get("titl")
 			record["creator"] = record.get("AuthEnty")

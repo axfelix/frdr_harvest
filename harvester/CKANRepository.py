@@ -8,8 +8,8 @@ import re
 class CKANRepository(HarvestRepository):
 	""" CKAN Repository """
 
-	def __init__(self, params):
-		super(CKANRepository, self).__init__(params)
+	def setRepoParams(self, repoParams):
+		super(CKANRepository, self).setRepoParams(repoParams)
 		self.ckanrepo = ckanapi.RemoteCKAN(self.url)
 		
 	def _crawl(self):

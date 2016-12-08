@@ -5,29 +5,32 @@ from harvester.TimeFormatter import TimeFormatter
 class HarvestRepository(object):
 	""" Top level representation of a repository """
 
-	def __init__(self, params):
-		self.url = params.get('url', None)
-		self.type = params.get('type', None)
-		self.name = params.get('name', None)
-		self.set = params.get('set', None)
-		self.thumbnail = params.get('thumbnail', None)
-		self.update_log_after_numitems = params.get('update_log_after_numitems', None)
-		self.item_url_pattern = params.get('item_url_pattern', None)
-		self.enabled = params.get('enabled', True)
-		self.formatter = TimeFormatter()
-		self.error_count = 0
-		self.db = None
-		self.logger = None
+	def __init__(self, globalParams):
+		self.__dict__.update({
+			'url': None,
+			'type': None,
+			'name': None,
+			'set': None,
+			'thumbnail': None,
+			'abort_after_numerrors': 5,
+			'max_records_updated_per_run': 100,
+			'update_log_after_numitems': 100,
+			'record_refresh_days': 30,
+			'repo_refresh_days': 7,
+			'item_url_pattern': None,
+			'enabled': False,
+			'formatter': TimeFormatter(),
+			'error_count': 0,
+			'db': None,
+			'logger': None
+		})
 
-	def setDefaults(self, defaults):
-		""" Inherit global configs, but they do not overwrite local configs """
-		for k,v in defaults.items():
-			if isinstance(k, str) or isinstance(k, unicode):
-				if k in self.__dict__:
-					if not self.__dict__[k]:
-						self.__dict__[k] = v
-				else:
-					self.__dict__[k] = v
+		# Inherit global config
+		self.__dict__.update(globalParams)
+
+	def setRepoParams(self, repoParams):
+		""" Set local repo params and let them override the global config """
+		self.__dict__.update(repoParams)
 
 	def setLogger(self, l):
 		self.logger = l
@@ -43,9 +46,9 @@ class HarvestRepository(object):
 		self.last_crawl = self.db.get_repo_last_crawl(self.url)
 
 		if self.last_crawl == 0:
-			self.logger.info("Repo: %s, type: %s, (last harvested: never)" % (self.name, self.type ) )
+			self.logger.info("*** Repo: %s, type: %s, (last harvested: never)" % (self.name, self.type ) )
 		else:
-			self.logger.info("Repo: %s, type: %s, (last harvested: %s ago)" % (self.name, self.type, self.formatter.humanize(self.tstart - self.last_crawl) ) )
+			self.logger.info("*** Repo: %s, type: %s, (last harvested: %s ago)" % (self.name, self.type, self.formatter.humanize(self.tstart - self.last_crawl) ) )
 
 		if (self.enabled):
 			if (self.last_crawl + self.repo_refresh_days*86400) < self.tstart:
@@ -64,6 +67,11 @@ class HarvestRepository(object):
 
 	def update_stale_records(self):
 		""" This method will be called by a child class only, so that it uses its own _update_record() method """
+		if self.enabled != True:
+			return True
+		if self.db == None:
+			self.logger.error("Database configuration is not complete")
+			return False
 		record_count = 0
 		tstart = time.time()
 		self.logger.info("Looking for stale records to update")
