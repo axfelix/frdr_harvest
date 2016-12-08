@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
 	temp_filepath = configs['temp_filepath']
 
-	exporter = Exporter(dbh, main_log)
+	exporter = Exporter(dbh, main_log, configs['db'])
 	exporter.export_to_file(configs['export_format'], configs['export_filepath'], configs['export_batch_size'], configs['temp_filepath'])
 
 	formatter = TimeFormatter()

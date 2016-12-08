@@ -2,11 +2,11 @@ This is a repository crawler which outputs gmeta.json files for indexing by Glob
 
 Configuration, including which repos are to be crawled, should be placed in data/config.json, in a structure like to this:
 
-```json
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ json
 {
     "db": {
         "type": "sqlite",
-        "filename": "data/globus_oai.db",
+        "dbname": "data/globus_oai.db",
         "host": "",
         "schema": "",
         "user": "",
@@ -100,7 +100,7 @@ Configuration, including which repos are to be crawled, should be placed in data
         }
     ]
 }
-```
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can call the crawler directly, which will run once, crawl all of the target domains, export metadata, and exit, by using `globus_harvester.py`. It requires you to specify a database backend as an argument; currently only `sqlite` is supported. You can also run it with `--onlyharvest` or `--onlyexport` if you want to skip the metadata export or crawling stages, respectively.
 

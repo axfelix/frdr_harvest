@@ -4,7 +4,7 @@ import time
 class DBInterface:
 	def __init__(self, params):
 		self.dbtype = params.get('type', None)
-		self.filename = params.get('filename', None)
+		self.dbname = params.get('dbname', None)
 		self.host = params.get('host', None)
 		self.schema = params.get('schema', None)
 		self.user = params.get('user', None)
@@ -12,40 +12,45 @@ class DBInterface:
 		self.connection = None
 		self.logger = None
 		if self.dbtype == "sqlite":
-			self.sqlite3 = __import__('sqlite3')
-
+			self.dblayer = __import__('sqlite3')
 			con = self.getConnection()
-			with con:
-				cur = con.cursor()
-				cur.execute("CREATE TABLE IF NOT EXISTS records (title TEXT, date TEXT, contact TEXT, series TEXT, modified_timestamp NUMERIC DEFAULT 0, source_url TEXT, deleted NUMERIC DEFAULT 0, local_identifier TEXT, repository_url TEXT, PRIMARY KEY (local_identifier, repository_url)) WITHOUT ROWID")
-
-				cur.execute("CREATE TABLE IF NOT EXISTS creators (local_identifier TEXT, repository_url TEXT, creator TEXT, is_contributor INTEGER)")
-				cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_creator ON creators (local_identifier, repository_url, creator)")
-
-				cur.execute("CREATE TABLE IF NOT EXISTS subjects (local_identifier TEXT, repository_url TEXT, subject TEXT)")
-				cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_subject ON subjects (local_identifier, repository_url, subject)")
-
-				cur.execute("CREATE TABLE IF NOT EXISTS rights (local_identifier TEXT, repository_url TEXT, rights TEXT)")
-				cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_rights ON rights (local_identifier, repository_url, rights)")
-
-				cur.execute("CREATE TABLE IF NOT EXISTS descriptions (local_identifier TEXT, repository_url TEXT, description TEXT)")
-				cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_description ON descriptions (local_identifier, repository_url, description)")
-
-				cur.execute("CREATE TABLE IF NOT EXISTS fra_descriptions (local_identifier TEXT, repository_url TEXT, description TEXT)")
-				cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_description ON fra_descriptions (local_identifier, repository_url, description)")
-
-				cur.execute("CREATE TABLE IF NOT EXISTS tags (local_identifier TEXT, repository_url TEXT, tag TEXT, language TEXT)")
-				cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_tag ON tags (local_identifier, repository_url, tag)")
-
-				cur.execute("CREATE TABLE IF NOT EXISTS geospatial (local_identifier TEXT, repository_url TEXT, coordinate_type TEXT, lat NUMERIC, lon NUMERIC)")
-				cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_lat_lon ON geospatial (local_identifier, repository_url, lat, lon)")
-
-				cur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, repository_type TEXT, last_crawl_timestamp NUMERIC, item_url_pattern TEXT, PRIMARY KEY (repository_url)) WITHOUT ROWID")
 			if os.name == "posix":
 				try:
-					os.chmod(configs['db']['filename'], 0o664 )
+					os.chmod(configs['db']['dbname'], 0o664 )
 				except:
 					pass
+
+		elif self.dbtype == "postgres":
+			self.dblayer = __import__('psycopg2')
+			con = self.getConnection()
+
+		with con:
+			cur = con.cursor()
+			cur.execute("CREATE TABLE IF NOT EXISTS records (title TEXT, date TEXT, contact TEXT, series TEXT, modified_timestamp NUMERIC DEFAULT 0, source_url TEXT, deleted NUMERIC DEFAULT 0, local_identifier TEXT, repository_url TEXT, PRIMARY KEY (local_identifier, repository_url))")
+
+			cur.execute("CREATE TABLE IF NOT EXISTS creators (local_identifier TEXT, repository_url TEXT, creator TEXT, is_contributor INTEGER)")
+			cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_creator ON creators (local_identifier, repository_url, creator)")
+
+			cur.execute("CREATE TABLE IF NOT EXISTS subjects (local_identifier TEXT, repository_url TEXT, subject TEXT)")
+			cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_subject ON subjects (local_identifier, repository_url, subject)")
+
+			cur.execute("CREATE TABLE IF NOT EXISTS rights (local_identifier TEXT, repository_url TEXT, rights TEXT)")
+			cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_rights ON rights (local_identifier, repository_url, rights)")
+
+			cur.execute("CREATE TABLE IF NOT EXISTS descriptions (local_identifier TEXT, repository_url TEXT, description TEXT)")
+			cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_description ON descriptions (local_identifier, repository_url, description)")
+
+			cur.execute("CREATE TABLE IF NOT EXISTS fra_descriptions (local_identifier TEXT, repository_url TEXT, description TEXT)")
+			cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_description ON fra_descriptions (local_identifier, repository_url, description)")
+
+			cur.execute("CREATE TABLE IF NOT EXISTS tags (local_identifier TEXT, repository_url TEXT, tag TEXT, language TEXT)")
+			cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_tag ON tags (local_identifier, repository_url, tag)")
+
+			cur.execute("CREATE TABLE IF NOT EXISTS geospatial (local_identifier TEXT, repository_url TEXT, coordinate_type TEXT, lat NUMERIC, lon NUMERIC)")
+			cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_lat_lon ON geospatial (local_identifier, repository_url, lat, lon)")
+
+			cur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, repository_type TEXT, last_crawl_timestamp NUMERIC, item_url_pattern TEXT, PRIMARY KEY (repository_url))")
+
 
 	def setLogger(self, l):
 		self.logger = l
@@ -53,15 +58,14 @@ class DBInterface:
 	def getConnection(self):
 		if self.connection == None:
 			if self.dbtype == "sqlite":
-				self.connection = self.sqlite3.connect(self.filename)
-				return self.connection
-		else:
-			return self.connection
+				self.connection = self.dblayer.connect(self.dbname)
+			elif self.dbtype == "postgres":
+				self.connection = self.dblayer.connect("dbname='%s' user='%s' password='%s' host='%s'" % (self.dbname, self.user, self.password, self.host))
+		return self.connection
 
 
 	def getRow(self):
-		if self.dbtype == "sqlite":
-			return self.sqlite3.Row
+		return self.dblayer.Row
 
 
 	def create_repo(self, repository_url, repository_name, repository_type, repository_thumbnail="", item_url_pattern=""):
@@ -71,7 +75,7 @@ class DBInterface:
 
 			try:
 				cur.execute("INSERT OR REPLACE INTO repositories (repository_url, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern) VALUES (?,?,?,?,?,?)", (repository_url, repository_name, repository_type, repository_thumbnail, time.time(), item_url_pattern))
-			except self.sqlite3.IntegrityError:
+			except self.dblayer.IntegrityError:
 				# record already present in repo
 				return None
 
@@ -132,20 +136,20 @@ class DBInterface:
 
 			try:
 				if 'dc:source' in record:
-					cur.execute(verb + " INTO records (title, date, contact, series, modified_timestamp, source_url, deleted, local_identifier, repository_url) VALUES(?,?,?,?,?,?,?,?,?)", (record["title"], record["date"], record["contact"], record["series"], time.time(), record["dc:source"], 0, record["identifier"], repository_url))				
+					cur.execute(verb + " INTO records (title, date, contact, series, modified_timestamp, source_url, deleted, local_identifier, repository_url) VALUES(?,?,?,?,?,?,?,?,?)", (record["title"], record["date"], record["contact"], record["series"], time.time(), record["dc:source"], 0, record["identifier"], repository_url))
 				else:
-					cur.execute(verb + " INTO records (title, date, contact, series, modified_timestamp, deleted, local_identifier, repository_url) VALUES(?,?,?,?,?,?,?,?)", (record["title"], record["date"], record["contact"], record["series"], time.time(), 0, record["identifier"], repository_url))				
-			except self.sqlite3.IntegrityError:
+					cur.execute(verb + " INTO records (title, date, contact, series, modified_timestamp, deleted, local_identifier, repository_url) VALUES(?,?,?,?,?,?,?,?)", (record["title"], record["date"], record["contact"], record["series"], time.time(), 0, record["identifier"], repository_url))
+			except self.dblayer.IntegrityError:
 				# record already present in repo
 				return None
-		
+
 			if "creator" in record:
 				if not isinstance(record["creator"], list):
 					record["creator"] = [record["creator"]]
 				for creator in record["creator"]:
 					try:
 						cur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"], repository_url, creator, 0))
-					except self.sqlite3.IntegrityError:
+					except self.dblayer.IntegrityError:
 						pass
 
 			if "contributor" in record:
@@ -154,7 +158,7 @@ class DBInterface:
 				for contributor in record["contributor"]:
 					try:
 						cur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)", (record["identifier"], repository_url, contributor, 1))
-					except self.sqlite3.IntegrityError:
+					except self.dblayer.IntegrityError:
 						pass
 
 			if "subject" in record:
@@ -164,7 +168,7 @@ class DBInterface:
 					try:
 						if len(subject) > 0:
 							cur.execute("INSERT INTO subjects (local_identifier, repository_url, subject) VALUES (?,?,?)", (record["identifier"], repository_url, subject))
-					except self.sqlite3.IntegrityError:
+					except self.dblayer.IntegrityError:
 						pass
 
 			if "rights" in record:
@@ -173,7 +177,7 @@ class DBInterface:
 				for rights in record["rights"]:
 					try:
 						cur.execute("INSERT INTO rights (local_identifier, repository_url, rights) VALUES (?,?,?)", (record["identifier"], repository_url, rights))
-					except self.sqlite3.IntegrityError:
+					except self.dblayer.IntegrityError:
 						pass
 
 			if "description" in record:
@@ -182,7 +186,7 @@ class DBInterface:
 				for description in record["description"]:
 					try:
 						cur.execute("INSERT INTO descriptions (local_identifier, repository_url, description) VALUES (?,?,?)", (record["identifier"], repository_url, description))
-					except self.sqlite3.IntegrityError:
+					except self.dblayer.IntegrityError:
 						pass
 
 			if "description_fr" in record:
@@ -191,7 +195,7 @@ class DBInterface:
 				for description_fr in record["description_fr"]:
 					try:
 						cur.execute("INSERT INTO fra_descriptions (local_identifier, repository_url, description) VALUES (?,?,?)", (record["identifier"], repository_url, description_fr))
-					except self.sqlite3.IntegrityError:
+					except self.dblayer.IntegrityError:
 						pass
 
 			if "tags" in record:
@@ -200,7 +204,7 @@ class DBInterface:
 				for tag in record["tags"]:
 					try:
 						cur.execute("INSERT INTO tags (local_identifier, repository_url, tag, language) VALUES (?,?,?,?)", (record["identifier"], repository_url, tag, "en"))
-					except self.sqlite3.IntegrityError:
+					except self.dblayer.IntegrityError:
 						pass
 
 			if "tags_fr" in record:
@@ -209,14 +213,14 @@ class DBInterface:
 				for tag_fr in record["tags_fr"]:
 					try:
 						cur.execute("INSERT INTO tags (local_identifier, repository_url, tag, language) VALUES (?,?,?,?)", (record["identifier"], repository_url, tag_fr, "fr"))
-					except self.sqlite3.IntegrityError:
+					except self.dblayer.IntegrityError:
 						pass
 
 			if "geospatial" in record:
 				for coordinates in record["geospatial"]["coordinates"][0]:
 					try:
 						cur.execute("INSERT INTO geospatial (local_identifier, repository_url, coordinate_type, lat, lon) VALUES (?,?,?,?,?)", (record["identifier"], repository_url, record["geospatial"]["type"], coordinates[0], coordinates[1]))
-					except self.sqlite3.IntegrityError:
+					except self.dblayer.IntegrityError:
 						pass
 
 		return record["identifier"]
@@ -242,9 +246,8 @@ class DBInterface:
 
 			try:
 				cur.execute("INSERT INTO records (title, date, contact, series, modified_timestamp, local_identifier, repository_url) VALUES(?,?,?,?,?,?,?)", ("", "", "", "", 0, record_id, repository_url))
-			except self.sqlite3.IntegrityError:
+			except self.dblayer.IntegrityError:
 				# record already present in repo
 				return None
 
 		return record_id
-
