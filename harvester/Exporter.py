@@ -73,7 +73,8 @@ class Exporter(object):
 		for record in records:
 			if records_assembled % batch_size == 0 and records_assembled!=0:
 				gmeta_batches += 1
-				self._write_to_file(json.dumps({"_gmeta":gmeta}), export_filepath, temp_filepath, "gmeta", gmeta_batches)
+				gingest_block = {"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":gmeta}}
+				self._write_to_file(json.dumps(gingest_block), export_filepath, temp_filepath, "gmeta", gmeta_batches)
 				del gmeta[:batch_size]
 
 			record = dict(zip([tuple[0] for tuple in records.description], record))
@@ -173,7 +174,7 @@ class Exporter(object):
 
 			record["@context"] = {"dc": "http://dublincore.org/documents/dcmi-terms", "nrdr": "http://nrdr-ednr.ca/schema/1.0/", "datacite": "https://schema.labs.datacite.org/meta/kernel-4.0/metadata.xsd"}
 			record["datacite:resourceTypeGeneral"] = "dataset"
-			gmeta_data = {record["dc:source"]: {"mimetype": "application/json", "content": record}}
+			gmeta_data = {"@datatype": "GMetaEntry", "@version": "2016-11-09", "subject": record["dc:source"], "id": record["dc:source"], "visible_to": ["public"], "mimetype": "application/json", "content": record}
 			gmeta.append(gmeta_data)
 
 			records_assembled += 1
@@ -345,7 +346,8 @@ class Exporter(object):
 		output = None
 
 		if export_format == "gmeta":
-			output = json.dumps({"_gmeta": self._generate_gmeta(export_batch_size, export_filepath, temp_filepath)})
+			gmeta_block = self._generate_gmeta(export_batch_size, export_filepath, temp_filepath)
+			output = json.dumps({"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":gmeta_block}})
 		elif export_format == "rifcs":
 			from lxml import etree
 			output = self._generate_rifcs()

@@ -49,7 +49,7 @@ if __name__ == "__main__":
 	configs['repo_refresh_days'] = configs.get('repo_refresh_days', 1)
 	configs['temp_filepath'] = configs.get('temp_filepath', "temp")
 	configs['export_filepath'] = configs.get('export_filepath', "data")
-	configs['export_batch_size'] = configs.get('export_batch_size', 40000)
+	configs['export_batch_size'] = configs.get('export_batch_size', 10000)
 	configs['export_format'] = configs.get('export_format', "gmeta")
 
 	main_log = HarvestLogger(configs['logging'])
