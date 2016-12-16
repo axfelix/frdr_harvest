@@ -11,7 +11,7 @@ class OAIRepository(HarvestRepository):
 	""" OAI Repository """
 
 	def setRepoParams(self, repoParams):
-		self.metadataPrefix = "oai_dc"
+		self.metadataprefix = "oai_dc"
 		super(OAIRepository, self).setRepoParams(repoParams)
 		self.sickle = Sickle(self.url)
 
@@ -20,9 +20,9 @@ class OAIRepository(HarvestRepository):
 
 		try:
 			if not self.set:
-				records = self.sickle.ListRecords(metadataPrefix=self.metadataPrefix, ignore_deleted=True)
+				records = self.sickle.ListRecords(metadataPrefix=self.metadataprefix, ignore_deleted=True)
 			else:
-				records = self.sickle.ListRecords(metadataPrefix=self.metadataPrefix, ignore_deleted=True, set=self.set)
+				records = self.sickle.ListRecords(metadataPrefix=self.metadataprefix, ignore_deleted=True, set=self.set)
 		except:
 			self.logger.info("No items were found")
 
@@ -67,7 +67,7 @@ class OAIRepository(HarvestRepository):
 		self.logger.info("Processed %s items in feed" % (item_count))
 
 	def unpack_oai_metadata(self, record):
-		if self.metadataPrefix.lower() == "ddi":
+		if self.metadataprefix.lower() == "ddi":
 			# TODO: better DDI implementation that doesn't simply flatten everything, see: https://sickle.readthedocs.io/en/latest/customizing.html
 			# Mapping as per http://www.ddialliance.org/resources/ddi-profiles/dc
 			record["title"] = record.get("titl")
@@ -89,7 +89,7 @@ class OAIRepository(HarvestRepository):
 				record["geospatial"] = {"type": "Polygon", "coordinates": [[[record["northBL"][0], record["westBL"][0]], [record["northBL"][0], record["eastBL"][0]], [record["southBL"][0], record["westBL"][0]], [record["southBL"][0], record["eastBL"][0]]]]}
 
 
-		if self.metadataPrefix.lower() == "fgdc":
+		if self.metadataprefix.lower() == "fgdc":
 			#record["title"] = record.get("title")
 			record["creator"] = record.get("origin")
 			record["subject"] = record.get("themekey")
@@ -108,7 +108,7 @@ class OAIRepository(HarvestRepository):
 					record["geospatial"] = {"type": "Polygon", "coordinates": [[[record["northbc"][0], record["westbc"][0]], [record["northbc"][0], record["eastbc"][0]], [record["southbc"][0], record["westbc"][0]], [record["southbc"][0], record["eastbc"][0]]]]}
 
 
-		if self.metadataPrefix.lower() == "frdr":
+		if self.metadataprefix.lower() == "frdr":
 			record["coverage"] = record.get("geolocationPlace")
 
 			if "geolocationPoint" in record.keys():
@@ -213,7 +213,7 @@ class OAIRepository(HarvestRepository):
 			"Updating OAI record %s from repo at %s" % (record['local_identifier'], record['repository_url']))
 
 		try:
-			single_record = self.sickle.GetRecord(identifier=record["local_identifier"], metadataPrefix="oai_dc")
+			single_record = self.sickle.GetRecord(identifier=record["local_identifier"], metadataPrefix=self.metadataprefix)
 
 			metadata = single_record.metadata
 			if 'identifier' in metadata.keys() and isinstance(metadata['identifier'], list):
