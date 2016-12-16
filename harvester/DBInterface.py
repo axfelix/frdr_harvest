@@ -23,6 +23,7 @@ class DBInterface:
 		elif self.dbtype == "postgres":
 			self.dblayer = __import__('psycopg2')
 			con = self.getConnection()
+			con.autocommit = True
 
 		with con:
 			cur = con.cursor()
@@ -84,7 +85,8 @@ class DBInterface:
 		returnvalue = False
 		con = self.getConnection()
 		with con:
-			con.row_factory = self.getRow()
+			if self.dbtype == "sqlite":
+				con.row_factory = self.getRow()
 			litecur = con.cursor()
 			records = litecur.execute("select last_crawl_timestamp from repositories where repository_url = ?",(repo_url,) ).fetchall()
 			for record in records:
@@ -166,7 +168,7 @@ class DBInterface:
 					record["subject"] = [record["subject"]]
 				for subject in record["subject"]:
 					try:
-						if len(subject) > 0:
+						if subject is not None and len(subject) > 0:
 							cur.execute("INSERT INTO subjects (local_identifier, repository_url, subject) VALUES (?,?,?)", (record["identifier"], repository_url, subject))
 					except self.dblayer.IntegrityError:
 						pass
