@@ -38,10 +38,10 @@ class Exporter(object):
 			return local_url
 
 		# Check if the identifier is a DOI
-		doi = re.search("(doi|DOI):\s%s\S+", record["local_identifier"])
+		doi = re.search("(doi|DOI):\s?\S+", record["local_identifier"])
 		if doi:
 			doi = doi.group(0).rstrip('\.')
-			local_url = re.sub("(doi|DOI):\s%s", "http://dx.doi.org/", doi)
+			local_url = re.sub("(doi|DOI):\s?", "http://dx.doi.org/", doi)
 			return local_url
 
 		# If the item has a source URL, use it
@@ -49,7 +49,7 @@ class Exporter(object):
 			return record['source_url']
 
 		# URL is in the identifier
-		local_url = re.search("(http|ftp|https)://([\w_-]+(%s:(%s:\.[\w_-]+)+))([\w.,@%s^=%&:/~+#-]*[\w@%s^=%&/~+#-])%s",
+		local_url = re.search("(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?",
 							  record["local_identifier"])
 		if local_url:
 			return local_url.group(0)
