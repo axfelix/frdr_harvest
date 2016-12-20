@@ -58,14 +58,14 @@ class HarvestRepository(object):
 				self.logger.info("This repo is not yet due to be harvested")
 		else:
 			self.logger.info("This repo is not enabled for harvesting")
-			
+
 
 	def _update_record(self, record):
 		""" This method to be overridden """
 		return True
 
 
-	def update_stale_records(self):
+	def update_stale_records(self, dbparams):
 		""" This method will be called by a child class only, so that it uses its own _update_record() method """
 		if self.enabled != True:
 			return True
@@ -76,16 +76,24 @@ class HarvestRepository(object):
 		tstart = time.time()
 		self.logger.info("Looking for stale records to update")
 		stale_timestamp = int(time.time() - self.record_refresh_days*86400)
+		self.dbtype = dbparams.get('type', None)
+
 
 		recordset = []
 		con = self.db.getConnection()
 		with con:
-			con.row_factory = self.db.getRow()
+			if self.dbtype == "sqlite":
+				con.row_factory = self.db.getRow()
 			cur = con.cursor()
-			records = cur.execute("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.modified_timestamp, recs.local_identifier, recs.repository_url, repos.repository_type
-				FROM records recs, repositories repos 
-				where recs.repository_url = repos.repository_url and recs.modified_timestamp < ? and repos.repository_url = ?
-				LIMIT ?""", (stale_timestamp,self.url, self.max_records_updated_per_run)).fetchall()
+			if self.dbtype == "postgres":
+				from psycopg2.extras import RealDictCursor
+				litecur = con.cursor(cursor_factory = RealDictCursor)
+			cur.execute("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.modified_timestamp, recs.local_identifier, recs.repository_url, repos.repository_type
+				FROM records recs, repositories repos
+				where recs.repository_url = repos.repository_url and recs.modified_timestamp < %s and repos.repository_url = %s
+				LIMIT %s""", (stale_timestamp,self.url, self.max_records_updated_per_run))
+			if cur is not None:
+				records = cur.fetchall()
 
 			for record in records:
 				if record_count == 0:
@@ -102,4 +110,3 @@ class HarvestRepository(object):
 					self.logger.info("Done %s items after %s (%.1f items/sec)" % (record_count, self.formatter.humanize(tdelta), (record_count/tdelta)))
 
 		self.logger.info("Updated %s items in %s (%.1f items/sec)" % (record_count, self.formatter.humanize(time.time() - tstart),record_count/(time.time() - tstart + 0.1)))
-
