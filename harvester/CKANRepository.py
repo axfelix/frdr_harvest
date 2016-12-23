@@ -145,8 +145,10 @@ class CKANRepository(HarvestRepository):
 			self.db.delete_record(record)
 			return True
 
-		except:
-			self.logger.error("Updating item failed")
+		except Exception as e:
+			self.logger.error("Updating item failed: %s" % (str(e)) )
+			# Touch the record so we do not keep requesting it on every run
+			self.db.touch_record(record)
 			self.error_count =  self.error_count + 1
 			if self.error_count < self.abort_after_numerrors:
 				return True
