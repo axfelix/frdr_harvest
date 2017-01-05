@@ -68,6 +68,11 @@ class DBInterface:
 	def getRow(self):
 		return self.dblayer.Row
 
+	def _prep(self, statement):
+		if (self.dbtype == "postgres"):
+			return statement.replace('?', '%s')
+		return statement
+
 
 	def create_repo(self, repository_url, repository_name, repository_type, repository_thumbnail="", item_url_pattern=""):
 		con = self.getConnection()
@@ -76,9 +81,9 @@ class DBInterface:
 
 			try:
 				if self.dbtype == "sqlite":
-					cur.execute("INSERT OR REPLACE INTO repositories (repository_url, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern) VALUES (%s,%s,%s,%s,%s,%s)", (repository_url, repository_name, repository_type, repository_thumbnail, time.time(), item_url_pattern))
+					cur.execute(self._prep("INSERT OR REPLACE INTO repositories (repository_url, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern) VALUES (?,?,?,?,?,?)"), (repository_url, repository_name, repository_type, repository_thumbnail, time.time(), item_url_pattern))
 				elif self.dbtype == "postgres":
-					cur.execute("INSERT INTO repositories (repository_url, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern) VALUES (%s,%s,%s,%s,%s,%s)", (repository_url, repository_name, repository_type, repository_thumbnail, time.time(), item_url_pattern))
+					cur.execute(self._prep("INSERT INTO repositories (repository_url, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern) VALUES (?,?,?,?,?,?)"), (repository_url, repository_name, repository_type, repository_thumbnail, time.time(), item_url_pattern))
 			except self.dblayer.IntegrityError:
 				# record already present in repo
 				return None
@@ -94,7 +99,7 @@ class DBInterface:
 			if self.dbtype == "postgres":
 				from psycopg2.extras import RealDictCursor
 				litecur = con.cursor(cursor_factory = RealDictCursor)
-			litecur.execute("select last_crawl_timestamp from repositories where repository_url = %s",(repo_url,) )
+			litecur.execute(self._prep("select last_crawl_timestamp from repositories where repository_url = ?"),(repo_url,) )
 			if litecur is not None:
 				records = litecur.fetchall()
 			else:
@@ -108,7 +113,7 @@ class DBInterface:
 		con = self.getConnection()
 		with con:
 			cur = con.cursor()
-			cur.execute("update repositories set last_crawl_timestamp = %s where repository_url = %s",(int(time.time()),repo_url))
+			cur.execute(self._prep("update repositories set last_crawl_timestamp = ? where repository_url = ?"),(int(time.time()),repo_url))
 
 
 	def delete_record(self, record):
@@ -117,16 +122,16 @@ class DBInterface:
 			cur = con.cursor()
 
 			try:
-				cur.execute("UPDATE records set deleted = 1, modified_timestamp = %s where local_identifier = %s and repository_url = %s", (time.time(), record['local_identifier'], record['repository_url']))
+				cur.execute(self._prep("UPDATE records set deleted = 1, modified_timestamp = ? where local_identifier = ? and repository_url = ?"), (time.time(), record['local_identifier'], record['repository_url']))
 			except:
 				self.logger.error("Unable to mark as deleted record %s in repository %s" % (record['local_identifier'], record['repository_url'] ) )
 				return False
 
 			try:
-				cur.execute("DELETE from creators where local_identifier = %s and repository_url = %s", (record['local_identifier'], record['repository_url']))
-				cur.execute("DELETE from subjects where local_identifier = %s and repository_url = %s", (record['local_identifier'], record['repository_url']))
-				cur.execute("DELETE from rights where local_identifier = %s and repository_url = %s", (record['local_identifier'], record['repository_url']))
-				cur.execute("DELETE from descriptions where local_identifier = %s and repository_url = %s", (record['local_identifier'], record['repository_url']))
+				cur.execute(self._prep("DELETE from creators where local_identifier = ? and repository_url = ?"), (record['local_identifier'], record['repository_url']))
+				cur.execute(self._prep("DELETE from subjects where local_identifier = ? and repository_url = ?"), (record['local_identifier'], record['repository_url']))
+				cur.execute(self._prep("DELETE from rights where local_identifier = ? and repository_url = ?"), (record['local_identifier'], record['repository_url']))
+				cur.execute(self._prep("DELETE from descriptions where local_identifier = ? and repository_url = ?"), (record['local_identifier'], record['repository_url']))
 			except:
 				self.logger.error("Unable to delete related table rows for record %s in repository %s" % (record['local_identifier'], record['repository_url'] ) )
 				return False
@@ -148,9 +153,9 @@ class DBInterface:
 
 			try:
 				if 'dc:source' in record:
-					cur.execute(verb + " INTO records (title, date, contact, series, modified_timestamp, source_url, deleted, local_identifier, repository_url) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)", (record["title"], record["date"], record["contact"], record["series"], time.time(), record["dc:source"], 0, record["identifier"], repository_url))
+					cur.execute(self._prep(verb + " INTO records (title, date, contact, series, modified_timestamp, source_url, deleted, local_identifier, repository_url) VALUES(?,?,?,?,?,?,?,?,?)"), (record["title"], record["date"], record["contact"], record["series"], time.time(), record["dc:source"], 0, record["identifier"], repository_url))
 				else:
-					cur.execute(verb + " INTO records (title, date, contact, series, modified_timestamp, deleted, local_identifier, repository_url) VALUES(%s,%s,%s,%s,%s,%s,%s,%s)", (record["title"], record["date"], record["contact"], record["series"], time.time(), 0, record["identifier"], repository_url))
+					cur.execute(self._prep(verb + " INTO records (title, date, contact, series, modified_timestamp, deleted, local_identifier, repository_url) VALUES(?,?,?,?,?,?,?,?)"), (record["title"], record["date"], record["contact"], record["series"], time.time(), 0, record["identifier"], repository_url))
 			except self.dblayer.IntegrityError:
 				# record already present in repo
 				return None
@@ -160,7 +165,7 @@ class DBInterface:
 					record["creator"] = [record["creator"]]
 				for creator in record["creator"]:
 					try:
-						cur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (%s,%s,%s,%s)", (record["identifier"], repository_url, creator, 0))
+						cur.execute(self._prep("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)"), (record["identifier"], repository_url, creator, 0))
 					except self.dblayer.IntegrityError:
 						pass
 
@@ -169,7 +174,7 @@ class DBInterface:
 					record["contributor"] = [record["contributor"]]
 				for contributor in record["contributor"]:
 					try:
-						cur.execute("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (%s,%s,%s,%s)", (record["identifier"], repository_url, contributor, 1))
+						cur.execute(self._prep("INSERT INTO creators (local_identifier, repository_url, creator, is_contributor) VALUES (?,?,?,?)"), (record["identifier"], repository_url, contributor, 1))
 					except self.dblayer.IntegrityError:
 						pass
 
@@ -179,7 +184,7 @@ class DBInterface:
 				for subject in record["subject"]:
 					try:
 						if subject is not None and len(subject) > 0:
-							cur.execute("INSERT INTO subjects (local_identifier, repository_url, subject) VALUES (%s,%s,%s)", (record["identifier"], repository_url, subject))
+							cur.execute(self._prep("INSERT INTO subjects (local_identifier, repository_url, subject) VALUES (?,?,?)"), (record["identifier"], repository_url, subject))
 					except self.dblayer.IntegrityError:
 						pass
 
@@ -188,7 +193,7 @@ class DBInterface:
 					record["rights"] = [record["rights"]]
 				for rights in record["rights"]:
 					try:
-						cur.execute("INSERT INTO rights (local_identifier, repository_url, rights) VALUES (%s,%s,%s)", (record["identifier"], repository_url, rights))
+						cur.execute(self._prep("INSERT INTO rights (local_identifier, repository_url, rights) VALUES (?,?,?)"), (record["identifier"], repository_url, rights))
 					except self.dblayer.IntegrityError:
 						pass
 
@@ -197,7 +202,7 @@ class DBInterface:
 					record["description"] = [record["description"]]
 				for description in record["description"]:
 					try:
-						cur.execute("INSERT INTO descriptions (local_identifier, repository_url, description) VALUES (%s,%s,%s)", (record["identifier"], repository_url, description))
+						cur.execute(self._prep("INSERT INTO descriptions (local_identifier, repository_url, description) VALUES (?,?,?)"), (record["identifier"], repository_url, description))
 					except self.dblayer.IntegrityError:
 						pass
 
@@ -206,7 +211,7 @@ class DBInterface:
 					record["description_fr"] = [record["description_fr"]]
 				for description_fr in record["description_fr"]:
 					try:
-						cur.execute("INSERT INTO fra_descriptions (local_identifier, repository_url, description) VALUES (%s,%s,%s)", (record["identifier"], repository_url, description_fr))
+						cur.execute(self._prep("INSERT INTO fra_descriptions (local_identifier, repository_url, description) VALUES (?,?,?)"), (record["identifier"], repository_url, description_fr))
 					except self.dblayer.IntegrityError:
 						pass
 
@@ -215,7 +220,7 @@ class DBInterface:
 					record["tags"] = [record["tags"]]
 				for tag in record["tags"]:
 					try:
-						cur.execute("INSERT INTO tags (local_identifier, repository_url, tag, language) VALUES (%s,%s,%s,%s)", (record["identifier"], repository_url, tag, "en"))
+						cur.execute(self._prep("INSERT INTO tags (local_identifier, repository_url, tag, language) VALUES (?,?,?,?)"), (record["identifier"], repository_url, tag, "en"))
 					except self.dblayer.IntegrityError:
 						pass
 
@@ -224,18 +229,36 @@ class DBInterface:
 					record["tags_fr"] = [record["tags_fr"]]
 				for tag_fr in record["tags_fr"]:
 					try:
-						cur.execute("INSERT INTO tags (local_identifier, repository_url, tag, language) VALUES (%s,%s,%s,%s)", (record["identifier"], repository_url, tag_fr, "fr"))
+						cur.execute(self._prep("INSERT INTO tags (local_identifier, repository_url, tag, language) VALUES (?,?,?,?)"), (record["identifier"], repository_url, tag_fr, "fr"))
 					except self.dblayer.IntegrityError:
 						pass
 
 			if "geospatial" in record:
 				for coordinates in record["geospatial"]["coordinates"][0]:
 					try:
-						cur.execute("INSERT INTO geospatial (local_identifier, repository_url, coordinate_type, lat, lon) VALUES (%s,%s,%s,%s,%s)", (record["identifier"], repository_url, record["geospatial"]["type"], coordinates[0], coordinates[1]))
+						cur.execute(self._prep("INSERT INTO geospatial (local_identifier, repository_url, coordinate_type, lat, lon) VALUES (?,?,?,?,?)"), (record["identifier"], repository_url, record["geospatial"]["type"], coordinates[0], coordinates[1]))
 					except self.dblayer.IntegrityError:
 						pass
 
 		return record["identifier"]
+
+	def get_stale_records(self,stale_timestamp,url, max_records_updated_per_run):
+		con = self.getConnection()
+		records = []
+		with con:
+			if self.dbtype == "sqlite":
+				con.row_factory = self.getRow()
+				cur = con.cursor()
+			if self.dbtype == "postgres":
+				from psycopg2.extras import RealDictCursor
+				cur = con.cursor(cursor_factory = RealDictCursor)
+			cur.execute(self._prep("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.modified_timestamp, recs.local_identifier, recs.repository_url, repos.repository_type
+				FROM records recs, repositories repos
+				where recs.repository_url = repos.repository_url and recs.modified_timestamp < ? and repos.repository_url = ?
+				LIMIT ?"""), (stale_timestamp,url, max_records_updated_per_run))
+			if cur is not None:
+				records = cur.fetchall()
+		return records
 
 
 	def touch_record(self, record):
@@ -243,7 +266,7 @@ class DBInterface:
 		with con:
 			cur = con.cursor()
 			try:
-				cur.execute("UPDATE records set modified_timestamp = %s where local_identifier = %s and repository_url = %s", (time.time(), record['local_identifier'], record['repository_url']))
+				cur.execute(self._prep("UPDATE records set modified_timestamp = ? where local_identifier = ? and repository_url = ?"), (time.time(), record['local_identifier'], record['repository_url']))
 			except:
 				self.logger.error("Unable to update modified_timestamp for record %s in repository %s" % (record['local_identifier'], record['repository_url'] ) )
 				return False
@@ -257,7 +280,7 @@ class DBInterface:
 			cur = con.cursor()
 
 			try:
-				cur.execute("INSERT INTO records (title, date, contact, series, modified_timestamp, local_identifier, repository_url) VALUES(%s,%s,%s,%s,%s,%s,%s)", ("", "", "", "", 0, record_id, repository_url))
+				cur.execute(self._prep("INSERT INTO records (title, date, contact, series, modified_timestamp, local_identifier, repository_url) VALUES(?,?,?,?,?,?,?)"), ("", "", "", "", 0, record_id, repository_url))
 			except self.dblayer.IntegrityError:
 				# record already present in repo
 				return None

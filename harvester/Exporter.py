@@ -65,16 +65,16 @@ class Exporter(object):
 
 		# Only select records that have complete data
 		if self.dbtype == "sqlite":
-			records = con.execute("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr:origin.id", repos.repository_thumbnail as "nrdr:origin.icon", repos.item_url_pattern
+			records = con.execute(self.db._prep("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr:origin.id", repos.repository_thumbnail as "nrdr:origin.icon", repos.item_url_pattern
 					FROM records recs, repositories repos
-					WHERE recs.title != '' and recs.repository_url = repos.repository_url """)
+					WHERE recs.title != '' and recs.repository_url = repos.repository_url """))
 
 		elif self.dbtype == "postgres":
 			with con:
 				cur = con.cursor()
-				cur.execute("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr:origin.id", repos.repository_thumbnail as "nrdr:origin.icon", repos.item_url_pattern
+				cur.execute(self.db._prep("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr:origin.id", repos.repository_thumbnail as "nrdr:origin.icon", repos.item_url_pattern
 						FROM records recs, repositories repos
-						WHERE recs.title != '' and recs.repository_url = repos.repository_url """)
+						WHERE recs.title != '' and recs.repository_url = repos.repository_url """))
 				records = cur.fetchall()
 
 		records_assembled = 0
@@ -111,8 +111,7 @@ class Exporter(object):
 				elif self.dbtype == "postgres":
 					litecur = con.cursor(cursor_factory=None)
 
-				litecur.execute(
-					"SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=%s AND repository_url=%s",
+				litecur.execute(self.db._prep("SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=? AND repository_url=?"),
 					(record["local_identifier"], record["repository_url"]))
 				geodata = litecur.fetchall()
 				record["nrdr:geospatial"] = []
@@ -138,38 +137,35 @@ class Exporter(object):
 
 				# attach the other values to the dict
 				# TODO: investigate doing this purely in SQL
-				litecur.execute(
-					"SELECT creator FROM creators WHERE local_identifier=%s AND repository_url=%s AND is_contributor=0",
+				litecur.execute(self.db._prep("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=0"),
 					(record["local_identifier"], record["repository_url"]))
 				record["dc:contributor.author"] = litecur.fetchall()
 
-				litecur.execute(
-					"SELECT creator FROM creators WHERE local_identifier=%s AND repository_url=%s AND is_contributor=1",
+				litecur.execute(self.db._prep("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=1"),
 					(record["local_identifier"], record["repository_url"]))
 				record["dc:contributor"] = litecur.fetchall()
 
-				litecur.execute("SELECT subject FROM subjects WHERE local_identifier=%s AND repository_url=%s",
+				litecur.execute(self.db._prep("SELECT subject FROM subjects WHERE local_identifier=? AND repository_url=?"),
 								(record["local_identifier"], record["repository_url"]))
 				record["dc:subject"] = litecur.fetchall()
 
-				litecur.execute("SELECT rights FROM rights WHERE local_identifier=%s AND repository_url=%s",
+				litecur.execute(self.db._prep("SELECT rights FROM rights WHERE local_identifier=? AND repository_url=?"),
 								(record["local_identifier"], record["repository_url"]))
 				record["dc:rights"] = litecur.fetchall()
 
-				litecur.execute("SELECT description FROM descriptions WHERE local_identifier=%s AND repository_url=%s",
+				litecur.execute(self.db._prep("SELECT description FROM descriptions WHERE local_identifier=? AND repository_url=?"),
 								(record["local_identifier"], record["repository_url"]))
 				record["dc:description"] = litecur.fetchall()
 
-				litecur.execute(
-					"SELECT description FROM fra_descriptions WHERE local_identifier=%s AND repository_url=%s",
+				litecur.execute(self.db._prep("SELECT description FROM fra_descriptions WHERE local_identifier=? AND repository_url=?"),
 					(record["local_identifier"], record["repository_url"]))
 				record["nrdr:description_fr"] = litecur.fetchall()
 
-				litecur.execute("SELECT tag FROM tags WHERE local_identifier=%s AND repository_url=%s AND language='en'",
+				litecur.execute(self.db._prep("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='en'"),
 								(record["local_identifier"], record["repository_url"]))
 				record["nrdr:tags"] = litecur.fetchall()
 
-				litecur.execute("SELECT tag FROM tags WHERE local_identifier=%s AND repository_url=%s AND language='fr'",
+				litecur.execute(self.db._prep("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='fr'"),
 								(record["local_identifier"], record["repository_url"]))
 				record["nrdr:tags_fr"] = litecur.fetchall()
 
@@ -227,11 +223,11 @@ class Exporter(object):
 			found_records = False
 
 			# Select a window of records at a time
-			records = con.execute("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url,
+			records = con.execute(self.db._prep("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url,
 					repos.repository_name as "nrdr_origin_id", repos.repository_thumbnail as "nrdr_origin_icon", repos.item_url_pattern
 					FROM records recs, repositories repos
 					WHERE recs.title != '' and recs.repository_url = repos.repository_url
-					LIMIT %s OFFSET %s""", (rec_limit, rec_start))
+					LIMIT ? OFFSET ?"""), (rec_limit, rec_start))
 
 			num_records = 0
 			for record in records:
@@ -255,44 +251,39 @@ class Exporter(object):
 						from psycopg2.extras import DictCursor as DictCursor
 						litecur = con.cursor(cursor_factory=DictCursor)
 
-					litecur.execute(
-						"SELECT creator FROM creators WHERE local_identifier=%s AND repository_url=%s AND is_contributor=0",
+					litecur.execute(self.db._prep("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=0"),
 						(record["local_identifier"], record["repository_url"]))
 					record["dc_contributor_author"] = litecur.fetchall()
 
-					litecur.execute(
-						"SELECT creator FROM creators WHERE local_identifier=%s AND repository_url=%s AND is_contributor=1",
+					litecur.execute(self.db._prep("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=1"),
 						(record["local_identifier"], record["repository_url"]))
 					record["dc_contributor"] = litecur.fetchall()
 
-					litecur.execute("SELECT subject FROM subjects WHERE local_identifier=%s AND repository_url=%s",
+					litecur.execute(self.db._prep("SELECT subject FROM subjects WHERE local_identifier=? AND repository_url=?"),
 									(record["local_identifier"], record["repository_url"]))
 					record["dc_subject"] = litecur.fetchall()
 
-					litecur.execute("SELECT rights FROM rights WHERE local_identifier=%s AND repository_url=%s",
+					litecur.execute(self.db._prep("SELECT rights FROM rights WHERE local_identifier=? AND repository_url=?"),
 									(record["local_identifier"], record["repository_url"]))
 					record["dc_rights"] = litecur.fetchall()
 
-					litecur.execute(
-						"SELECT description FROM descriptions WHERE local_identifier=%s AND repository_url=%s",
+					litecur.execute(self.db._prep("SELECT description FROM descriptions WHERE local_identifier=? AND repository_url=?"),
 						(record["local_identifier"], record["repository_url"]))
 					record["dc_description"] = litecur.fetchall()
 
-					litecur.execute(
-						"SELECT description FROM fra_descriptions WHERE local_identifier=%s AND repository_url=%s",
+					litecur.execute(self.db._prep("SELECT description FROM fra_descriptions WHERE local_identifier=? AND repository_url=?"),
 						(record["local_identifier"], record["repository_url"]))
 					record["nrdr_fra_description"] = litecur.fetchall()
 
-					litecur.execute("SELECT tag FROM tags WHERE local_identifier=%s AND repository_url=%s AND language='en'",
+					litecur.execute(self.db._prep("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='en'"),
 									(record["local_identifier"], record["repository_url"]))
 					record["nrdr:tags"] = litecur.fetchall()
 
-					litecur.execute("SELECT tag FROM tags WHERE local_identifier=%s AND repository_url=%s AND language='fr'",
+					litecur.execute(self.db._prep("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='fr'"),
 									(record["local_identifier"], record["repository_url"]))
 					record["nrdr:tags_fr"] = litecur.fetchall()
 
-					litecur.execute(
-						"SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=%s AND repository_url=%s",
+					litecur.execute(self.db._prep("SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=? AND repository_url=?"),
 						(record["local_identifier"], record["repository_url"]))
 					record["nrdr_geospatial"] = litecur.fetchall()
 
