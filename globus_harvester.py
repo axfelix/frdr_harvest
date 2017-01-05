@@ -69,7 +69,7 @@ if __name__ == "__main__":
 			repo.setRepoParams(repoconfig)
 			repo.setDatabase(dbh)
 			repo.crawl()
-			repo.update_stale_records()
+			repo.update_stale_records(configs['db'])
 
 	if arguments["--onlyharvest"] == True:
 		raise SystemExit

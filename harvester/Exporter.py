@@ -64,9 +64,18 @@ class Exporter(object):
 		gmeta = []
 
 		# Only select records that have complete data
-		records = con.execute("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr:origin.id", repos.repository_thumbnail as "nrdr:origin.icon", repos.item_url_pattern
-				FROM records recs, repositories repos
-				WHERE recs.title != '' and recs.repository_url = repos.repository_url """)
+		if self.dbtype == "sqlite":
+			records = con.execute("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr:origin.id", repos.repository_thumbnail as "nrdr:origin.icon", repos.item_url_pattern
+					FROM records recs, repositories repos
+					WHERE recs.title != '' and recs.repository_url = repos.repository_url """)
+
+		elif self.dbtype == "postgres":
+			with con:
+				cur = con.cursor()
+				cur.execute("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr:origin.id", repos.repository_thumbnail as "nrdr:origin.icon", repos.item_url_pattern
+						FROM records recs, repositories repos
+						WHERE recs.title != '' and recs.repository_url = repos.repository_url """)
+				records = cur.fetchall()
 
 		records_assembled = 0
 		gmeta_batches = 0
@@ -77,7 +86,14 @@ class Exporter(object):
 				self._write_to_file(json.dumps(gingest_block), export_filepath, temp_filepath, "gmeta", gmeta_batches)
 				del gmeta[:batch_size]
 
-			record = dict(zip([tuple[0] for tuple in records.description], record))
+
+			if self.dbtype == "sqlite":
+				record = dict(zip([tuple[0] for tuple in records.description], record))
+			elif self.dbtype == "postgres":
+				record = (dict(zip(['title', 'date', 'contact', 'series', 'source_url', 'deleted', 'local_identifier', 'repository_url', 'nrdr:origin.id', 'nrdr:origin.icon', 'item_url_pattern'], record)))
+				record["deleted"] = int(record["deleted"])
+
+
 			record["dc:source"] = self._construct_local_url(record)
 			if record["dc:source"] is None:
 				continue
@@ -93,11 +109,10 @@ class Exporter(object):
 					con.row_factory = Row
 					litecur = con.cursor()
 				elif self.dbtype == "postgres":
-					from psycopg2 import cursor as TupleCursor
-					litecur = con.TupleCursor
+					litecur = con.cursor(cursor_factory=None)
 
 				litecur.execute(
-					"SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=? AND repository_url=?",
+					"SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=%s AND repository_url=%s",
 					(record["local_identifier"], record["repository_url"]))
 				geodata = litecur.fetchall()
 				record["nrdr:geospatial"] = []
@@ -105,9 +120,9 @@ class Exporter(object):
 
 				for coordinate in geodata:
 					if coordinate[0] == "Polygon":
-						polycoordinates.append([coordinate[1], coordinate[2]])
+						polycoordinates.append([float(coordinate[1]), float(coordinate[2])])
 					else:
-						record["nrdr:geospatial"].append({"type":"Feature", "geometry":{"type":coordinate[0], "coordinates": [coordinate[1], coordinate[2]]}})
+						record["nrdr:geospatial"].append({"type":"Feature", "geometry":{"type":coordinate[0], "coordinates": [float(coordinate[1]), float(coordinate[2])]}})
 
 				if polycoordinates:
 					record["nrdr:geospatial"].append({"type":"Feature", "geometry":{"type":"Polygon", "coordinates": polycoordinates}})
@@ -124,39 +139,39 @@ class Exporter(object):
 				# attach the other values to the dict
 				# TODO: investigate doing this purely in SQL
 				litecur.execute(
-					"SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=0",
+					"SELECT creator FROM creators WHERE local_identifier=%s AND repository_url=%s AND is_contributor=0",
 					(record["local_identifier"], record["repository_url"]))
 				record["dc:contributor.author"] = litecur.fetchall()
 
 				litecur.execute(
-					"SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=1",
+					"SELECT creator FROM creators WHERE local_identifier=%s AND repository_url=%s AND is_contributor=1",
 					(record["local_identifier"], record["repository_url"]))
 				record["dc:contributor"] = litecur.fetchall()
 
-				litecur.execute("SELECT subject FROM subjects WHERE local_identifier=? AND repository_url=?",
+				litecur.execute("SELECT subject FROM subjects WHERE local_identifier=%s AND repository_url=%s",
 								(record["local_identifier"], record["repository_url"]))
 				record["dc:subject"] = litecur.fetchall()
 
-				litecur.execute("SELECT rights FROM rights WHERE local_identifier=? AND repository_url=?",
+				litecur.execute("SELECT rights FROM rights WHERE local_identifier=%s AND repository_url=%s",
 								(record["local_identifier"], record["repository_url"]))
 				record["dc:rights"] = litecur.fetchall()
 
-				litecur.execute("SELECT description FROM descriptions WHERE local_identifier=? AND repository_url=?",
+				litecur.execute("SELECT description FROM descriptions WHERE local_identifier=%s AND repository_url=%s",
 								(record["local_identifier"], record["repository_url"]))
 				record["dc:description"] = litecur.fetchall()
 
 				litecur.execute(
-					"SELECT description FROM fra_descriptions WHERE local_identifier=? AND repository_url=?",
+					"SELECT description FROM fra_descriptions WHERE local_identifier=%s AND repository_url=%s",
 					(record["local_identifier"], record["repository_url"]))
 				record["nrdr:description_fr"] = litecur.fetchall()
 
-				litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='en'",
+				litecur.execute("SELECT tag FROM tags WHERE local_identifier=%s AND repository_url=%s AND language='en'",
 								(record["local_identifier"], record["repository_url"]))
 				record["nrdr:tags"] = litecur.fetchall()
 
-				litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='fr'",
+				litecur.execute("SELECT tag FROM tags WHERE local_identifier=%s AND repository_url=%s AND language='fr'",
 								(record["local_identifier"], record["repository_url"]))
-				record["nrdr:tags_fr"] = litecur.fetchall()	
+				record["nrdr:tags_fr"] = litecur.fetchall()
 
 				record.pop("repository_url", None)
 				record.pop("local_identifier", None)
@@ -216,7 +231,7 @@ class Exporter(object):
 					repos.repository_name as "nrdr_origin_id", repos.repository_thumbnail as "nrdr_origin_icon", repos.item_url_pattern
 					FROM records recs, repositories repos
 					WHERE recs.title != '' and recs.repository_url = repos.repository_url
-					LIMIT ? OFFSET ?""", (rec_limit, rec_start))
+					LIMIT %s OFFSET %s""", (rec_limit, rec_start))
 
 			num_records = 0
 			for record in records:
@@ -241,43 +256,43 @@ class Exporter(object):
 						litecur = con.cursor(cursor_factory=DictCursor)
 
 					litecur.execute(
-						"SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=0",
+						"SELECT creator FROM creators WHERE local_identifier=%s AND repository_url=%s AND is_contributor=0",
 						(record["local_identifier"], record["repository_url"]))
 					record["dc_contributor_author"] = litecur.fetchall()
 
 					litecur.execute(
-						"SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=1",
+						"SELECT creator FROM creators WHERE local_identifier=%s AND repository_url=%s AND is_contributor=1",
 						(record["local_identifier"], record["repository_url"]))
 					record["dc_contributor"] = litecur.fetchall()
 
-					litecur.execute("SELECT subject FROM subjects WHERE local_identifier=? AND repository_url=?",
+					litecur.execute("SELECT subject FROM subjects WHERE local_identifier=%s AND repository_url=%s",
 									(record["local_identifier"], record["repository_url"]))
 					record["dc_subject"] = litecur.fetchall()
 
-					litecur.execute("SELECT rights FROM rights WHERE local_identifier=? AND repository_url=?",
+					litecur.execute("SELECT rights FROM rights WHERE local_identifier=%s AND repository_url=%s",
 									(record["local_identifier"], record["repository_url"]))
 					record["dc_rights"] = litecur.fetchall()
 
 					litecur.execute(
-						"SELECT description FROM descriptions WHERE local_identifier=? AND repository_url=?",
+						"SELECT description FROM descriptions WHERE local_identifier=%s AND repository_url=%s",
 						(record["local_identifier"], record["repository_url"]))
 					record["dc_description"] = litecur.fetchall()
 
 					litecur.execute(
-						"SELECT description FROM fra_descriptions WHERE local_identifier=? AND repository_url=?",
+						"SELECT description FROM fra_descriptions WHERE local_identifier=%s AND repository_url=%s",
 						(record["local_identifier"], record["repository_url"]))
 					record["nrdr_fra_description"] = litecur.fetchall()
 
-					litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='en'",
+					litecur.execute("SELECT tag FROM tags WHERE local_identifier=%s AND repository_url=%s AND language='en'",
 									(record["local_identifier"], record["repository_url"]))
 					record["nrdr:tags"] = litecur.fetchall()
 
-					litecur.execute("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='fr'",
+					litecur.execute("SELECT tag FROM tags WHERE local_identifier=%s AND repository_url=%s AND language='fr'",
 									(record["local_identifier"], record["repository_url"]))
 					record["nrdr:tags_fr"] = litecur.fetchall()
 
 					litecur.execute(
-						"SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=? AND repository_url=?",
+						"SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=%s AND repository_url=%s",
 						(record["local_identifier"], record["repository_url"]))
 					record["nrdr_geospatial"] = litecur.fetchall()
 
@@ -338,8 +353,7 @@ class Exporter(object):
 		try:
 			os.rename(temp_filename, os.path.join(export_filepath, export_basename))
 		except:
-			self.logger.error(
-				"Unable to move temp file %s into output file location %s" % (temp_filename, export_filepath))
+			self.logger.error("Unable to move temp file %s into output file location %s" % (temp_filename, export_filepath))
 
 
 	def export_to_file(self, export_format, export_filepath, export_batch_size, temp_filepath="temp"):
