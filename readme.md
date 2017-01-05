@@ -102,8 +102,6 @@ Configuration, including which repos are to be crawled, should be placed in data
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can call the crawler directly, which will run once, crawl all of the target domains, export metadata, and exit, by using `globus_harvester.py`. You can also run it with `--onlyharvest` or `--onlyexport` if you want to skip the metadata export or crawling stages, respectively.
-
-Support database types are "sqlite" and "postgres"; the `psycopg2` library is required for postgres support. This harvester *temporarily* only supports postgres out of the box; you need to run `to_sqlite.sh` from a fresh checkout in order to switch to sqlite mode, in addition to setting the db.type parameter in the config.
+You can call the crawler directly, which will run once, crawl all of the target domains, export metadata, and exit, by using `globus_harvester.py`. You can also run it with `--onlyharvest` or `--onlyexport` if you want to skip the metadata export or crawling stages, respectively. Support database types are "sqlite" and "postgres"; the `psycopg2` library is required for postgres support.
 
 Requires the Python libraries `docopt`, `sickle` and `ckanapi`. Should work on 2.7+ and 3.x.
