@@ -353,8 +353,7 @@ class Exporter(object):
 		try:
 			os.rename(temp_filename, os.path.join(export_filepath, export_basename))
 		except:
-			self.logger.error(
-				"Unable to move temp file %s into output file location %s" % (temp_filename, export_filepath))
+			self.logger.error("Unable to move temp file %s into output file location %s" % (temp_filename, export_filepath))
 
 
 	def export_to_file(self, export_format, export_filepath, export_batch_size, temp_filepath="temp"):
