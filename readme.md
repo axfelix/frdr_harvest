@@ -74,9 +74,9 @@ Configuration, including which repos are to be crawled, should be placed in data
         },
         {
             "name": "FRDR",
-            "url": "https://rdmtest1.computecanada.ca/oai/request",
+            "url": "https://frdr-alpha.computecanada.ca/oai/request",
             "set": "",
-            "thumbnail": "https://rdmtest1.computecanada.ca/jspui/image/logo.png",
+            "thumbnail": "https://frdr-alpha.computecanada.ca/jspui/image/logo.png",
             "type": "oai",
             "metadataprefix": "frdr",
             "enabled": false
