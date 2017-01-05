@@ -209,8 +209,7 @@ class OAIRepository(HarvestRepository):
 
 	@_rate_limited(5)
 	def _update_record(self, record):
-		self.logger.debug(
-			"Updating OAI record %s from repo at %s" % (record['local_identifier'], record['repository_url']))
+		self.logger.debug("Updating OAI record %s from repo at %s" % (record['local_identifier'], record['repository_url']))
 
 		try:
 			single_record = self.sickle.GetRecord(identifier=record["local_identifier"], metadataPrefix=self.metadataprefix)
