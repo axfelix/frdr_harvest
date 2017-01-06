@@ -11,6 +11,8 @@ class Lock:
 
 			try:
 				self.lockfile = open('lockfile','w')
+				self.lockfile.write( str(os.getpid()) + "\n" )
+				self.lockfile.flush()
 			except:
 				sys.stderr.write("ERROR: was harvester runnning under a different user previously? (could not write to lockfile)\n")
 				raise SystemExit
