@@ -60,38 +60,24 @@ class Exporter(object):
 
 	def _generate_gmeta(self, batch_size, export_filepath, temp_filepath):
 		self.logger.info("Exporter: generate_gmeta called")
-		con = self.db.getConnection()
 		gmeta = []
+		records_con = self.db.getConnection()
+		with records_con:
+			records_cursor = records_con.cursor()
 
-		# Only select records that have complete data
-		if self.dbtype == "sqlite":
-			records = con.execute(self.db._prep("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr:origin.id", repos.repository_thumbnail as "nrdr:origin.icon", repos.item_url_pattern
-					FROM records recs, repositories repos
-					WHERE recs.title != '' and recs.repository_url = repos.repository_url """))
-
-		elif self.dbtype == "postgres":
-			with con:
-				cur = con.cursor()
-				cur.execute(self.db._prep("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr:origin.id", repos.repository_thumbnail as "nrdr:origin.icon", repos.item_url_pattern
-						FROM records recs, repositories repos
-						WHERE recs.title != '' and recs.repository_url = repos.repository_url """))
-				records = cur.fetchall()
+		records_cursor.execute(self.db._prep("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr:origin.id", repos.repository_thumbnail as "nrdr:origin.icon", repos.item_url_pattern FROM records recs, repositories repos WHERE recs.title != '' and recs.repository_url = repos.repository_url """))
 
 		records_assembled = 0
 		gmeta_batches = 0
-		for record in records:
+		for row in records_cursor:
 			if records_assembled % batch_size == 0 and records_assembled!=0:
 				gmeta_batches += 1
 				gingest_block = {"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":gmeta}}
 				self._write_to_file(json.dumps(gingest_block), export_filepath, temp_filepath, "gmeta", gmeta_batches)
 				del gmeta[:batch_size]
 
-
-			if self.dbtype == "sqlite":
-				record = dict(zip([tuple[0] for tuple in records.description], record))
-			elif self.dbtype == "postgres":
-				record = (dict(zip(['title', 'date', 'contact', 'series', 'source_url', 'deleted', 'local_identifier', 'repository_url', 'nrdr:origin.id', 'nrdr:origin.icon', 'item_url_pattern'], record)))
-				record["deleted"] = int(record["deleted"])
+			record = (dict(zip(['title', 'date', 'contact', 'series', 'source_url', 'deleted', 'local_identifier', 'repository_url', 'nrdr:origin.id', 'nrdr:origin.icon', 'item_url_pattern'], row)))
+			record["deleted"] = int(record["deleted"])
 
 
 			record["dc:source"] = self._construct_local_url(record)
@@ -103,6 +89,7 @@ class Exporter(object):
 				gmeta.append(gmeta_data)
 				continue
 
+			con = self.db.getConnection()
 			with con:
 				if self.dbtype == "sqlite":
 					from sqlite3 import Row
@@ -117,11 +104,14 @@ class Exporter(object):
 				record["nrdr:geospatial"] = []
 				polycoordinates = []
 
-				for coordinate in geodata:
-					if coordinate[0] == "Polygon":
-						polycoordinates.append([float(coordinate[1]), float(coordinate[2])])
-					else:
-						record["nrdr:geospatial"].append({"type":"Feature", "geometry":{"type":coordinate[0], "coordinates": [float(coordinate[1]), float(coordinate[2])]}})
+				try:
+					for coordinate in geodata:
+						if coordinate[0] == "Polygon":
+							polycoordinates.append([float(coordinate[1]), float(coordinate[2])])
+						else:
+							record["nrdr:geospatial"].append({"type":"Feature", "geometry":{"type":coordinate[0], "coordinates": [float(coordinate[1]), float(coordinate[2])]}})
+				except:
+					pass
 
 				if polycoordinates:
 					record["nrdr:geospatial"].append({"type":"Feature", "geometry":{"type":"Polygon", "coordinates": polycoordinates}})
