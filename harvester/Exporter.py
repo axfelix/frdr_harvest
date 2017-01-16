@@ -180,7 +180,7 @@ class Exporter(object):
 
 			records_assembled += 1
 
-		self.logger.info("gmeta size: %s items" % (len(gmeta)))
+		self.logger.info("gmeta size: %s items in %s files" % (records_assembled, gmeta_batches + 1))
 		return gmeta
 
 	def _validate_rifcs(self, rifcs):
@@ -336,9 +336,16 @@ class Exporter(object):
 		except:
 			self.logger.error("Unable to move temp file %s into output file location %s" % (temp_filename, export_filepath))
 
+	def _cleanup_previous_exports(self, dirname, export_format):
+		pattern = export_format + '_?[\d]*\.[a-z]*$'
+	    for f in os.listdir(dirname):
+	        if re.search(pattern, f):
+	            os.remove(os.path.join(dirname, f))
 
 	def export_to_file(self, export_format, export_filepath, export_batch_size, temp_filepath="temp"):
 		output = None
+		self._cleanup_previous_exports(export_filepath, export_format)
+		self._cleanup_previous_exports(temp_filepath, export_format)
 
 		if export_format == "gmeta":
 			gmeta_block = self._generate_gmeta(export_batch_size, export_filepath, temp_filepath)
