@@ -48,7 +48,7 @@ Configuration, including which repos are to be crawled, should be placed in data
         {
             "name": "UBC Circle",
             "url": "http://circle.library.ubc.ca/oai/request",
-            "set": "com_2429_287",
+            "set": "",
             "thumbnail": "https://circle-23jan2015.sites.olt.ubc.ca/files/2015/01/circle-logo-inverted.png",
             "type": "oai",
             "enabled": false
