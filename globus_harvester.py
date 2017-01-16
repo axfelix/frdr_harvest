@@ -1,11 +1,12 @@
 """Globus Harvester.
 
 Usage:
-  globus_harvester.py [--onlyharvest | --onlyexport] [--export-filepath=<file>] [--export-format=<format>]
+  globus_harvester.py [--onlyharvest | --onlyexport] [--only-new-records] [--export-filepath=<file>] [--export-format=<format>]
 
 Options:
   --onlyharvest             Just harvest new items, do not export anything.
   --onlyexport              Just export existing items, do not harvest anything.
+  --only-new-records        Only export records changed since last crawl.
   --export-filepath=<file>  The path to export the data to.
   --export-format=<format>  The export format (gmeta or rifcs).
 
@@ -82,7 +83,11 @@ if __name__ == "__main__":
 	temp_filepath = configs['temp_filepath']
 
 	exporter = Exporter(dbh, main_log, configs['db'])
-	exporter.export_to_file(configs['export_format'], configs['export_filepath'], configs['export_batch_size'], configs['temp_filepath'])
+
+	if arguments["--only-new-records"] == True:
+		exporter.export_to_file(configs['export_format'], configs['export_filepath'], configs['export_batch_size'], True, configs['temp_filepath'])
+	else:
+		exporter.export_to_file(configs['export_format'], configs['export_filepath'], configs['export_batch_size'], False, configs['temp_filepath'])
 
 	formatter = TimeFormatter()
 	main_log.info("Done after %s" % (formatter.humanize(time.time() - tstart)))

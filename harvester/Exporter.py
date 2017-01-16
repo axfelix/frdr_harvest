@@ -58,14 +58,14 @@ class Exporter(object):
 		return local_url
 
 
-	def _generate_gmeta(self, batch_size, export_filepath, temp_filepath):
+	def _generate_gmeta(self, batch_size, export_filepath, temp_filepath, only_new_records):
 		self.logger.info("Exporter: generate_gmeta called")
 		gmeta = []
 		records_con = self.db.getConnection()
 		with records_con:
 			records_cursor = records_con.cursor()
 
-		records_cursor.execute(self.db._prep("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr:origin.id", repos.repository_thumbnail as "nrdr:origin.icon", repos.item_url_pattern FROM records recs, repositories repos WHERE recs.title != '' and recs.repository_url = repos.repository_url """))
+		records_cursor.execute(self.db._prep("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr:origin.id", repos.repository_thumbnail as "nrdr:origin.icon", repos.item_url_pattern, recs.modified_timestamp, repos.last_crawl_timestamp FROM records recs, repositories repos WHERE recs.title != '' and recs.repository_url = repos.repository_url """))
 
 		records_assembled = 0
 		gmeta_batches = 0
@@ -76,9 +76,12 @@ class Exporter(object):
 				self._write_to_file(json.dumps(gingest_block), export_filepath, temp_filepath, "gmeta", gmeta_batches)
 				del gmeta[:batch_size]
 
-			record = (dict(zip(['title', 'date', 'contact', 'series', 'source_url', 'deleted', 'local_identifier', 'repository_url', 'nrdr:origin.id', 'nrdr:origin.icon', 'item_url_pattern'], row)))
+			record = (dict(zip(['title', 'date', 'contact', 'series', 'source_url', 'deleted', 'local_identifier', 'repository_url', 'nrdr:origin.id', 'nrdr:origin.icon', 'item_url_pattern', 'modified_timestamp', 'last_crawl_timestamp'], row)))
 			record["deleted"] = int(record["deleted"])
 
+
+			if only_new_records == True and record["modified_timestamp"] < record["last_crawl_timestamp"]:
+				continue
 
 			record["dc:source"] = self._construct_local_url(record)
 			if record["dc:source"] is None:
@@ -338,17 +341,20 @@ class Exporter(object):
 
 	def _cleanup_previous_exports(self, dirname, export_format):
 		pattern = export_format + '_?[\d]*\.[a-z]*$'
-	    for f in os.listdir(dirname):
-	        if re.search(pattern, f):
-	            os.remove(os.path.join(dirname, f))
+		try:
+			for f in os.listdir(dirname):
+				if re.search(pattern, f):
+					os.remove(os.path.join(dirname, f))
+		except:
+			pass
 
-	def export_to_file(self, export_format, export_filepath, export_batch_size, temp_filepath="temp"):
+	def export_to_file(self, export_format, export_filepath, export_batch_size, only_new_records, temp_filepath="temp"):
 		output = None
 		self._cleanup_previous_exports(export_filepath, export_format)
 		self._cleanup_previous_exports(temp_filepath, export_format)
 
 		if export_format == "gmeta":
-			gmeta_block = self._generate_gmeta(export_batch_size, export_filepath, temp_filepath)
+			gmeta_block = self._generate_gmeta(export_batch_size, export_filepath, temp_filepath, only_new_records)
 			output = json.dumps({"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":gmeta_block}})
 		elif export_format == "rifcs":
 			from lxml import etree
