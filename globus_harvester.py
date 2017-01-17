@@ -92,4 +92,8 @@ if __name__ == "__main__":
 	formatter = TimeFormatter()
 	main_log.info("Done after %s" % (formatter.humanize(time.time() - tstart)))
 
+	con = dbh.getConnection()
+	with con:
+		cur = con.cursor()
+		cur.execute(dbh._prep("UPDATE system SET last_run_timestamp=?"), (time.time(),))
 	instance_lock.unlock()
