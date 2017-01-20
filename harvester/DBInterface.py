@@ -51,8 +51,6 @@ class DBInterface:
 
 			cur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, repository_type TEXT, last_crawl_timestamp NUMERIC, item_url_pattern TEXT, PRIMARY KEY (repository_url))")
 
-			cur.execute("CREATE TABLE IF NOT EXISTS system (last_run_timestamp NUMERIC DEFAULT 0, PRIMARY KEY (last_run_timestamp))")
-
 
 	def setLogger(self, l):
 		self.logger = l

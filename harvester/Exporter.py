@@ -61,6 +61,13 @@ class Exporter(object):
 	def _generate_gmeta(self, batch_size, export_filepath, temp_filepath, only_new_records):
 		self.logger.info("Exporter: generate_gmeta called")
 		gmeta = []
+
+		try:
+			with open("data/last_run_timestamp", "r") as lastrun:
+				lastrun_timestamp = lastrun.read()
+		except:
+			lastrun_timestamp = 0
+
 		records_con = self.db.getConnection()
 		with records_con:
 			records_cursor = records_con.cursor()
@@ -80,7 +87,7 @@ class Exporter(object):
 			record["deleted"] = int(record["deleted"])
 
 
-			if only_new_records == True and record["modified_timestamp"] < record["last_crawl_timestamp"]:
+			if only_new_records == True and float(lastrun_timestamp) > record["last_crawl_timestamp"]:
 				continue
 
 			record["dc:source"] = self._construct_local_url(record)
