@@ -91,6 +91,15 @@ Configuration, including which repos are to be crawled, should be placed in data
             "enabled": false
         },
         {
+            "name": "York University Digital Library",
+            "url": "https://digital.library.yorku.ca/oai2",
+            "set": "yul_232039",
+            "thumbnail": "https://digital.library.yorku.ca/YorkULogo_Hor_rgb-bootstrap_transparent.png",
+            "type": "oai",
+            "metadataprefix": "dc",
+            "enabled": false
+        },
+        {
             "name": "Concordia Spectrum Research Repository",
             "url": "http://spectrum.library.concordia.ca/cgi/oai2",
             "set": "74797065733D64617461736574",
