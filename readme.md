@@ -96,7 +96,6 @@ Configuration, including which repos are to be crawled, should be placed in data
             "set": "yul_232039",
             "thumbnail": "https://digital.library.yorku.ca/YorkULogo_Hor_rgb-bootstrap_transparent.png",
             "type": "oai",
-            "metadataprefix": "dc",
             "enabled": false
         },
         {
