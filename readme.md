@@ -91,6 +91,15 @@ Configuration, including which repos are to be crawled, should be placed in data
             "enabled": false
         },
         {
+            "name": "Abacus Dataverse Network",
+            "url": "http://dvn.library.ubc.ca/dvn/OAIHandler",
+            "set": "",
+            "thumbnail": "http://dvn.library.ubc.ca/dvn/resources/images/DVN/ABACUS/AbacusLogoDVN.png",
+            "type": "oai",
+            "metadataprefix": "ddi",
+            "enabled": false
+        },
+        {
             "name": "York University Digital Library",
             "url": "https://digital.library.yorku.ca/oai2",
             "set": "yul_232039",
