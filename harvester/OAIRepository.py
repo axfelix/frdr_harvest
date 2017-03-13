@@ -134,11 +134,13 @@ class OAIRepository(HarvestRepository):
 					valid_id = idstring
 			record["identifier"] = valid_id
 
-		if 'creator' not in record.keys() and 'contributor' not in record.keys():
+		if 'creator' not in record.keys() and 'contributor' not in record.keys() and 'publisher' not in record.keys():
 			self.logger.debug("Item %s is missing creator - will not be added" % (record["identifier"]))
 			return None
-		elif 'creator' not in record.keys():
+		elif 'creator' not in record.keys() and 'contributor' in record.keys():
 			record["creator"] = record["contributor"]
+		elif 'creator' not in record.keys() and 'publisher' in record.keys():
+			record["creator"] = record["publisher"]
 
 		# If date is undefined add an empty key
 		if 'date' not in record.keys():

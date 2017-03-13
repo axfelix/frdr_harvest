@@ -96,7 +96,6 @@ Configuration, including which repos are to be crawled, should be placed in data
             "set": "",
             "thumbnail": "http://dvn.library.ubc.ca/dvn/resources/images/DVN/ABACUS/AbacusLogoDVN.png",
             "type": "oai",
-            "metadataprefix": "ddi",
             "enabled": false
         },
         {
