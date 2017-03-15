@@ -84,7 +84,7 @@ Configuration, including which repos are to be crawled, should be placed in data
         {
             "name": "U of A Dataverse",
             "url": "https://dataverse.library.ualberta.ca/dvn/OAIHandler",
-            "set": "abacus_open",
+            "set": "",
             "thumbnail": "https://dataverse.library.ualberta.ca/dvn/resources/images/ua-lib-logo.png",
             "type": "oai",
             "metadataprefix": "ddi",
@@ -93,15 +93,7 @@ Configuration, including which repos are to be crawled, should be placed in data
         {
             "name": "Abacus Dataverse Network",
             "url": "http://dvn.library.ubc.ca/dvn/OAIHandler",
-            "set": "",
-            "thumbnail": "http://dvn.library.ubc.ca/dvn/resources/images/DVN/ABACUS/AbacusLogoDVN.png",
-            "type": "oai",
-            "enabled": false
-        },
-        {
-            "name": "Abacus Dataverse Network",
-            "url": "http://dvn.library.ubc.ca/dvn/OAIHandler",
-            "set": "",
+            "set": "abacus_open",
             "thumbnail": "http://dvn.library.ubc.ca/dvn/resources/images/DVN/ABACUS/AbacusLogoDVN.png",
             "type": "oai",
             "enabled": false
