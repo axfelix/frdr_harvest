@@ -50,6 +50,7 @@ class DBInterface:
 			cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_lat_lon ON geospatial (local_identifier, repository_url, lat, lon)")
 
 			cur.execute("CREATE TABLE IF NOT EXISTS domain_metadata (local_identifier TEXT, repository_url TEXT, field_name TEXT, field_value TEXT)")
+			cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS domain_metadata_value ON domain_metadata (local_identifier, repository_url, field_name, field_value)")
 
 			cur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, repository_type TEXT, last_crawl_timestamp NUMERIC, item_url_pattern TEXT, PRIMARY KEY (repository_url))")
 
@@ -142,7 +143,7 @@ class DBInterface:
 		return True
 
 
-	def write_record(self, record, repository_url, mode = "insert"):
+	def write_record(self, record, repository_url, metadata_prefix, domain_metadata, mode = "insert"):
 		if record == None:
 			return None
 
@@ -241,6 +242,17 @@ class DBInterface:
 						cur.execute(self._prep("INSERT INTO geospatial (local_identifier, repository_url, coordinate_type, lat, lon) VALUES (?,?,?,?,?)"), (record["identifier"], repository_url, record["geospatial"]["type"], coordinates[0], coordinates[1]))
 					except self.dblayer.IntegrityError:
 						pass
+
+			for domain_metadata_element in domain_metadata:
+				if domain_metadata_element in record:
+					if not isinstance(record[domain_metadata_element], list):
+						record[domain_metadata_element] = [record[domain_metadata_element]]
+					namespaced_element = metadata_prefix + ":" + domain_metadata_element
+					for domain_metadata_element_value in record[domain_metadata_element]:
+						try:
+							cur.execute(self._prep("INSERT INTO domain_metadata (local_identifier, repository_url, field_name, field_value) VALUES (?,?,?,?)"), (record["identifier"], repository_url, namespaced_element, domain_metadata_element_value))
+						except self.dblayer.IntegrityError:
+							pass
 
 		return record["identifier"]
 
