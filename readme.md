@@ -1,4 +1,4 @@
-This is a repository crawler which outputs gmeta.json files for indexing by Globus. It currently only supports OAI-DC and CKAN repositories.
+This is a repository crawler which outputs gmeta.json files for indexing by Globus. It currently only supports OAI and CKAN repositories.
 
 Configuration, including which repos are to be crawled, should be placed in data/config.json, in a structure like to this:
 
@@ -118,6 +118,8 @@ Configuration, including which repos are to be crawled, should be placed in data
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can call the crawler directly, which will run once, crawl all of the target domains, export metadata, and exit, by using `globus_harvester.py`. You can also run it with `--onlyharvest` or `--onlyexport` if you want to skip the metadata export or crawling stages, respectively. Support database types are "sqlite" and "postgres"; the `psycopg2` library is required for postgres support.
+Right now, supported OAI metadata types are Dublin Core ("OAI-DC" is assumed by default and does not need to be specified), DDI, and FGDC. If you want to harvest metadata from another OAI schema, you can create a file at `metadata/schemaname` containing one metadata value name per line.
+
+You can call the crawler directly, which will run once, crawl all of the target domains, export metadata, and exit, by using `globus_harvester.py`. You can also run it with `--onlyharvest` or `--onlyexport` if you want to skip the metadata export or crawling stages, respectively. You can also use `--only-new-records` to only export records that have changed since the last run. Support database types are "sqlite" and "postgres"; the `psycopg2` library is required for postgres support.
 
 Requires the Python libraries `docopt`, `sickle` and `ckanapi`. Should work on 2.7+ and 3.x.
