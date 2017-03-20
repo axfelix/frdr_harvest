@@ -169,6 +169,12 @@ class Exporter(object):
 								(record["local_identifier"], record["repository_url"]))
 				record["nrdr:tags_fr"] = litecur.fetchall()
 
+				litecur.execute(self.db._prep("SELECT field_name, field_value FROM domain_metadata WHERE local_identifier=? AND repository_url=?"),
+								(record["local_identifier"], record["repository_url"]))
+				domain_metadata = litecur.fetchall()
+				for row in domain_metadata:
+					record[row[0]] = row[1]
+
 				record.pop("repository_url", None)
 				record.pop("local_identifier", None)
 
@@ -206,112 +212,6 @@ class Exporter(object):
 		except etree.XMLSchemaError:
 			self.logger.error("Invalid RIFCS Generated")
 			raise SystemExit
-
-	def _generate_rifcs(self):
-		self.logger.info("Exporter: generate_rifcs called")
-		rifcs_header_xml = open("templates/rifcs_header.xml").read()
-		rifcs_footer_xml = open("templates/rifcs_footer.xml").read()
-		rifcs_object_xml = open("templates/rifcs_object.xml").read()
-		rifcs_object_template = Template(rifcs_object_xml)
-		con = self.db.getConnection()
-		rifcs = ""
-		rec_start = 0
-		rec_limit = self.__records_per_loop
-		found_records = True
-
-		while found_records:
-			found_records = False
-
-			# Select a window of records at a time
-			records = con.execute(self.db._prep("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url,
-					repos.repository_name as "nrdr_origin_id", repos.repository_thumbnail as "nrdr_origin_icon", repos.item_url_pattern
-					FROM records recs, repositories repos
-					WHERE recs.title != '' and recs.repository_url = repos.repository_url
-					LIMIT ? OFFSET ?"""), (rec_limit, rec_start))
-
-			num_records = 0
-			for record in records:
-				found_records = True
-				num_records += 1
-				record = dict(zip([tuple[0] for tuple in records.description], record))
-				record["dc_source"] = self._construct_local_url(record)
-				if record["dc_source"] is None:
-					continue
-
-				if record["deleted"] == 1:
-					# TODO: find out how RIF-CS represents deleted records
-					rifcs += ""
-					continue
-
-				with con:
-					if self.dbtype == "sqlite":
-						con.row_factory = lambda cursor, row: row[0]
-						litecur = con.cursor()
-					elif self.dbtype == "postgres":
-						from psycopg2.extras import DictCursor as DictCursor
-						litecur = con.cursor(cursor_factory=DictCursor)
-
-					litecur.execute(self.db._prep("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=0"),
-						(record["local_identifier"], record["repository_url"]))
-					record["dc_contributor_author"] = litecur.fetchall()
-
-					litecur.execute(self.db._prep("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=1"),
-						(record["local_identifier"], record["repository_url"]))
-					record["dc_contributor"] = litecur.fetchall()
-
-					litecur.execute(self.db._prep("SELECT subject FROM subjects WHERE local_identifier=? AND repository_url=?"),
-									(record["local_identifier"], record["repository_url"]))
-					record["dc_subject"] = litecur.fetchall()
-
-					litecur.execute(self.db._prep("SELECT rights FROM rights WHERE local_identifier=? AND repository_url=?"),
-									(record["local_identifier"], record["repository_url"]))
-					record["dc_rights"] = litecur.fetchall()
-
-					litecur.execute(self.db._prep("SELECT description FROM descriptions WHERE local_identifier=? AND repository_url=?"),
-						(record["local_identifier"], record["repository_url"]))
-					record["dc_description"] = litecur.fetchall()
-
-					litecur.execute(self.db._prep("SELECT description FROM fra_descriptions WHERE local_identifier=? AND repository_url=?"),
-						(record["local_identifier"], record["repository_url"]))
-					record["nrdr_fra_description"] = litecur.fetchall()
-
-					litecur.execute(self.db._prep("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='en'"),
-									(record["local_identifier"], record["repository_url"]))
-					record["nrdr:tags"] = litecur.fetchall()
-
-					litecur.execute(self.db._prep("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='fr'"),
-									(record["local_identifier"], record["repository_url"]))
-					record["nrdr:tags_fr"] = litecur.fetchall()
-
-					litecur.execute(self.db._prep("SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=? AND repository_url=?"),
-						(record["local_identifier"], record["repository_url"]))
-					record["nrdr_geospatial"] = litecur.fetchall()
-
-				record["dc_title"] = record["title"]
-				record["dc_date"] = record["date"]
-				record["nrdr_contact"] = record["contact"]
-				record["nrdr_series"] = record["series"]
-
-				# TODO: break this apart so that where multi-valued elements can exist in the XML, then multiple XML blocks are output
-				# Right now these are just being (wrongly) joined into a single string for testing purposes
-				for key, value in record.items():
-					if isinstance(value, list):
-						record[key] = html.escape(', '.join(fld or "" for fld in value))
-					if isinstance(value, str):
-						record[key] = html.escape(value)
-				# TODO: determine how some records end up with blank nrdr_origin_id
-				if 'nrdr_origin_id' in record.keys():
-					rifcs += rifcs_object_template.substitute(record)
-
-			if found_records:
-				self.logger.info("Done exporting records %s to %s" % (rec_start, (rec_start + num_records)))
-			rec_start += rec_limit
-
-		# TODO: flush buffer to file after every block of records is done, so it doesn't get so large in memory
-		rifcs = rifcs_header_xml + rifcs + rifcs_footer_xml
-		self._validate_rifcs(rifcs)
-		self.logger.info("rifcs size: %s bytes" % (len(rifcs)))
-		return rifcs
 
 
 	def _write_to_file(self, output, export_filepath, temp_filepath, export_format, gmeta_batches=False):

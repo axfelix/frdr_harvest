@@ -49,6 +49,8 @@ class DBInterface:
 			cur.execute("CREATE TABLE IF NOT EXISTS geospatial (local_identifier TEXT, repository_url TEXT, coordinate_type TEXT, lat NUMERIC, lon NUMERIC)")
 			cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS identifier_plus_lat_lon ON geospatial (local_identifier, repository_url, lat, lon)")
 
+			cur.execute("CREATE TABLE IF NOT EXISTS domain_metadata (local_identifier TEXT, repository_url TEXT, field_name TEXT, field_value TEXT)")
+
 			cur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, repository_type TEXT, last_crawl_timestamp NUMERIC, item_url_pattern TEXT, PRIMARY KEY (repository_url))")
 
 
