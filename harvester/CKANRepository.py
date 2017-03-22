@@ -9,6 +9,7 @@ class CKANRepository(HarvestRepository):
 	""" CKAN Repository """
 
 	def setRepoParams(self, repoParams):
+		self.metadataprefix = "ckan"
 		super(CKANRepository, self).setRepoParams(repoParams)
 		self.ckanrepo = ckanapi.RemoteCKAN(self.url)
 		
