@@ -16,6 +16,15 @@ class OAIRepository(HarvestRepository):
 		super(OAIRepository, self).setRepoParams(repoParams)
 		self.sickle = Sickle(self.url)
 
+		domain_metadata_file = "metadata/" + self.metadataprefix.lower()
+		if os.path.isfile(domain_metadata_file):
+			with open(domain_metadata_file) as dmf:
+				# F gon' give it to ya
+				self.domain_metadata = dmf.readlines()
+		else:
+			self.domain_metadata = []
+
+
 	def _crawl(self):
 		records = []
 
@@ -47,18 +56,10 @@ class OAIRepository(HarvestRepository):
 				if 'date' not in metadata.keys() and record.header.datestamp:
 					metadata["date"] = record.header.datestamp
 
-				domain_metadata_file = "metadata/" + self.metadataprefix.lower()
-				if os.path.isfile(domain_metadata_file):
-					with open(domain_metadata_file) as dmf:
-						# F gon' give it to ya
-						domain_metadata = dmf.readlines()
-				else:
-					domain_metadata = []
-
 				# Use the header id for the database key (needed later for OAI GetRecord calls)
 				metadata['identifier'] = record.header.identifier
 				oai_record = self.unpack_oai_metadata(metadata)
-				self.db.write_record(oai_record, self.url, self.metadataprefix.lower(), domain_metadata)
+				self.db.write_record(oai_record, self.url, self.metadataprefix.lower(), self.domain_metadata)
 				item_count = item_count + 1
 				if (item_count % self.update_log_after_numitems == 0):
 					tdelta = time.time() - self.tstart + 0.1
@@ -242,7 +243,7 @@ class OAIRepository(HarvestRepository):
 
 			metadata['identifier'] = single_record.header.identifier
 			oai_record = self.unpack_oai_metadata(metadata)
-			self.db.write_record(oai_record, self.url, self.metadataprefix.lower(), "replace")
+			self.db.write_record(oai_record, self.url, self.metadataprefix.lower(), self.domain_metadata, "replace")
 			return True
 
 		except IdDoesNotExist:
