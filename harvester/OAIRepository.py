@@ -242,7 +242,7 @@ class OAIRepository(HarvestRepository):
 
 			metadata['identifier'] = single_record.header.identifier
 			oai_record = self.unpack_oai_metadata(metadata)
-			self.db.write_record(oai_record, self.url, "replace")
+			self.db.write_record(oai_record, self.url, self.metadataprefix.lower(), "replace")
 			return True
 
 		except IdDoesNotExist:
