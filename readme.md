@@ -6,8 +6,8 @@ Configuration, including which repos are to be crawled, should be placed in data
 {
     "db": {
         "type": "sqlite",
-        "dbname": "data/globus_oai.db",
-        "host": "",
+        "dbname": "data/globus_oai.db"
+,        "host": "",
         "schema": "",
         "user": "",
         "pass": ""
@@ -38,9 +38,169 @@ Configuration, including which repos are to be crawled, should be placed in data
             "enabled": false
         },
         {
-            "name": "Scholars Portal",
-            "url": "http://dataverse.scholarsportal.info/dvn/OAIHandler",
-            "set": "ugrdr",
+            "name": "Scholars Portal Algoma University Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "algoma_university_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal Brock University Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "brock_university_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal Carleton University Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "Carleton-University-Set",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal Lakehead University Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "lakehead_university_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal Laurentian University Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "laurentian_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal McMaster University Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "mcmaster_university_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal Nipissing University Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "nipissing_university_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal OCAD Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "ocad_university_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal ODESI Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "ODESI",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal Queen's University Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "queens_university_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal Ryerson University Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "ryerson_university_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal Trent University Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "trent_university_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal University of Guelph Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "university_of_guelph_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal University of Ottawa Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "university_of_ottawa_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal UOIT Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "uoit_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal University of Toronto Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "u_toronto_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal Waterloo University Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "waterloo_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal Western University Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "western_university_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal Wilfrid Laurier University Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "wilfrid_laurier_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal University of Windsor Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "windsor_dataverse",
+            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "type": "oai",
+            "enabled": false
+        },
+        {
+            "name": "Scholars Portal York University Dataverse",
+            "url": "http://dataverse.scholarsportal.info/oai",
+            "set": "york_university_dataverse",
             "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
             "type": "oai",
             "enabled": false
