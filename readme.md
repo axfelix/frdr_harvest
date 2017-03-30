@@ -41,7 +41,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal Algoma University Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "algoma_university_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "https://www.algomau.ca/wp-content/themes/algoma/favicon.png",
             "type": "oai",
             "enabled": false
         },
@@ -49,7 +49,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal Brock University Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "brock_university_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "https://discover.brocku.ca/wp-content/themes/brocku/images/brocku-rectangle-logo-280.png",
             "type": "oai",
             "enabled": false
         },
@@ -57,7 +57,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal Carleton University Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "Carleton-University-Set",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "https://cmsframework.s3.amazonaws.com/theme-carleton-cms/assets/images/favicons/apple-icon-precomposed.png",
             "type": "oai",
             "enabled": false
         },
@@ -65,7 +65,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal Lakehead University Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "lakehead_university_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "http://cou.on.ca/wp-content/uploads/2015/04/lakehead-icon.png",
             "type": "oai",
             "enabled": false
         },
@@ -81,7 +81,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal McMaster University Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "mcmaster_university_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "http://future.mcmaster.ca/wp-content/uploads/FS_maroon3_logo.png",
             "type": "oai",
             "enabled": false
         },
@@ -97,7 +97,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal OCAD Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "ocad_university_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "https://upload.wikimedia.org/wikipedia/commons/0/02/OCAD_University_Logo.png",
             "type": "oai",
             "enabled": false
         },
@@ -105,7 +105,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal ODESI Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "ODESI",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "http://s3.amazonaws.com/libapps/accounts/37287/images/odesi_logo.png",
             "type": "oai",
             "enabled": false
         },
@@ -113,7 +113,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal Queen's University Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "queens_university_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "http://www.queensu.ca/mc_administrator/sites/default/files/assets/pages/QueensLogo_red.jpg",
             "type": "oai",
             "enabled": false
         },
@@ -121,7 +121,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal Ryerson University Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "ryerson_university_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "http://www.ryerson.ca/brand/index/jcr:content/center/uiwcolumns_0/conContainer_2_0/uiwimage.img.png/1448296969404.png",
             "type": "oai",
             "enabled": false
         },
@@ -129,7 +129,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal Trent University Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "trent_university_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "http://media.zuza.com/a/7/a70985c3-688f-4e32-8a18-5f87b6b877c3/trent___Content.jpg",
             "type": "oai",
             "enabled": false
         },
@@ -137,7 +137,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal University of Guelph Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "university_of_guelph_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "http://www.uoguelph.ca/polisci/sites/default/files/images/University-of-Guelph.png",
             "type": "oai",
             "enabled": false
         },
@@ -145,7 +145,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal University of Ottawa Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "university_of_ottawa_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "https://www.uottawa.ca/marque/sites/www.uottawa.ca.marque/files/updated_logo_0.jpg",
             "type": "oai",
             "enabled": false
         },
@@ -153,7 +153,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal UOIT Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "uoit_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "https://shared.uoit.ca/site-images/UOITlogo-SocialMediaShare.jpg",
             "type": "oai",
             "enabled": false
         },
@@ -161,7 +161,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal University of Toronto Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "u_toronto_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "http://pie.med.utoronto.ca/LapChole/content/assets/images/UofTlogo.png",
             "type": "oai",
             "enabled": false
         },
@@ -169,7 +169,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal Waterloo University Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "waterloo_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "http://chemeng.uwaterloo.ca/mtam/Funding/image2328.jpg",
             "type": "oai",
             "enabled": false
         },
@@ -177,7 +177,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal Western University Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "western_university_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "http://communications.uwo.ca/comms/img/logo_teasers/Stacked.gif",
             "type": "oai",
             "enabled": false
         },
@@ -185,7 +185,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal Wilfrid Laurier University Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "wilfrid_laurier_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "https://students.wlu.ca/common/images/site/logos/Laurier_PURPLE_rgb_LRG.png",
             "type": "oai",
             "enabled": false
         },
@@ -193,7 +193,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal University of Windsor Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "windsor_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "http://www1.uwindsor.ca/tifs/system/files/Uwindsor%20logo.png",
             "type": "oai",
             "enabled": false
         },
@@ -201,7 +201,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "name": "Scholars Portal York University Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "york_university_dataverse",
-            "thumbnail": "http://images.scholarsportal.info/dataverse/logo.png",
+            "thumbnail": "https://digital.library.yorku.ca/YorkULogo_Hor_rgb-bootstrap_transparent.png",
             "type": "oai",
             "enabled": false
         },
