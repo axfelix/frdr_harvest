@@ -43,7 +43,7 @@ class HarvestRepository(object):
 
 	def crawl(self):
 		self.tstart = time.time()
-		self.last_crawl = self.db.get_repo_last_crawl(self.url)
+		self.last_crawl = self.db.get_repo_last_crawl(self.url, self.name)
 
 		if self.last_crawl == 0:
 			self.logger.info("*** Repo: %s, type: %s, (last harvested: never)" % (self.name, self.type ) )
@@ -53,7 +53,7 @@ class HarvestRepository(object):
 		if (self.enabled):
 			if (self.last_crawl + self.repo_refresh_days*86400) < self.tstart:
 				self._crawl()
-				self.db.update_last_crawl(self.url)
+				self.db.update_last_crawl(self.url, self.name)
 			else:
 				self.logger.info("This repo is not yet due to be harvested")
 		else:

@@ -52,7 +52,7 @@ class DBInterface:
 			cur.execute("CREATE TABLE IF NOT EXISTS domain_metadata (local_identifier TEXT, repository_url TEXT, field_name TEXT, field_value TEXT)")
 			cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS domain_metadata_value ON domain_metadata (local_identifier, repository_url, field_name, field_value)")
 
-			cur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, repository_type TEXT, last_crawl_timestamp NUMERIC, item_url_pattern TEXT, PRIMARY KEY (repository_url))")
+			cur.execute("CREATE TABLE IF NOT EXISTS repositories (repository_url TEXT, repository_name TEXT, repository_thumbnail TEXT, repository_type TEXT, last_crawl_timestamp NUMERIC, item_url_pattern TEXT, PRIMARY KEY (repository_url, repository_name))")
 
 
 	def setLogger(self, l):
@@ -92,7 +92,7 @@ class DBInterface:
 				return None
 
 
-	def get_repo_last_crawl(self, repo_url):
+	def get_repo_last_crawl(self, repo_url, repo_name):
 		returnvalue = False
 		con = self.getConnection()
 		with con:
@@ -102,7 +102,7 @@ class DBInterface:
 			if self.dbtype == "postgres":
 				from psycopg2.extras import RealDictCursor
 				litecur = con.cursor(cursor_factory = RealDictCursor)
-			litecur.execute(self._prep("select last_crawl_timestamp from repositories where repository_url = ?"),(repo_url,) )
+			litecur.execute(self._prep("select last_crawl_timestamp from repositories where repository_url = ? and repository_name = ?"),(repo_url,repo_name))
 			if litecur is not None:
 				records = litecur.fetchall()
 			else:
@@ -112,11 +112,11 @@ class DBInterface:
 		return returnvalue
 
 
-	def update_last_crawl(self, repo_url):
+	def update_last_crawl(self, repo_url, repo_name):
 		con = self.getConnection()
 		with con:
 			cur = con.cursor()
-			cur.execute(self._prep("update repositories set last_crawl_timestamp = ? where repository_url = ?"),(int(time.time()),repo_url))
+			cur.execute(self._prep("update repositories set last_crawl_timestamp = ? where repository_url = ? and repository_name = ?"),(int(time.time()),repo_url,repo_name))
 
 
 	def delete_record(self, record):
