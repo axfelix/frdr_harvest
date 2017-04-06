@@ -175,7 +175,13 @@ class OAIRepository(HarvestRepository):
 
 		# If dates are entirely numeric, add separators
 		if not re.search("\D", record["date"]):
-			record["date"] = record["date"][0] + record["date"][1] + record["date"][2] + record["date"][3] + "-" + record["date"][4] + record["date"][5] + "-" + record["date"][6] + record["date"][7]
+			self.logger.debug("Trying to reformat date: %s" % (record["date"]))
+			if (len(record["date"]) == 4):
+				record["date"] = record["date"][0] + record["date"][1] + record["date"][2] + record["date"][3] + "-01-01"
+			if (len(record["date"]) == 6):
+				record["date"] = record["date"][0] + record["date"][1] + record["date"][2] + record["date"][3] + "-" + record["date"][4] + record["date"][5] + "-01"
+			if (len(record["date"]) == 8):
+				record["date"] = record["date"][0] + record["date"][1] + record["date"][2] + record["date"][3] + "-" + record["date"][4] + record["date"][5] + "-" + record["date"][6] + record["date"][7]
 
 		if isinstance(record["title"], list):
 			record["title"] = record["title"][0]
