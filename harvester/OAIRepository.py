@@ -29,14 +29,14 @@ class OAIRepository(HarvestRepository):
 		records = []
 
 		try:
-			if not self.set:
+			if self.set is None or self.set == "":
 				records = self.sickle.ListRecords(metadataPrefix=self.metadataprefix, ignore_deleted=True)
 			else:
 				records = self.sickle.ListRecords(metadataPrefix=self.metadataprefix, ignore_deleted=True, set=self.set)
 		except:
 			self.logger.info("No items were found")
 
-		self.db.create_repo(self.url, self.name, "oai", self.thumbnail, self.item_url_pattern)
+		self.repository_id = self.db.update_repo(self.repository_id, self.url, self.set, self.name, "oai",  self.enabled, self.thumbnail, self.item_url_pattern,self.abort_after_numerrors,self.max_records_updated_per_run,self.update_log_after_numitems,self.record_refresh_days,self.repo_refresh_days)
 		item_count = 0
 
 		while records:
@@ -59,7 +59,7 @@ class OAIRepository(HarvestRepository):
 				# Use the header id for the database key (needed later for OAI GetRecord calls)
 				metadata['identifier'] = record.header.identifier
 				oai_record = self.unpack_oai_metadata(metadata)
-				self.db.write_record(oai_record, self.url, self.metadataprefix.lower(), self.domain_metadata)
+				self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
 				item_count = item_count + 1
 				if (item_count % self.update_log_after_numitems == 0):
 					tdelta = time.time() - self.tstart + 0.1
@@ -77,6 +77,8 @@ class OAIRepository(HarvestRepository):
 		self.logger.info("Processed %s items in feed" % (item_count))
 
 	def unpack_oai_metadata(self, record):
+		record["pub_date"] = record.get("date")
+		
 		if self.metadataprefix.lower() == "ddi":
 			# TODO: better DDI implementation that doesn't simply flatten everything, see: https://sickle.readthedocs.io/en/latest/customizing.html
 			# Mapping as per http://www.ddialliance.org/resources/ddi-profiles/dc
@@ -88,7 +90,7 @@ class OAIRepository(HarvestRepository):
 			record["description"] = record.get("abstract")
 			record["publisher"] = record.get("producer")
 			record["contributor"] = record.get("othId")
-			record["date"] = record.get("prodDate")
+			record["pub_date"] = record.get("prodDate")
 			record["type"] = record.get("dataKind")
 			record["identifier"] = record.get("IDNo")
 			record["rights"] = record.get("copyright")
@@ -105,7 +107,7 @@ class OAIRepository(HarvestRepository):
 			record["subject"] = record.get("themekey")
 			record["description"] = record.get("abstract")
 			record["publisher"] = record.get("cntorg")
-			record["date"] = [record.get("begdate"), record.get("enddate")]
+			record["pub_date"] = [record.get("begdate"), record.get("enddate")]
 			record["type"] = record.get("geoform")
 			record["identifier"] = record.get("onlink")
 			record["rights"] = record.get("distliab")
@@ -132,7 +134,7 @@ class OAIRepository(HarvestRepository):
 		if 'identifier' not in record.keys():
 			return None
 
-		if record["date"] is None:
+		if record["pub_date"] is None:
 			return None
 
 		# If there are multiple identifiers, and one of them contains a link, then prefer it
@@ -153,35 +155,35 @@ class OAIRepository(HarvestRepository):
 			record["creator"] = record["publisher"]
 
 		# If date is undefined add an empty key
-		if 'date' not in record.keys():
-			record["date"] = ""
+		if 'pub_date' not in record.keys():
+			record["pub_date"] = ""
 
 		# If there are multiple dates choose the longest one (likely the most specific)
-		if isinstance(record["date"], list):
-			valid_date = record["date"][0]
-			for datestring in record["date"]:
+		if isinstance(record["pub_date"], list):
+			valid_date = record["pub_date"][0]
+			for datestring in record["pub_date"]:
 				if len(datestring) > len(valid_date):
 					valid_date = datestring
-			record["date"] = valid_date
+			record["pub_date"] = valid_date
 
 		# If date is still a one-value list, make it a string
-		if isinstance(record["date"], list):
-			record["date"] = record["date"][0]
+		if isinstance(record["pub_date"], list):
+			record["pub_date"] = record["pub_date"][0]
 
 		# Convert long dates into YYYY-MM-DD
-		datestring = re.search("(\d{4}[-/]?\d{2}[-/]?\d{2})", record["date"])
+		datestring = re.search("(\d{4}[-/]?\d{2}[-/]?\d{2})", record["pub_date"])
 		if datestring:
-			record["date"] = datestring.group(0).replace("/", "-")
+			record["pub_date"] = datestring.group(0).replace("/", "-")
 
 		# If dates are entirely numeric, add separators
-		if not re.search("\D", record["date"]):
-			self.logger.debug("Trying to reformat date: %s" % (record["date"]))
-			if (len(record["date"]) == 4):
-				record["date"] = record["date"][0] + record["date"][1] + record["date"][2] + record["date"][3] + "-01-01"
-			if (len(record["date"]) == 6):
-				record["date"] = record["date"][0] + record["date"][1] + record["date"][2] + record["date"][3] + "-" + record["date"][4] + record["date"][5] + "-01"
-			if (len(record["date"]) == 8):
-				record["date"] = record["date"][0] + record["date"][1] + record["date"][2] + record["date"][3] + "-" + record["date"][4] + record["date"][5] + "-" + record["date"][6] + record["date"][7]
+		if not re.search("\D", record["pub_date"]):
+			self.logger.debug("Trying to reformat date: %s" % (record["pub_date"]))
+			if (len(record["pub_date"]) == 4):
+				record["pub_date"] = record["pub_date"][0] + record["pub_date"][1] + record["pub_date"][2] + record["pub_date"][3] + "-01-01"
+			if (len(record["pub_date"]) == 6):
+				record["pub_date"] = record["pub_date"][0] + record["pub_date"][1] + record["pub_date"][2] + record["pub_date"][3] + "-" + record["pub_date"][4] + record["pub_date"][5] + "-01"
+			if (len(record["pub_date"]) == 8):
+				record["pub_date"] = record["pub_date"][0] + record["pub_date"][1] + record["pub_date"][2] + record["pub_date"][3] + "-" + record["pub_date"][4] + record["pub_date"][5] + "-" + record["pub_date"][6] + record["pub_date"][7]
 
 		if isinstance(record["title"], list):
 			record["title"] = record["title"][0]
@@ -233,7 +235,7 @@ class OAIRepository(HarvestRepository):
 
 	@_rate_limited(5)
 	def _update_record(self, record):
-		self.logger.debug("Updating OAI record %s from repo at %s" % (record['local_identifier'], record['repository_url']))
+		self.logger.debug("Updating OAI record %s" % (record['local_identifier']) )
 
 		try:
 			single_record = self.sickle.GetRecord(identifier=record["local_identifier"], metadataPrefix=self.metadataprefix)
@@ -249,7 +251,7 @@ class OAIRepository(HarvestRepository):
 
 			metadata['identifier'] = single_record.header.identifier
 			oai_record = self.unpack_oai_metadata(metadata)
-			self.db.write_record(oai_record, self.url, self.metadataprefix.lower(), self.domain_metadata, "replace")
+			self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
 			return True
 
 		except IdDoesNotExist:
