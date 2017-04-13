@@ -28,14 +28,14 @@ class DBInterface:
 			cur = con.cursor()
 			cur.execute("create table if not exists creators (creator_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, creator TEXT, is_contributor INTEGER)")
 			cur.execute("create table if not exists descriptions (description_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, description TEXT, language TEXT)")
-			cur.execute("create table if not exists domain_metadata (subject_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, field_name TEXT, field_value TEXT)")
-			cur.execute("create table if not exists geospatial (subject_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, coordinate_type TEXT, lat NUMERIC, lon NUMERIC)")
+			cur.execute("create table if not exists domain_metadata (metadata_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, field_name TEXT, field_value TEXT)")
+			cur.execute("create table if not exists geospatial (geospatial_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, coordinate_type TEXT, lat NUMERIC, lon NUMERIC)")
 			cur.execute("""create table if not exists records (record_id INTEGER PRIMARY KEY NOT NULL,repository_id INTEGER NOT NULL,title TEXT,pub_date TEXT,modified_timestamp INTEGER DEFAULT 0,
 				source_url TEXT,deleted NUMERIC DEFAULT 0,local_identifier TEXT,series TEXT,contact TEXT)""")
 			cur.execute("""create table if not exists repositories (repository_id INTEGER PRIMARY KEY NOT NULL,repository_set TEXT NOT NULL DEFAULT '',repository_url TEXT,repository_name TEXT,
 				repository_thumbnail TEXT,repository_type TEXT,last_crawl_timestamp INTEGER,item_url_pattern TEXT,abort_after_numerrors INTEGER,max_records_updated_per_run INTEGER,
 				update_log_after_numitems INTEGER,record_refresh_days INTEGER,repo_refresh_days INTEGER,enabled TEXT)""")
-			cur.execute("create table if not exists rights (subject_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, rights TEXT)")
+			cur.execute("create table if not exists rights (rights_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, rights TEXT)")
 			cur.execute("create table if not exists subjects (subject_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, subject TEXT)")
 			cur.execute("create table if not exists tags (tag_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, tag TEXT, language TEXT)")
 			cur.execute("create index if not exists creators_by_record on creators(record_id)")
