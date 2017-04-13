@@ -246,94 +246,123 @@ class DBInterface:
 				return None
 
 			if "creator" in record:
+				try:
+					# TODO: figure out a cleaner way to remove related table data other than just purging it all each time
+					cur.execute(self._prep("DELETE from creators where record_id = ? and is_contributor=0"), (record["record_id"],))
+				except:
+					pass
 				if not isinstance(record["creator"], list):
 					record["creator"] = [record["creator"]]
 				for creator in record["creator"]:
 					try:
-						cur.execute(self._prep("DELETE from creators where record_id = ? and is_contributor=0"), (record["record_id"],))
 						cur.execute(self._prep("INSERT INTO creators (record_id, creator, is_contributor) VALUES (?,?,?)"), (record["record_id"], creator, 0))
 					except self.dblayer.IntegrityError:
 						pass
 
 			if "contributor" in record:
+				try:
+					cur.execute(self._prep("DELETE from creators where record_id = ? and is_contributor=1"), (record["record_id"],))
+				except:
+					pass
 				if not isinstance(record["contributor"], list):
 					record["contributor"] = [record["contributor"]]
 				for creator in record["contributor"]:
 					try:
-						cur.execute(self._prep("DELETE from creators where record_id = ? and is_contributor=1"), (record["record_id"],))
 						cur.execute(self._prep("INSERT INTO creators (record_id, creator, is_contributor) VALUES (?,?,?)"), (record["record_id"], creator, 1))
 					except self.dblayer.IntegrityError:
 						pass
 
 			if "subject" in record:
+				try:
+					cur.execute(self._prep("DELETE from subjects where record_id = ?"), (record["record_id"],))
+				except:
+					pass
 				if not isinstance(record["subject"], list):
 					record["subject"] = [record["subject"]]
 				for subject in record["subject"]:
 					try:
-						cur.execute(self._prep("DELETE from subjects where record_id = ?"), (record["record_id"],))
 						if subject is not None and len(subject) > 0:
 							cur.execute(self._prep("INSERT INTO subjects (record_id, subject) VALUES (?,?)"), (record["record_id"], subject))
 					except self.dblayer.IntegrityError:
 						pass
 
 			if "rights" in record:
+				try:
+					cur.execute(self._prep("DELETE from rights where record_id = ?"), (record["record_id"],))
+				except:
+					pass
 				if not isinstance(record["rights"], list):
 					record["rights"] = [record["rights"]]
 				for rights in record["rights"]:
 					try:
-						cur.execute(self._prep("DELETE from rights where record_id = ?"), (record["record_id"],))
 						cur.execute(self._prep("INSERT INTO rights (record_id, rights) VALUES (?,?)"), (record["record_id"], rights))
 					except self.dblayer.IntegrityError:
 						pass
 
 			if "description" in record:
+				try:
+					cur.execute(self._prep("DELETE from descriptions where record_id = ? and language='en' "), (record["record_id"],))
+				except:
+					pass
 				if not isinstance(record["description"], list):
 					record["description"] = [record["description"]]
 				for description in record["description"]:
 					try:
-						cur.execute(self._prep("DELETE from descriptions where record_id = ? and language='en' "), (record["record_id"],))
 						cur.execute(self._prep("INSERT INTO descriptions (record_id, description, language) VALUES (?,?,?)"), (record["record_id"], description, 'en'))
 					except self.dblayer.IntegrityError:
 						pass
 
 			if "description_fr" in record:
+				try:
+					cur.execute(self._prep("DELETE from descriptions where record_id = ? and language='fr' "), (record["record_id"],))
+				except:
+					pass
 				if not isinstance(record["description_fr"], list):
 					record["description_fr"] = [record["description_fr"]]
 				for description_fr in record["description_fr"]:
 					try:
-						cur.execute(self._prep("DELETE from descriptions where record_id = ? and language='fr' "), (record["record_id"],))
 						cur.execute(self._prep("INSERT INTO descriptions (record_id, description, language) VALUES (?,?,?)"), (record["record_id"], description_fr, 'fr'))
 					except self.dblayer.IntegrityError:
 						pass
 
 			if "tags" in record:
+				try:
+					cur.execute(self._prep("DELETE from tags where record_id = ? and language='en' "), (record["record_id"],))
+				except:
+					pass
 				if not isinstance(record["tags"], list):
 					record["tags"] = [record["tags"]]
 				for tag in record["tags"]:
 					try:
-						cur.execute(self._prep("DELETE from tags where record_id = ? and language='en' "), (record["record_id"],))
 						cur.execute(self._prep("INSERT INTO tags (record_id, tag, language) VALUES (?,?,?)"), (record["record_id"], tag, "en"))
 					except self.dblayer.IntegrityError:
 						pass
 
 			if "tags_fr" in record:
+				try:
+					cur.execute(self._prep("DELETE from tags where record_id = ? and language='fr' "), (record["record_id"],))
+				except:
+					pass
 				if not isinstance(record["tags_fr"], list):
 					record["tags_fr"] = [record["tags_fr"]]
 				for tag_fr in record["tags_fr"]:
 					try:
-						cur.execute(self._prep("DELETE from tags where record_id = ? and language='fr' "), (record["record_id"],))
 						cur.execute(self._prep("INSERT INTO tags (record_id, tag, language) VALUES (?,?,?)"), (record["record_id"], tag_fr, "fr"))
 					except self.dblayer.IntegrityError:
 						pass
 
 			if "geospatial" in record:
+				try:
+					cur.execute(self._prep("DELETE from geospatial where record_id = ?"), (record["record_id"],))
+				except:
+					pass
 				for coordinates in record["geospatial"]["coordinates"][0]:
 					try:
-						cur.execute(self._prep("DELETE from geospatial where record_id = ?"), (record["record_id"],))
 						cur.execute(self._prep("INSERT INTO geospatial (record_id, coordinate_type, lat, lon) VALUES (?,?,?,?)"), (record["record_id"], record["geospatial"]["type"], coordinates[0], coordinates[1]))
 					except self.dblayer.IntegrityError:
 						pass
 
+			# TODO: Figure out how to handle the case when domain metadata removed from item in repo
 			for domain_metadata_element in domain_metadata:
 				if domain_metadata_element in record:
 					if not isinstance(record[domain_metadata_element], list):

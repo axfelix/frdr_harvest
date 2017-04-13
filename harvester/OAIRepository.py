@@ -69,7 +69,7 @@ class OAIRepository(HarvestRepository):
 			except AttributeError:
 				# probably not a valid OAI record
 				# Islandora throws this for non-object directories
-				self.logger.debug("OAI AttributeError with item %s" % (metadata["identifier"]) )
+				self.logger.debug("AttributeError while working on item %i" % (item_count))
 				pass
 
 			except StopIteration:
