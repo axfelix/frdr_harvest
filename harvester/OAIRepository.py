@@ -69,7 +69,7 @@ class OAIRepository(HarvestRepository):
 			except AttributeError:
 				# probably not a valid OAI record
 				# Islandora throws this for non-object directories
-				self.logger.debug("OAI AttributeError with item %s" % (oai_record["identifier"]) )
+				self.logger.debug("OAI AttributeError with item %s" % (metadata["identifier"]) )
 				pass
 
 			except StopIteration:
@@ -178,7 +178,6 @@ class OAIRepository(HarvestRepository):
 
 		# If dates are entirely numeric, add separators
 		if not re.search("\D", record["pub_date"]):
-			self.logger.debug("Trying to reformat date: %s" % (record["pub_date"]))
 			if (len(record["pub_date"]) == 6):
 				record["pub_date"] = record["pub_date"][0] + record["pub_date"][1] + record["pub_date"][2] + record["pub_date"][3] + "-" + record["pub_date"][4] + record["pub_date"][5]
 			if (len(record["pub_date"]) == 8):
