@@ -242,7 +242,7 @@ class DBInterface:
 				cur.execute(self._prep("UPDATE records set title=?, pub_date=?, contact=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=? WHERE record_id = ?"),
 					(record["title"], record["pub_date"], record["contact"], record["series"], time.time(), source_url, 0, record["identifier"], record["record_id"]) )
 
-			if record["record_id"] == None:
+			if record["record_id"] is None:
 				return None
 
 			if "creator" in record:
