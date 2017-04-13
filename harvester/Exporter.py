@@ -73,7 +73,7 @@ class Exporter(object):
 			records_cursor = records_con.cursor()
 
 		records_cursor.execute(self.db._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.modified_timestamp,
-			repos.repository_url, repos.repository_name as "nrdr:origin.id", repos.repository_thumbnail as "nrdr:origin.icon", repos.item_url_pattern, repos.last_crawl_timestamp 
+			repos.repository_url, repos.repository_name, repos.repository_thumbnail, repos.item_url_pattern, repos.last_crawl_timestamp 
 			FROM records recs, repositories repos WHERE recs.repository_id = repos.repository_id """))
 
 		records_assembled = 0
@@ -86,7 +86,8 @@ class Exporter(object):
 				self._write_to_file(json.dumps(gingest_block), export_filepath, temp_filepath, "gmeta", gmeta_batches)
 				del gmeta[:batch_size]
 
-			record = (dict(zip(['record_id','title', 'pub_date', 'contact', 'series', 'source_url', 'deleted', 'local_identifier', 'repository_url', 'nrdr:origin.id', 'nrdr:origin.icon', 'item_url_pattern', 'modified_timestamp', 'last_crawl_timestamp'], row)))
+			record = (dict(zip(['record_id','title', 'pub_date', 'contact', 'series', 'source_url', 'deleted', 'local_identifier', 'modified_timestamp',
+				'repository_url', 'repository_name', 'repository_thumbnail', 'item_url_pattern',  'last_crawl_timestamp'], row)))
 			record["deleted"] = int(record["deleted"])
 
 			if only_new_records == True and float(lastrun_timestamp) > record["last_crawl_timestamp"]:
@@ -171,20 +172,28 @@ class Exporter(object):
 					record[row[0]] = row[1]
 
 			# Convert friendly column names into dc element names
-			record["dc:title"] = record["title"]
-			record["dc:date"] = record["pub_date"]
-			record["nrdr:contact"] = record["contact"]
-			record["nrdr:series"] = record["series"]
+			record["dc:title"]         = record["title"]
+			record["dc:date"]          = record["pub_date"]
+			record["nrdr:contact"]     = record["contact"]
+			record["nrdr:series"]      = record["series"]
+			record["nrdr:origin.id"]   = record["repository_name"]
+			record["nrdr:origin.icon"] = record["repository_thumbnail"]
+
 			# remove unneeded columns from output
-			record.pop("title", None)
-			record.pop("pub_date", None)
 			record.pop("contact", None)
+			record.pop("deleted", None)
+			record.pop("item_url_pattern", None)
+			record.pop("last_crawl_timestamp", None)
+			record.pop("local_identifier", None)
+			record.pop("modified_timestamp", None)
+			record.pop("pub_date", None)
+			record.pop("record_id", None)
+			record.pop("repository_name", None)
+			record.pop("repository_thumbnail", None)
+			record.pop("repository_url", None)
 			record.pop("series", None)
 			record.pop("source_url", None)
-			record.pop("deleted", None)
-			record.pop("repository_url", None)
-			record.pop("local_identifier", None)
-			record.pop("record_id", None)
+			record.pop("title", None)
 
 			record["@context"] = {"dc": "http://dublincore.org/documents/dcmi-terms", "nrdr": "http://nrdr-ednr.ca/schema/1.0/", "datacite": "https://schema.labs.datacite.org/meta/kernel-4.0/metadata.xsd"}
 			record["datacite:resourceTypeGeneral"] = "dataset"
