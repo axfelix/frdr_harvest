@@ -196,7 +196,7 @@ class DBInterface:
 		return True
 
 	def get_record_id(self, repo_id, local_identifier):
-		returnvalue = 0
+		returnvalue = None
 		con = self.getConnection()
 		with con:
 			if self.dbtype == "sqlite":
@@ -209,7 +209,7 @@ class DBInterface:
 			if cur is not None:
 				records = cur.fetchall()
 			else:
-				return 0
+				return None
 			for record in records:
 				returnvalue = int(record['record_id'])
 		return returnvalue		
@@ -225,7 +225,7 @@ class DBInterface:
 			source_url = ""
 			if 'dc:source' in record:
 				source_url = record["dc:source"]
-			if record["record_id"] == 0:
+			if record["record_id"] is None:
 				try:
 					if self.dbtype == "postgres":
 						cur.execute(self._prep("INSERT INTO records (title, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, repository_id) VALUES(?,?,?,?,?,?,?,?,?) RETURNING record_id"), 
@@ -242,7 +242,7 @@ class DBInterface:
 				cur.execute(self._prep("UPDATE records set title=?, pub_date=?, contact=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=? WHERE record_id = ?"),
 					(record["title"], record["pub_date"], record["contact"], record["series"], time.time(), source_url, 0, record["identifier"], record["record_id"]) )
 
-			if record["record_id"] == 0:
+			if record["record_id"] == None:
 				return None
 
 			if "creator" in record:

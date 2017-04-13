@@ -92,7 +92,7 @@ class Exporter(object):
 			if only_new_records == True and float(lastrun_timestamp) > record["last_crawl_timestamp"]:
 				continue
 
-			if (record['title'] < 1):
+			if (len(record['title']) == 0):
 				continue
 
 			record["dc:source"] = self._construct_local_url(record)
