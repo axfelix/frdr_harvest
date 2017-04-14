@@ -1,7 +1,7 @@
 import os
 import logging
 import sys
-from logging.handlers import TimedRotatingFileHandler
+from logging.handlers import RotatingFileHandler
 
 class HarvestLogger:
 
@@ -10,11 +10,10 @@ class HarvestLogger:
 		if not os.path.exists(self.logdir):
 			os.makedirs(self.logdir)
 
-		self.handler = TimedRotatingFileHandler(
-			params['filename'],
-			when="D",
-			interval=int(params['daysperfile']),
-			backupCount=int(params['keep'])
+		self.handler = RotatingFileHandler(
+			params.get('filename','logs/log.txt'),
+			maxBytes=int(params.get('maxbytes',10485760)),
+			backupCount=int(params.get('keep',7))
 		)
 		logFormatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
 		self.handler.setFormatter(logFormatter)

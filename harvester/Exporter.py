@@ -72,22 +72,28 @@ class Exporter(object):
 		with records_con:
 			records_cursor = records_con.cursor()
 
-		records_cursor.execute(self.db._prep("""SELECT recs.title, recs.date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.repository_url, repos.repository_name as "nrdr:origin.id", repos.repository_thumbnail as "nrdr:origin.icon", repos.item_url_pattern, recs.modified_timestamp, repos.last_crawl_timestamp FROM records recs, repositories repos WHERE recs.title != '' and recs.repository_url = repos.repository_url """))
+		records_cursor.execute(self.db._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.modified_timestamp,
+			repos.repository_url, repos.repository_name, repos.repository_thumbnail, repos.item_url_pattern, repos.last_crawl_timestamp 
+			FROM records recs, repositories repos WHERE recs.repository_id = repos.repository_id """))
 
 		records_assembled = 0
 		gmeta_batches = 0
 		for row in records_cursor:
 			if records_assembled % batch_size == 0 and records_assembled!=0:
 				gmeta_batches += 1
+				self.logger.debug("Writing batch %s to output file" % (gmeta_batches))
 				gingest_block = {"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":gmeta}}
 				self._write_to_file(json.dumps(gingest_block), export_filepath, temp_filepath, "gmeta", gmeta_batches)
 				del gmeta[:batch_size]
 
-			record = (dict(zip(['title', 'date', 'contact', 'series', 'source_url', 'deleted', 'local_identifier', 'repository_url', 'nrdr:origin.id', 'nrdr:origin.icon', 'item_url_pattern', 'modified_timestamp', 'last_crawl_timestamp'], row)))
+			record = (dict(zip(['record_id','title', 'pub_date', 'contact', 'series', 'source_url', 'deleted', 'local_identifier', 'modified_timestamp',
+				'repository_url', 'repository_name', 'repository_thumbnail', 'item_url_pattern',  'last_crawl_timestamp'], row)))
 			record["deleted"] = int(record["deleted"])
 
-
 			if only_new_records == True and float(lastrun_timestamp) > record["last_crawl_timestamp"]:
+				continue
+
+			if (len(record['title']) == 0):
 				continue
 
 			record["dc:source"] = self._construct_local_url(record)
@@ -108,8 +114,7 @@ class Exporter(object):
 				elif self.dbtype == "postgres":
 					litecur = con.cursor(cursor_factory=None)
 
-				litecur.execute(self.db._prep("SELECT coordinate_type, lat, lon FROM geospatial WHERE local_identifier=? AND repository_url=?"),
-					(record["local_identifier"], record["repository_url"]))
+				litecur.execute(self.db._prep("SELECT coordinate_type, lat, lon FROM geospatial WHERE record_id=?"), (record["record_id"],) )
 				geodata = litecur.fetchall()
 				record["nrdr:geospatial"] = []
 				polycoordinates = []
@@ -137,57 +142,58 @@ class Exporter(object):
 
 				# attach the other values to the dict
 				# TODO: investigate doing this purely in SQL
-				litecur.execute(self.db._prep("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=0"),
-					(record["local_identifier"], record["repository_url"]))
+				litecur.execute(self.db._prep("SELECT creator FROM creators WHERE record_id=? AND is_contributor=0"), (record["record_id"],) )
 				record["dc:contributor.author"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT creator FROM creators WHERE local_identifier=? AND repository_url=? AND is_contributor=1"),
-					(record["local_identifier"], record["repository_url"]))
+				litecur.execute(self.db._prep("SELECT creator FROM creators WHERE record_id=? AND is_contributor=1"), (record["record_id"],) )
 				record["dc:contributor"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT subject FROM subjects WHERE local_identifier=? AND repository_url=?"),
-								(record["local_identifier"], record["repository_url"]))
+				litecur.execute(self.db._prep("SELECT subject FROM subjects WHERE record_id=?"), (record["record_id"],) )
 				record["dc:subject"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT rights FROM rights WHERE local_identifier=? AND repository_url=?"),
-								(record["local_identifier"], record["repository_url"]))
+				litecur.execute(self.db._prep("SELECT rights FROM rights WHERE record_id=?"), (record["record_id"],) )
 				record["dc:rights"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT description FROM descriptions WHERE local_identifier=? AND repository_url=?"),
-								(record["local_identifier"], record["repository_url"]))
+				litecur.execute(self.db._prep("SELECT description FROM descriptions WHERE record_id=? and language='en' "), (record["record_id"],) )
 				record["dc:description"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT description FROM fra_descriptions WHERE local_identifier=? AND repository_url=?"),
-					(record["local_identifier"], record["repository_url"]))
+				litecur.execute(self.db._prep("SELECT description FROM descriptions WHERE record_id=? and language='fr' "), (record["record_id"],) )
 				record["nrdr:description_fr"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='en'"),
-								(record["local_identifier"], record["repository_url"]))
+				litecur.execute(self.db._prep("SELECT tag FROM tags WHERE record_id=? AND language='en'"), (record["record_id"],) )
 				record["nrdr:tags"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT tag FROM tags WHERE local_identifier=? AND repository_url=? AND language='fr'"),
-								(record["local_identifier"], record["repository_url"]))
+				litecur.execute(self.db._prep("SELECT tag FROM tags WHERE record_id=? AND language='fr'"), (record["record_id"],) )
 				record["nrdr:tags_fr"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT field_name, field_value FROM domain_metadata WHERE local_identifier=? AND repository_url=?"),
-								(record["local_identifier"], record["repository_url"]))
+				litecur.execute(self.db._prep("SELECT field_name, field_value FROM domain_metadata WHERE record_id=?"), (record["record_id"],) )
 				domain_metadata = litecur.fetchall()
 				for row in domain_metadata:
 					record[row[0]] = row[1]
 
-				record.pop("repository_url", None)
-				record.pop("local_identifier", None)
+			# Convert friendly column names into dc element names
+			record["dc:title"]         = record["title"]
+			record["dc:date"]          = record["pub_date"]
+			record["nrdr:contact"]     = record["contact"]
+			record["nrdr:series"]      = record["series"]
+			record["nrdr:origin.id"]   = record["repository_name"]
+			record["nrdr:origin.icon"] = record["repository_thumbnail"]
 
-			record["dc:title"] = record["title"]
-			record.pop("title", None)
-			record["dc:date"] = record["date"]
-			record.pop("date", None)
-			record["nrdr:contact"] = record["contact"]
+			# remove unneeded columns from output
 			record.pop("contact", None)
-			record["nrdr:series"] = record["series"]
+			record.pop("deleted", None)
+			record.pop("item_url_pattern", None)
+			record.pop("last_crawl_timestamp", None)
+			record.pop("local_identifier", None)
+			record.pop("modified_timestamp", None)
+			record.pop("pub_date", None)
+			record.pop("record_id", None)
+			record.pop("repository_name", None)
+			record.pop("repository_thumbnail", None)
+			record.pop("repository_url", None)
 			record.pop("series", None)
 			record.pop("source_url", None)
-			record.pop("deleted", None)
+			record.pop("title", None)
 
 			record["@context"] = {"dc": "http://dublincore.org/documents/dcmi-terms", "nrdr": "http://nrdr-ednr.ca/schema/1.0/", "datacite": "https://schema.labs.datacite.org/meta/kernel-4.0/metadata.xsd"}
 			record["datacite:resourceTypeGeneral"] = "dataset"
@@ -231,7 +237,6 @@ class Exporter(object):
 
 		try:
 			with open(temp_filename, "w") as tempfile:
-				self.logger.info("Writing output file")
 				tempfile.write(output)
 		except:
 			self.logger.error("Unable to write output data to temporary file: %s" % (temp_filename))

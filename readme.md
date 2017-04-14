@@ -17,7 +17,7 @@ Configuration, including which repos are to be crawled, should be placed in data
     "export_format": "gmeta",
     "logging": {
         "filename": "logs/log.txt",
-        "daysperfile": 1,
+        "maxbytes": 10485760,
         "keep": 7,
         "level": "DEBUG"
     },

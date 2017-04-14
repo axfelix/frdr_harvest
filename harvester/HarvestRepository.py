@@ -24,9 +24,9 @@ class HarvestRepository(object):
 			'db': None,
 			'logger': None
 		})
-
 		# Inherit global config
 		self.__dict__.update(globalParams)
+		self.repository_id = 0
 
 	def setRepoParams(self, repoParams):
 		""" Set local repo params and let them override the global config """
@@ -43,7 +43,9 @@ class HarvestRepository(object):
 
 	def crawl(self):
 		self.tstart = time.time()
-		self.last_crawl = self.db.get_repo_last_crawl(self.url, self.name)
+		if self.repository_id == 0:
+			self.repository_id = self.db.get_repo_id(self.url, self.set)
+		self.last_crawl = self.db.get_repo_last_crawl(self.repository_id)
 
 		if self.last_crawl == 0:
 			self.logger.info("*** Repo: %s, type: %s, (last harvested: never)" % (self.name, self.type ) )
@@ -53,7 +55,7 @@ class HarvestRepository(object):
 		if (self.enabled):
 			if (self.last_crawl + self.repo_refresh_days*86400) < self.tstart:
 				self._crawl()
-				self.db.update_last_crawl(self.url, self.name)
+				self.db.update_last_crawl(self.repository_id)
 			else:
 				self.logger.info("This repo is not yet due to be harvested")
 		else:
@@ -78,7 +80,7 @@ class HarvestRepository(object):
 		stale_timestamp = int(time.time() - self.record_refresh_days*86400)
 		self.dbtype = dbparams.get('type', None)
 
-		records = self.db.get_stale_records(stale_timestamp,self.url, self.max_records_updated_per_run)
+		records = self.db.get_stale_records(stale_timestamp,self.repository_id, self.max_records_updated_per_run)
 		for record in records:
 			if record_count == 0:
 				self.logger.info("Started processing for %d records" % (len(records)) )

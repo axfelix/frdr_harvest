@@ -21,28 +21,24 @@ class CKANRepository(HarvestRepository):
 				# F gon' give it to ya
 				self.domain_metadata = dmf.readlines()
 		else:
-			self.domain_metadata = []		
+			self.domain_metadata = []
 
 
 	def _crawl(self):
-		self.db.create_repo(self.url, self.name, "ckan", self.thumbnail, self.item_url_pattern)
+		self.repository_id = self.db.update_repo(self.repository_id, self.url, self.set, self.name, "ckan", self.enabled, self.thumbnail, self.item_url_pattern,self.abort_after_numerrors,self.max_records_updated_per_run,self.update_log_after_numitems,self.record_refresh_days,self.repo_refresh_days)
 		records = self.ckanrepo.action.package_list()
 
-		item_existing_count = 0
-		item_new_count = 0
-		for record_id in records:
-			result = self.db.write_header(record_id, self.url)
-			if result == None:
-				item_existing_count = item_existing_count + 1
-			else:
-				item_new_count = item_new_count + 1
-			if ((item_existing_count + item_new_count) % self.update_log_after_numitems == 0):
+		item_count = 0
+		for ckan_identifier in records:
+			result = self.db.write_header(ckan_identifier, self.repository_id)
+			item_count = item_count + 1
+			if (item_count % self.update_log_after_numitems == 0):
 				tdelta = time.time() - self.tstart + 0.1
-				self.logger.info("Done %s item headers after %s (%.1f items/sec)" % ((item_existing_count + item_new_count), self.formatter.humanize(tdelta), ((item_existing_count + item_new_count)/tdelta)) )
+				self.logger.info("Done %s item headers after %s (%.1f items/sec)" % (item_count, self.formatter.humanize(tdelta), item_count/tdelta) )
 
-		self.logger.info("Found %s items in feed (%d existing, %d new)" % ((item_existing_count + item_new_count), item_existing_count, item_new_count) )
+		self.logger.info("Found %s items in feed" % (item_count) )
 
-	def format_ckan_to_oai(self,ckan_record, local_identifier):
+	def format_ckan_to_oai(self, ckan_record, local_identifier):
 		record = {}
 
 		if not 'date_published' in ckan_record:
@@ -73,7 +69,10 @@ class CKANRepository(HarvestRepository):
 		record["subject"] = ckan_record.get('subject',"")
 
 		# Open Data Canada API now returns a mangled unicode-escaped-keyed-dict-as-string; regex is the only solution
-		record["dc:source"] = re.search("(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?", ckan_record["url"]).group(0)
+		try:
+			record["dc:source"] = re.search("(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?", ckan_record["url"]).group(0)
+		except:
+			return None
 
 		record["rights"] = [ckan_record['license_title']]
 		record["rights"].append(ckan_record.get("license_url", ""))
@@ -81,7 +80,7 @@ class CKANRepository(HarvestRepository):
 		record["rights"] = " - ".join(record["rights"])
 
 		# Some CKAN records have a trailing null timestamp after date
-		record["date"] = re.sub(" 00:00:00", "", ckan_record['date_published'])
+		record["pub_date"] = re.sub(" 00:00:00", "", ckan_record['date_published'])
 
 		record["contact"] = ckan_record.get("author_email", ckan_record.get("maintainer_email", ""))
 
@@ -138,13 +137,13 @@ class CKANRepository(HarvestRepository):
 
 	@_rate_limited(5)
 	def _update_record(self,record):
-		self.logger.debug("Updating CKAN record %s from repo at %s" % (record['local_identifier'],self.url) )
+		#self.logger.debug("Updating CKAN record %s" % (record['local_identifier']) )
 
 		try:
 			ckan_record = self.ckanrepo.action.package_show(id=record['local_identifier'])
 			oai_record = self.format_ckan_to_oai(ckan_record,record['local_identifier'])
 			if oai_record:
-				self.db.write_record(oai_record, self.url, self.metadataprefix.lower(), self.domain_metadata, "replace")
+				self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
 			return True
 
 		except ckanapi.errors.NotAuthorized:
