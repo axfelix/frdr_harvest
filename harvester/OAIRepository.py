@@ -49,8 +49,10 @@ class OAIRepository(HarvestRepository):
 					if not isinstance(metadata['identifier'], list):
 						metadata['identifier'] = [metadata['identifier']]
 					for idt in metadata['identifier']:
-						if "http" in idt.lower():
+						if idt.lower().startswith("http:"):
 							metadata['dc:source'] = idt
+						if idt.lower().startswith("doi:"):
+							metadata['dc:source'] = "https://dx.doi.org/" + idt[4:]
 
 				# EPrints workaround for using header datestamp in lieu of date
 				if 'date' not in metadata.keys() and record.header.datestamp:
