@@ -71,6 +71,9 @@ class CKANRepository(HarvestRepository):
 		# Open Data Canada API now returns a mangled unicode-escaped-keyed-dict-as-string; regex is the only solution
 		try:
 			record["dc:source"] = re.search("(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?", ckan_record["url"]).group(0)
+			# Prefer English URL if regex finds French URL first
+			# This feels bad but the way they expose this data is worse
+			record["dc:source"] = re.sub("/fr/", "/en/", record["dc:source"])
 		except:
 			return None
 
