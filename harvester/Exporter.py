@@ -101,7 +101,7 @@ class Exporter(object):
 				continue
 
 			if record["deleted"] == 1:
-				gmeta_data = {record["dc:source"]: {"mimetype": "application/json", "content": None}}
+				gmeta_data = {"@datatype": "GMetaEntry", "@version": "2016-11-09", "subject": record["dc:source"], "id": record["dc:source"], "visible_to": ["public"], "mimetype": "application/json", "content": None}
 				gmeta.append(gmeta_data)
 				continue
 
@@ -195,7 +195,7 @@ class Exporter(object):
 			record.pop("source_url", None)
 			record.pop("title", None)
 
-			record["@context"] = {"dc": "http://dublincore.org/documents/dcmi-terms", "nrdr": "http://nrdr-ednr.ca/schema/1.0/", "datacite": "https://schema.labs.datacite.org/meta/kernel-4.0/metadata.xsd"}
+			record["@context"] = {"dc": "http://dublincore.org/documents/dcmi-terms", "frdr": "https://frdr.ca/schema/1.0/", "datacite": "https://schema.labs.datacite.org/meta/kernel-4.0/metadata.xsd"}
 			record["datacite:resourceTypeGeneral"] = "dataset"
 			gmeta_data = {"@datatype": "GMetaEntry", "@version": "2016-11-09", "subject": record["dc:source"], "id": record["dc:source"], "visible_to": ["public"], "mimetype": "application/json", "content": record}
 			gmeta.append(gmeta_data)
