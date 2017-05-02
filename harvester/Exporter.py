@@ -101,7 +101,7 @@ class Exporter(object):
 				continue
 
 			if record["deleted"] == 1:
-				gmeta_data = {"@datatype": "GMetaEntry", "@version": "2016-11-09", "subject": record["dc:source"], "id": record["dc:source"], "visible_to": ["public"], "mimetype": "application/json", "content": None}
+				gmeta_data = {"@datatype": "GMetaEntry", "@version": "2016-11-09", "subject": record["dc:source"], "id": record["dc:source"], "visible_to": ["public"], "mimetype": "application/json", "content": {}}
 				gmeta.append(gmeta_data)
 				continue
 
