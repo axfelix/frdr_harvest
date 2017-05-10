@@ -49,7 +49,7 @@ class OAIRepository(HarvestRepository):
 					if not isinstance(metadata['identifier'], list):
 						metadata['identifier'] = [metadata['identifier']]
 					for idt in metadata['identifier']:
-						if idt.lower().startswith("http:"):
+						if idt.lower().startswith("http"):
 							metadata['dc:source'] = idt
 						if idt.lower().startswith("doi:"):
 							metadata['dc:source'] = "https://dx.doi.org/" + idt[4:]
