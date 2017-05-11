@@ -76,15 +76,20 @@ class Exporter(object):
 			repos.repository_url, repos.repository_name, repos.repository_thumbnail, repos.item_url_pattern, repos.last_crawl_timestamp 
 			FROM records recs, repositories repos WHERE recs.repository_id = repos.repository_id """))
 
+		buffer_limit = 10000000
+
 		records_assembled = 0
 		gmeta_batches = 0
+		buffer_size = 0
 		for row in records_cursor:
-			if records_assembled % batch_size == 0 and records_assembled!=0:
+			#if records_assembled % batch_size == 0 and records_assembled!=0:
+			if buffer_size > buffer_limit:
 				gmeta_batches += 1
 				self.logger.debug("Writing batch %s to output file" % (gmeta_batches))
 				gingest_block = {"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":gmeta}}
 				self._write_to_file(json.dumps(gingest_block), export_filepath, temp_filepath, "gmeta", gmeta_batches)
 				del gmeta[:batch_size]
+				buffer_size = 0
 
 			record = (dict(zip(['record_id','title', 'pub_date', 'contact', 'series', 'source_url', 'deleted', 'local_identifier', 'modified_timestamp',
 				'repository_url', 'repository_name', 'repository_thumbnail', 'item_url_pattern',  'last_crawl_timestamp'], row)))
@@ -200,6 +205,7 @@ class Exporter(object):
 			gmeta_data = {"@datatype": "GMetaEntry", "@version": "2016-11-09", "subject": record["dc:source"], "id": record["dc:source"], "visible_to": ["public"], "mimetype": "application/json", "content": record}
 			gmeta.append(gmeta_data)
 
+			buffer_size = buffer_size + len(json.dumps(gmeta_data))
 			records_assembled += 1
 
 		self.logger.info("gmeta size: %s items in %s files" % (records_assembled, gmeta_batches + 1))
