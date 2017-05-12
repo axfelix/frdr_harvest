@@ -121,7 +121,7 @@ class Exporter(object):
 
 				litecur.execute(self.db._prep("SELECT coordinate_type, lat, lon FROM geospatial WHERE record_id=?"), (record["record_id"],) )
 				geodata = litecur.fetchall()
-				record["nrdr:geospatial"] = []
+				record["frdr:geospatial"] = []
 				polycoordinates = []
 
 				try:
@@ -129,12 +129,12 @@ class Exporter(object):
 						if coordinate[0] == "Polygon":
 							polycoordinates.append([float(coordinate[1]), float(coordinate[2])])
 						else:
-							record["nrdr:geospatial"].append({"type":"Feature", "geometry":{"type":coordinate[0], "coordinates": [float(coordinate[1]), float(coordinate[2])]}})
+							record["frdr:geospatial"].append({"type":"Feature", "geometry":{"type":coordinate[0], "coordinates": [float(coordinate[1]), float(coordinate[2])]}})
 				except:
 					pass
 
 				if polycoordinates:
-					record["nrdr:geospatial"].append({"type":"Feature", "geometry":{"type":"Polygon", "coordinates": polycoordinates}})
+					record["frdr:geospatial"].append({"type":"Feature", "geometry":{"type":"Polygon", "coordinates": polycoordinates}})
 
 			with con:
 				if self.dbtype == "sqlite":
@@ -163,13 +163,13 @@ class Exporter(object):
 				record["dc:description"] = litecur.fetchall()
 
 				litecur.execute(self.db._prep("SELECT description FROM descriptions WHERE record_id=? and language='fr' "), (record["record_id"],) )
-				record["nrdr:description_fr"] = litecur.fetchall()
+				record["frdr:description_fr"] = litecur.fetchall()
 
 				litecur.execute(self.db._prep("SELECT tag FROM tags WHERE record_id=? AND language='en'"), (record["record_id"],) )
-				record["nrdr:tags"] = litecur.fetchall()
+				record["frdr:tags"] = litecur.fetchall()
 
 				litecur.execute(self.db._prep("SELECT tag FROM tags WHERE record_id=? AND language='fr'"), (record["record_id"],) )
-				record["nrdr:tags_fr"] = litecur.fetchall()
+				record["frdr:tags_fr"] = litecur.fetchall()
 
 				litecur.execute(self.db._prep("SELECT field_name, field_value FROM domain_metadata WHERE record_id=?"), (record["record_id"],) )
 				domain_metadata = litecur.fetchall()
@@ -179,10 +179,10 @@ class Exporter(object):
 			# Convert friendly column names into dc element names
 			record["dc:title"]         = record["title"]
 			record["dc:date"]          = record["pub_date"]
-			record["nrdr:contact"]     = record["contact"]
-			record["nrdr:series"]      = record["series"]
-			record["nrdr:origin.id"]   = record["repository_name"]
-			record["nrdr:origin.icon"] = record["repository_thumbnail"]
+			record["frdr:contact"]     = record["contact"]
+			record["frdr:series"]      = record["series"]
+			record["frdr:origin.id"]   = record["repository_name"]
+			record["frdr:origin.icon"] = record["repository_thumbnail"]
 
 			# remove unneeded columns from output
 			record.pop("contact", None)

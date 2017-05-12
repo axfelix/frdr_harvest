@@ -1,5 +1,5 @@
 
-    <registryObject group="${nrdr_origin_id}">
+    <registryObject group="${frdr_origin_id}">
         <key>${dc_source}</key>
         <originatingSource>${repository_url}</originatingSource>
         <collection type="dataset">
