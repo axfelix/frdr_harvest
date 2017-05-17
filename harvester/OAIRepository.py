@@ -198,6 +198,11 @@ class OAIRepository(HarvestRepository):
 		if "series" not in record.keys():
 			record["series"] = ""
 
+		# DSpace workaround to exclude theses and non-data content
+		if self.url == "http://circle.library.ubc.ca/oai/request":
+			if record["type"] and "Dataset" not in record["type"]:
+				return None
+
 		# EPrints workaround for liberal use of dc:identifier
 		# Rather not hardcode a single source URL for this
 		if self.url == "http://spectrum.library.concordia.ca/cgi/oai2":
