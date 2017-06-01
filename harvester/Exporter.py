@@ -130,8 +130,8 @@ class Exporter(object):
 							polycoordinates.append([float(coordinate[1]), float(coordinate[2])])
 						else:
 							record["frdr:geospatial"].append({"frdr:geospatial_type":"Feature", "frdr:geospatial_geometry":{"frdr:geometry_type":coordinate[0], "frdr:geometry_coordinates": [float(coordinate[1]), float(coordinate[2])]}})
-					except:
-						pass
+				except:
+					pass
 
 				if polycoordinates:
 					record["frdr:geospatial"].append({"frdr:geospatial_type":"Feature", "frdr:geospatial_geometry":{"frdr:geometry_type":"Polygon", "frdr:geometry_coordinates": polycoordinates}})
