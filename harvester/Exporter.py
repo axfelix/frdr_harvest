@@ -129,12 +129,12 @@ class Exporter(object):
 						if coordinate[0] == "Polygon":
 							polycoordinates.append([float(coordinate[1]), float(coordinate[2])])
 						else:
-							record["frdr:geospatial"].append({"type":"Feature", "geometry":{"type":coordinate[0], "coordinates": [float(coordinate[1]), float(coordinate[2])]}})
-				except:
-					pass
+							record["frdr:geospatial"].append({"frdr:geospatial_type":"Feature", "frdr:geospatial_geometry":{"frdr:geometry_type":coordinate[0], "frdr:geometry_coordinates": [float(coordinate[1]), float(coordinate[2])]}})
+					except:
+						pass
 
 				if polycoordinates:
-					record["frdr:geospatial"].append({"type":"Feature", "geometry":{"type":"Polygon", "coordinates": polycoordinates}})
+					record["frdr:geospatial"].append({"frdr:geospatial_type":"Feature", "frdr:geospatial_geometry":{"frdr:geometry_type":"Polygon", "frdr:geometry_coordinates": polycoordinates}})
 
 			with con:
 				if self.dbtype == "sqlite":
