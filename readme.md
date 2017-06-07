@@ -38,6 +38,15 @@ Configuration, including which repos are to be crawled, should be placed in data
             "enabled": false
         },
         {
+            "name": "BC Data Catalogue",
+            "url": "https://catalogue.data.gov.bc.ca",
+            "set": "",
+            "thumbnail": "https://pbs.twimg.com/profile_images/1328354823/databc-avatar-v2.png",
+            "type": "ckan",
+            "update_log_after_numitems": 50,
+            "enabled": false
+        },
+        {
             "name": "Algoma University Dataverse",
             "url": "http://dataverse.scholarsportal.info/oai",
             "set": "algoma_university_dataverse",
