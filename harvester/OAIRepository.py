@@ -258,6 +258,9 @@ class OAIRepository(HarvestRepository):
 
 			metadata['identifier'] = single_record.header.identifier
 			oai_record = self.unpack_oai_metadata(metadata)
+			if oai_record is None:
+				self.db.delete_record(record)
+				return False
 			self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
 			return True
 
