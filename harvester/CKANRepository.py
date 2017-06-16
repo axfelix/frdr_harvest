@@ -41,10 +41,12 @@ class CKANRepository(HarvestRepository):
 	def format_ckan_to_oai(self, ckan_record, local_identifier):
 		record = {}
 
-		if not 'date_published' in ckan_record:
+		if not 'date_published' in ckan_record and not 'dates' in ckan_record:
 			return None
 
-		if ('author' in ckan_record) and ckan_record['author']:
+		if ('contacts' in ckan_record) and ckan_record['contacts']:
+			record["creator"] = [person.get('name',"") for person in ckan_record['contacts']]
+		elif ('author' in ckan_record) and ckan_record['author']:
 			record["creator"] = ckan_record['author']
 		elif ('maintainer' in ckan_record) and ckan_record['maintainer']:
 			record["creator"] = ckan_record['maintainer']
@@ -70,10 +72,13 @@ class CKANRepository(HarvestRepository):
 
 		# Open Data Canada API now returns a mangled unicode-escaped-keyed-dict-as-string; regex is the only solution
 		try:
-			record["dc:source"] = re.search("(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?", ckan_record["url"]).group(0)
-			# Prefer English URL if regex finds French URL first
-			# This feels bad but the way they expose this data is worse
-			record["dc:source"] = re.sub("/fr/", "/en/", record["dc:source"])
+			if ('resources' in ckan_record):
+				record["dc:source"] = ckan_record['resources'][0].get('url',"")
+			else:
+				record["dc:source"] = re.search("(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?", ckan_record["url"]).group(0)
+				# Prefer English URL if regex finds French URL first
+				# This feels bad but the way they expose this data is worse
+				record["dc:source"] = re.sub("/fr/", "/en/", record["dc:source"])
 		except:
 			return None
 
@@ -83,9 +88,15 @@ class CKANRepository(HarvestRepository):
 		record["rights"] = " - ".join(record["rights"])
 
 		# Some CKAN records have a trailing null timestamp after date
-		record["pub_date"] = re.sub(" 00:00:00", "", ckan_record['date_published'])
+		if ('dates' in ckan_record):
+			record["pub_date"] = ckan_record['dates'][0].get('date',"")
+		else:
+			record["pub_date"] = re.sub(" 00:00:00", "", ckan_record['date_published'])
 
-		record["contact"] = ckan_record.get("author_email", ckan_record.get("maintainer_email", ""))
+		if ('contacts' in ckan_record) and ckan_record['contacts']:
+			record["contact"] = ckan_record["contacts"][0].get('email', "")
+		else:
+			record["contact"] = ckan_record.get("author_email", ckan_record.get("maintainer_email", ""))
 
 		try: 
 			record["series"] = ckan_record["data_series_name"]["en"]

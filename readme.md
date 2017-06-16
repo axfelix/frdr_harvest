@@ -251,7 +251,7 @@ Configuration, including which repos are to be crawled, should be placed in data
             "enabled": false
         },
         {
-            "name": "U of A Dataverse",
+            "name": "University of Alberta Dataverse",
             "url": "https://dataverse.library.ualberta.ca/dvn/OAIHandler",
             "set": "",
             "thumbnail": "https://dataverse.library.ualberta.ca/dvn/resources/images/ua-lib-logo.png",
