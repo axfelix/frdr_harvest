@@ -68,7 +68,10 @@ class CKANRepository(HarvestRepository):
 			record["description"] = ckan_record.get("notes", "")
 			record["description_fr"] = ckan_record.get("notes_fra", "")
 
-		record["subject"] = ckan_record.get('subject',"")
+		if ('sector' in ckan_record):
+			record["subject"] = ckan_record.get('sector', "")
+		else:
+			record["subject"] = ckan_record.get('subject',"")
 
 		# Open Data Canada API now returns a mangled unicode-escaped-keyed-dict-as-string; regex is the only solution
 		try:
