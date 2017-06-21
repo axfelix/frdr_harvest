@@ -1,12 +1,78 @@
 from harvester.HarvestRepository import HarvestRepository
 from functools import wraps
 from sickle import Sickle
+from sickle.iterator import BaseOAIIterator, OAIItemIterator, OAIResponseIterator
+from sickle.models import OAIItem, Record, Header
 from sickle.oaiexceptions import BadArgument, CannotDisseminateFormat, IdDoesNotExist, NoSetHierarchy, \
 	BadResumptionToken, NoRecordsMatch, OAIError
+from collections import defaultdict
 import re
 import os.path
 import time
+import json
 
+class FRDRRecord(OAIItem):
+	""" Override Sickle OAIItem to handle stripping only known namespaces """
+
+	def __init__(self, record_element, strip_ns=False):
+		super(FRDRRecord, self).__init__(record_element, strip_ns=strip_ns)
+		self.header = Header(self.xml.find('.//' + self._oai_namespace + 'header'))
+		self.deleted = self.header.deleted
+		if not self.deleted:
+			self.metadata = self.xml_to_dict(self.xml.find('.//' + self._oai_namespace + 'metadata').getchildren()[0])
+
+	def xml_to_dict(self,tree, paths=None):
+		""" Modified from Sickle.utils to strip only some namespaces """
+		namespaces_to_strip = [
+			'http://purl.org/dc/elements/1.1/',
+			'https://schema.datacite.org/meta/kernel-3/'
+		]
+		paths = paths or ['.//']
+		fields = defaultdict(list)
+		for path in paths:
+			elements = tree.findall(path, {})
+			for element in elements:
+				tag_namespace = re.search('\{(.*)\}', element.tag).group(1)
+				if tag_namespace in namespaces_to_strip:
+					tag = re.sub(r'\{.*\}', '', element.tag) 
+				else:
+					tag = tag_namespace + "#" + re.sub(r'\{.*\}', '', element.tag)
+				fields[tag].append(element.text)
+		return dict(fields)
+
+class FRDRItemIterator(BaseOAIIterator):
+	""" Modifed from Sickle.interator.OAIItemIterator to implement custom item mapping """
+
+	def __init__(self, sickle, params, ignore_deleted=False):
+		VERBS_ELEMENTS = {
+			'GetRecord': 'record',
+			'ListRecords': 'record',
+			'ListIdentifiers': 'header',
+			'ListSets': 'set',
+			'ListMetadataFormats': 'metadataFormat',
+			'Identify': 'Identify',
+		}
+		#self.mapper = sickle.class_mapping[params.get('verb')]
+		self.mapper = FRDRRecord
+		self.element = VERBS_ELEMENTS[params.get('verb')]
+		super(FRDRItemIterator, self).__init__(sickle, params, ignore_deleted)
+
+	def _next_response(self):
+		super(FRDRItemIterator, self)._next_response()
+		self._items = self.oai_response.xml.iterfind('.//' + self.sickle.oai_namespace + self.element)
+
+	def next(self):
+		"""Return the next record/header/set."""
+		while True:
+			for item in self._items:
+				mapped = self.mapper(item)
+				if self.ignore_deleted and mapped.deleted:
+					continue
+				return mapped
+			if self.resumption_token and self.resumption_token.token:
+				self._next_response()
+			else:
+				raise StopIteration
 
 class OAIRepository(HarvestRepository):
 	""" OAI Repository """
@@ -14,16 +80,7 @@ class OAIRepository(HarvestRepository):
 	def setRepoParams(self, repoParams):
 		self.metadataprefix = "oai_dc"
 		super(OAIRepository, self).setRepoParams(repoParams)
-		self.sickle = Sickle(self.url)
-
-		domain_metadata_file = "metadata/" + self.metadataprefix.lower()
-		if os.path.isfile(domain_metadata_file):
-			with open(domain_metadata_file) as dmf:
-				# F gon' give it to ya
-				self.domain_metadata = dmf.readlines()
-		else:
-			self.domain_metadata = []
-
+		self.sickle = Sickle(self.url, iterator=FRDRItemIterator)
 
 	def _crawl(self):
 		records = []
@@ -49,6 +106,7 @@ class OAIRepository(HarvestRepository):
 					if not isinstance(metadata['identifier'], list):
 						metadata['identifier'] = [metadata['identifier']]
 					for idt in metadata['identifier']:
+						#TODO - what about multiple identifiers? We should have some priority here, so we always pick the same one regardless of ordering
 						if idt.lower().startswith("http"):
 							metadata['dc:source'] = idt
 						if idt.lower().startswith("doi:"):
@@ -63,7 +121,9 @@ class OAIRepository(HarvestRepository):
 				# Use the header id for the database key (needed later for OAI GetRecord calls)
 				metadata['identifier'] = record.header.identifier
 				oai_record = self.unpack_oai_metadata(metadata)
-				self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
+				domain_metadata = self.find_domain_metadata(metadata)
+
+				self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), domain_metadata)
 				item_count = item_count + 1
 				if (item_count % self.update_log_after_numitems == 0):
 					tdelta = time.time() - self.tstart + 0.1
@@ -211,6 +271,13 @@ class OAIRepository(HarvestRepository):
 					record["dc:source"] = relation
 
 		return record
+
+	def find_domain_metadata(self, record):
+		newRecord = {}
+		for elementName in record.keys():
+			if '#' in elementName:
+				newRecord[elementName] = record.pop(elementName, None)
+		return newRecord
 
 	def _rate_limited(max_per_second):
 		""" Decorator that make functions not be called faster than a set rate """

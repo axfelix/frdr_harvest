@@ -171,10 +171,23 @@ class Exporter(object):
 				litecur.execute(self.db._prep("SELECT tag FROM tags WHERE record_id=? AND language='fr'"), (record["record_id"],) )
 				record["frdr:tags_fr"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT field_name, field_value FROM domain_metadata WHERE record_id=?"), (record["record_id"],) )
-				domain_metadata = litecur.fetchall()
-				for row in domain_metadata:
-					record[row[0]] = row[1]
+			domain_schemas = {}
+			with con:
+				if self.dbtype == "sqlite":
+					from sqlite3 import Row
+					con.row_factory = Row
+					litecur = con.cursor()
+				elif self.dbtype == "postgres":
+					litecur = con.cursor(cursor_factory=None)
+
+				litecur.execute(self.db._prep("SELECT ds.namespace, dm.field_name, dm.field_value FROM domain_metadata dm, domain_schemas ds WHERE dm.schema_id=ds.schema_id and dm.record_id=?"), (record["record_id"],) )
+				for row in litecur:
+					domain_namespace = str(row[0])
+					if domain_namespace not in domain_schemas.keys():
+						current_count = len(domain_schemas)
+						domain_schemas[domain_namespace] = "frdrcust" + str(current_count+1)
+					custom_label = domain_schemas[domain_namespace] + ":" + str(row[1])
+					record[custom_label] = str(row[2])
 
 			# Convert friendly column names into dc element names
 			record["dc:title"]         = record["title"]
@@ -201,7 +214,15 @@ class Exporter(object):
 			record.pop("source_url", None)
 			record.pop("title", None)
 
-			record["@context"] = {"dc": "http://dublincore.org/documents/dcmi-terms", "nrdr": "http://nrdr-ednr.ca/schema/1.0", "frdr": "https://frdr.ca/schema/1.0", "datacite": "https://schema.labs.datacite.org/meta/kernel-4.0/metadata.xsd"}
+			record["@context"] = {
+				"dc": "http://dublincore.org/documents/dcmi-terms", 
+				"nrdr": "http://nrdr-ednr.ca/schema/1.0", 
+				"frdr": "https://frdr.ca/schema/1.0", 
+				"datacite": "https://schema.labs.datacite.org/meta/kernel-4.0/metadata.xsd"
+			}
+			for custom_schema in domain_schemas:
+				short_label = domain_schemas[custom_schema]
+				record["@context"].update({short_label: custom_schema})
 			record["datacite:resourceTypeGeneral"] = "dataset"
 			gmeta_data = {"@datatype": "GMetaEntry", "@version": "2016-11-09", "subject": record["dc:source"], "id": record["dc:source"], "visible_to": ["public"], "mimetype": "application/json", "content": record}
 			gmeta.append(gmeta_data)
