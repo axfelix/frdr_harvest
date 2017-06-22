@@ -18,6 +18,7 @@ class HarvestRepository(object):
 			'record_refresh_days': 30,
 			'repo_refresh_days': 7,
 			'item_url_pattern': None,
+			'prune_non_dataset_items': False,
 			'enabled': False,
 			'formatter': TimeFormatter(),
 			'error_count': 0,

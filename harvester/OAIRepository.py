@@ -52,7 +52,6 @@ class FRDRItemIterator(BaseOAIIterator):
 			'ListMetadataFormats': 'metadataFormat',
 			'Identify': 'Identify',
 		}
-		#self.mapper = sickle.class_mapping[params.get('verb')]
 		self.mapper = FRDRRecord
 		self.element = VERBS_ELEMENTS[params.get('verb')]
 		super(FRDRItemIterator, self).__init__(sickle, params, ignore_deleted)
@@ -167,7 +166,6 @@ class OAIRepository(HarvestRepository):
 
 
 		if self.metadataprefix.lower() == "fgdc":
-			#record["title"] = record.get("title")
 			record["creator"] = record.get("origin")
 			record["subject"] = record.get("themekey")
 			record["description"] = record.get("abstract")
@@ -224,11 +222,13 @@ class OAIRepository(HarvestRepository):
 			record["pub_date"] = ""
 
 		# If there are multiple dates choose the longest one (likely the most specific)
+		# Exception test added for some strange PDC dates of [null, null]
 		if isinstance(record["pub_date"], list):
-			valid_date = record["pub_date"][0]
+			valid_date = record["pub_date"][0] or ""
 			for datestring in record["pub_date"]:
-				if len(datestring) > len(valid_date):
-					valid_date = datestring
+				if datestring is not None:
+					if len(datestring) > len(valid_date):
+						valid_date = datestring
 			record["pub_date"] = valid_date
 
 		# If date is still a one-value list, make it a string
@@ -247,6 +247,8 @@ class OAIRepository(HarvestRepository):
 			if (len(record["pub_date"]) == 8):
 				record["pub_date"] = record["pub_date"][0] + record["pub_date"][1] + record["pub_date"][2] + record["pub_date"][3] + "-" + record["pub_date"][4] + record["pub_date"][5] + "-" + record["pub_date"][6] + record["pub_date"][7]
 
+		if "title" not in record.keys():
+			return None
 		if isinstance(record["title"], list):
 			record["title"] = record["title"][0]
 
@@ -259,7 +261,7 @@ class OAIRepository(HarvestRepository):
 			record["series"] = ""
 
 		# DSpace workaround to exclude theses and non-data content
-		if self.url == "http://circle.library.ubc.ca/oai/request":
+		if self.prune_non_dataset_items:
 			if record["type"] and "Dataset" not in record["type"]:
 				return None
 
@@ -274,7 +276,7 @@ class OAIRepository(HarvestRepository):
 
 	def find_domain_metadata(self, record):
 		newRecord = {}
-		for elementName in record.keys():
+		for elementName in list(record.keys()):
 			if '#' in elementName:
 				newRecord[elementName] = record.pop(elementName, None)
 		return newRecord
@@ -336,7 +338,7 @@ class OAIRepository(HarvestRepository):
 			self.db.delete_record(record)
 
 		except Exception as e:
-			self.logger.error("Updating item failed: %s" % (str(e)) )
+			self.logger.error("Updating item failed (repo_id:%s, oai_id:%s): %s" % (self.repository_id, record['local_identifier'], str(e)) )
 			# Touch the record so we do not keep requesting it on every run
 			self.db.touch_record(record)
 			self.error_count = self.error_count + 1

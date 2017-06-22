@@ -260,7 +260,7 @@ class DBInterface:
 				returnvalue = int(record['record_id'])
 		return returnvalue		
 
-	def write_record(self, record, repo_id, metadata_prefix, domain_metadata, mode = "insert"):
+	def write_record(self, record, repo_id, metadata_prefix, domain_metadata):
 		if record == None:
 			return None
 		record["record_id"] = self.get_record_id(repo_id, record["identifier"])
