@@ -14,14 +14,7 @@ class CKANRepository(HarvestRepository):
 		self.metadataprefix = "ckan"
 		super(CKANRepository, self).setRepoParams(repoParams)
 		self.ckanrepo = ckanapi.RemoteCKAN(self.url)
-
-		domain_metadata_file = "metadata/" + self.metadataprefix.lower()
-		if os.path.isfile(domain_metadata_file):
-			with open(domain_metadata_file) as dmf:
-				# F gon' give it to ya
-				self.domain_metadata = dmf.readlines()
-		else:
-			self.domain_metadata = []
+		self.domain_metadata = []
 
 
 	def _crawl(self):
