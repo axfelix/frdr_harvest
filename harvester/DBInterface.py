@@ -36,6 +36,7 @@ class DBInterface:
 			cur.execute("""create table if not exists repositories (repository_id INTEGER PRIMARY KEY NOT NULL,repository_set TEXT NOT NULL DEFAULT '',repository_url TEXT,repository_name TEXT,
 				repository_thumbnail TEXT,repository_type TEXT,last_crawl_timestamp INTEGER,item_url_pattern TEXT,abort_after_numerrors INTEGER,max_records_updated_per_run INTEGER,
 				update_log_after_numitems INTEGER,record_refresh_days INTEGER,repo_refresh_days INTEGER,enabled TEXT)""")
+			cur.execute("create table if not exists publishers (publisher_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, publisher TEXT)")
 			cur.execute("create table if not exists rights (rights_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, rights TEXT)")
 			cur.execute("create table if not exists subjects (subject_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, subject TEXT)")
 			cur.execute("create table if not exists tags (tag_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, tag TEXT, language TEXT)")
@@ -45,6 +46,7 @@ class DBInterface:
 			cur.execute("create index if not exists descriptions_by_record on descriptions(record_id,language)")
 			cur.execute("create index if not exists tags_by_record on tags(record_id,language)")
 			cur.execute("create index if not exists subjects_by_record on subjects(record_id)")
+			cur.execute("create index if not exists publishers_by_record on publishers(record_id)")
 			cur.execute("create index if not exists rights_by_record on rights(record_id)")
 			cur.execute("create index if not exists geospatial_by_record on geospatial(record_id)")
 			cur.execute("create index if not exists domain_metadata_by_record on domain_metadata(record_id,schema_id)")
@@ -329,6 +331,20 @@ class DBInterface:
 					try:
 						if subject is not None and len(subject) > 0:
 							cur.execute(self._prep("INSERT INTO subjects (record_id, subject) VALUES (?,?)"), (record["record_id"], subject))
+					except self.dblayer.IntegrityError:
+						pass
+
+			if "publisher" in record:
+				try:
+					cur.execute(self._prep("DELETE from publishers where record_id = ?"), (record["record_id"],))
+				except:
+					pass
+				if not isinstance(record["publisher"], list):
+					record["publisher"] = [record["publisher"]]
+				for publisher in record["publisher"]:
+					try:
+						if publisher is not None and len(publisher) > 0:
+							cur.execute(self._prep("INSERT INTO publishers (record_id, publisher) VALUES (?,?)"), (record["record_id"], publisher))
 					except self.dblayer.IntegrityError:
 						pass
 
