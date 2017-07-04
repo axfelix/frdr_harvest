@@ -28,7 +28,8 @@ class DBInterface:
 			cur = con.cursor()
 			cur.execute("create table if not exists creators (creator_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, creator TEXT, is_contributor INTEGER)")
 			cur.execute("create table if not exists descriptions (description_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, description TEXT, language TEXT)")
-			cur.execute("create table if not exists domain_metadata (metadata_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, field_name TEXT, field_value TEXT)")
+			cur.execute("create table if not exists domain_metadata (metadata_id INTEGER PRIMARY KEY NOT NULL,schema_id INTEGER NOT NULL, record_id INTEGER NOT NULL, field_name TEXT, field_value TEXT)")
+			cur.execute("create table if not exists domain_schemas (schema_id INTEGER PRIMARY KEY NOT NULL, namespace TEXT)")
 			cur.execute("create table if not exists geospatial (geospatial_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, coordinate_type TEXT, lat NUMERIC, lon NUMERIC)")
 			cur.execute("""create table if not exists records (record_id INTEGER PRIMARY KEY NOT NULL,repository_id INTEGER NOT NULL,title TEXT,pub_date TEXT,modified_timestamp INTEGER DEFAULT 0,
 				source_url TEXT,deleted NUMERIC DEFAULT 0,local_identifier TEXT,series TEXT,contact TEXT)""")
@@ -38,13 +39,16 @@ class DBInterface:
 			cur.execute("create table if not exists rights (rights_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, rights TEXT)")
 			cur.execute("create table if not exists subjects (subject_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, subject TEXT)")
 			cur.execute("create table if not exists tags (tag_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, tag TEXT, language TEXT)")
+			cur.execute("create table if not exists settings (setting_id INTEGER PRIMARY KEY NOT NULL, setting_name TEXT, setting_value TEXT)")
+
 			cur.execute("create index if not exists creators_by_record on creators(record_id)")
 			cur.execute("create index if not exists descriptions_by_record on descriptions(record_id,language)")
 			cur.execute("create index if not exists tags_by_record on tags(record_id,language)")
 			cur.execute("create index if not exists subjects_by_record on subjects(record_id)")
 			cur.execute("create index if not exists rights_by_record on rights(record_id)")
 			cur.execute("create index if not exists geospatial_by_record on geospatial(record_id)")
-			cur.execute("create index if not exists domain_metadata_by_record on domain_metadata(record_id)")
+			cur.execute("create index if not exists domain_metadata_by_record on domain_metadata(record_id,schema_id)")
+			cur.execute("create index if not exists domain_schemas_by_schema_id on domain_schemas(schema_id)")
 			cur.execute("create unique index if not exists records_by_repository on records (repository_id, local_identifier)")
 
 	def setLogger(self, l):
@@ -71,7 +75,6 @@ class DBInterface:
 
 	def update_repo(self,repo_id,repo_url,repo_set,repo_name,repo_type,enabled,repo_thumbnail,item_url_pattern,abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days):
 		con = self.getConnection()
-		records=[]
 		with con:
 			if self.dbtype == "sqlite":
 				con.row_factory = self.getRow()
@@ -115,7 +118,6 @@ class DBInterface:
 				except self.dblayer.IntegrityError:
 					# record already present in repo
 					return repo_id
-
 		return repo_id
 
 	def get_repo_id(self, repo_url, repo_set):
@@ -159,6 +161,50 @@ class DBInterface:
 		self.logger.debug("Last crawl ts for repo_id %s is %s" % (repo_id, returnvalue))
 		return returnvalue
 
+	def get_domain_schema_id(self, namespace):
+		returnvalue = 0
+		con = self.getConnection()
+		with con:
+			if self.dbtype == "sqlite":
+				con.row_factory = self.getRow()
+			cur = con.cursor()
+			if self.dbtype == "postgres":
+				from psycopg2.extras import RealDictCursor
+				cur = con.cursor(cursor_factory = RealDictCursor)
+			cur.execute(self._prep("select schema_id from domain_schemas where namespace = ?"), (namespace,) )
+			if cur is not None:
+				records = cur.fetchall()
+			else:
+				return 0
+			for record in records:
+				returnvalue = int(record['schema_id'])
+		return returnvalue
+
+	def create_domain_schema(self, namespace):
+		con = self.getConnection()
+		schema_id = self.get_domain_schema_id(namespace)
+		with con:
+			if self.dbtype == "sqlite":
+				con.row_factory = self.getRow()
+				cur = con.cursor()
+			if self.dbtype == "postgres":
+				from psycopg2.extras import RealDictCursor
+				cur = con.cursor(cursor_factory = RealDictCursor)
+			# Create new domain_schema record
+			try:
+				if self.dbtype == "postgres":
+					cur.execute(self._prep("""INSERT INTO domain_schemas (namespace) VALUES (?) RETURNING schema_id"""), (namespace,))
+					res = cur.fetchone()
+					schema_id = int(res[0])
+
+				if self.dbtype == "sqlite":
+					cur.execute(self._prep("""INSERT INTO domain_schemas (namespace) VALUES (?)"""), (namespace,))
+					schema_id = int(cur.lastrowid)
+
+			except self.dblayer.IntegrityError:
+				# record already present in repo
+				return schema_id
+		return schema_id
 
 	def update_last_crawl(self, repo_id):
 		con = self.getConnection()
@@ -214,7 +260,7 @@ class DBInterface:
 				returnvalue = int(record['record_id'])
 		return returnvalue		
 
-	def write_record(self, record, repo_id, metadata_prefix, domain_metadata, mode = "insert"):
+	def write_record(self, record, repo_id, metadata_prefix, domain_metadata):
 		if record == None:
 			return None
 		record["record_id"] = self.get_record_id(repo_id, record["identifier"])
@@ -362,15 +408,23 @@ class DBInterface:
 					except self.dblayer.IntegrityError:
 						pass
 
-			# TODO: Figure out how to handle the case when domain metadata removed from item in repo
-			for domain_metadata_element in domain_metadata:
-				if domain_metadata_element in record:
-					if not isinstance(record[domain_metadata_element], list):
-						record[domain_metadata_element] = [record[domain_metadata_element]]
-					namespaced_element = metadata_prefix + ":" + domain_metadata_element
-					for domain_metadata_element_value in record[domain_metadata_element]:
+			if len(domain_metadata) > 0:
+				try:
+					cur.execute(self._prep("DELETE from domain_metadata where record_id = ?"), (record["record_id"],))
+				except:
+					pass
+				for field_uri in domain_metadata:
+					field_pieces = field_uri.split("#")
+					domain_schema = field_pieces[0]
+					field_name = field_pieces[1]
+					schema_id = self.get_domain_schema_id(domain_schema)
+					if (schema_id == 0):
+						schema_id = self.create_domain_schema(domain_schema)
+					if not isinstance(domain_metadata[field_uri], list):
+						domain_metadata[field_uri] = [domain_metadata[field_uri]]
+					for field_value in domain_metadata[field_uri]:
 						try:
-							cur.execute(self._prep("INSERT INTO domain_metadata (record_id, field_name, field_value) VALUES (?,?,?)"), (record["record_id"], namespaced_element, domain_metadata_element_value))
+							cur.execute(self._prep("INSERT INTO domain_metadata (record_id, schema_id, field_name, field_value) VALUES (?,?,?,?)"), (record["record_id"], schema_id, field_name, field_value))
 						except self.dblayer.IntegrityError:
 							pass
 
