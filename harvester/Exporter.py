@@ -156,6 +156,9 @@ class Exporter(object):
 				litecur.execute(self.db._prep("SELECT subject FROM subjects WHERE record_id=?"), (record["record_id"],) )
 				record["dc:subject"] = litecur.fetchall()
 
+				litecur.execute(self.db._prep("SELECT publisher FROM publishers WHERE record_id=?"), (record["record_id"],) )
+				record["dc:publisher"] = litecur.fetchall()
+
 				litecur.execute(self.db._prep("SELECT rights FROM rights WHERE record_id=?"), (record["record_id"],) )
 				record["dc:rights"] = litecur.fetchall()
 
