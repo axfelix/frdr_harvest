@@ -10,6 +10,8 @@ import re
 import os.path
 import time
 import json
+#import dateparser
+#from time import strftime
 
 class FRDRRecord(OAIItem):
 	""" Override Sickle OAIItem to handle stripping only known namespaces """
@@ -246,6 +248,8 @@ class OAIRepository(HarvestRepository):
 				record["pub_date"] = record["pub_date"][0] + record["pub_date"][1] + record["pub_date"][2] + record["pub_date"][3] + "-" + record["pub_date"][4] + record["pub_date"][5]
 			if (len(record["pub_date"]) == 8):
 				record["pub_date"] = record["pub_date"][0] + record["pub_date"][1] + record["pub_date"][2] + record["pub_date"][3] + "-" + record["pub_date"][4] + record["pub_date"][5] + "-" + record["pub_date"][6] + record["pub_date"][7]
+
+		#record["pub_date"] = dateparser.parse(record["pub_date"]).strftime("%Y-%m-%d")
 
 		if "title" not in record.keys():
 			return None

@@ -89,6 +89,9 @@ class CKANRepository(HarvestRepository):
 		else:
 			record["pub_date"] = re.sub(" 00:00:00", "", ckan_record['date_published'])
 
+		if record["pub_date"][:2] != "19" and record["pub_date"][:2] != "20":
+			record["pub_date"] = ""
+
 		if ('contacts' in ckan_record) and ckan_record['contacts']:
 			record["contact"] = ckan_record["contacts"][0].get('email', "")
 		else:
