@@ -83,13 +83,30 @@ class CKANRepository(HarvestRepository):
 		record["rights"].append(ckan_record.get("attribution", ""))
 		record["rights"] = " - ".join(record["rights"])
 
-		# Some CKAN records have a trailing null timestamp after date
-		if ('dates' in ckan_record):
-			record["pub_date"] = ckan_record['dates'][0].get('date',"")
-		else:
-			record["pub_date"] = re.sub(" 00:00:00", "", ckan_record['date_published'])
+		# Look for publication date in a few places
+		# All of these assume the date will start with year first
+		record["pub_date"] = ""
+		if ('record_publish_date' in ckan_record):
+			# Prefer an explicit publish date if it exists
+			record["pub_date"] = ckan_record["record_publish_date"]
+		elif ('date_published' in ckan_record):
+			# Another possible field name for publication date
+			record["pub_date"] = ckan_record["date_published"]
+		elif ('dates' in ckan_record and isinstance(ckan_record["dates"], list) ):
+			# A list of date objects, look for the one marked as Created
+			for date_object in ckan_record['dates']:
+				if date_object.type == "Created":
+					record["pub_date"] = date_object.date
 
-		if record["pub_date"][:2] != "19" and record["pub_date"][:2] != "20":
+		# Some date formats have a trailing timestamp after date (ie: "2014-12-10T15:05:03.074998Z")
+		record["pub_date"] = re.sub("[T ][0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.?[0-9]*[Z]?$", "", record["pub_date"])
+		# Ensure date separator is a dash
+		record["pub_date"] = record["pub_date"].replace("/","-")
+
+		# Look at the year and make sure it is feasible, otherwise blank out the date
+		# Limiting records to being published from 1300-2399
+		publication_year = int(record["pub_date"][:2])
+		if (publication_year < 13 or publication_year > 23):
 			record["pub_date"] = ""
 
 		if ('contacts' in ckan_record) and ckan_record['contacts']:
