@@ -328,6 +328,8 @@ class DBInterface:
 				if not isinstance(record["subject"], list):
 					record["subject"] = [record["subject"]]
 				for subject in record["subject"]:
+					if (subject == "form_descriptors"):
+						continue
 					try:
 						if subject is not None and len(subject) > 0:
 							cur.execute(self._prep("INSERT INTO subjects (record_id, subject) VALUES (?,?)"), (record["record_id"], subject))
