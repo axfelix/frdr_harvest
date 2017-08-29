@@ -172,7 +172,8 @@ class OAIRepository(HarvestRepository):
 			record["subject"] = record.get("themekey")
 			record["description"] = record.get("abstract")
 			record["publisher"] = record.get("cntorg")
-			record["pub_date"] = [record.get("begdate"), record.get("enddate")]
+			# Put these dates in preferred order
+			record["pub_date"] = [record.get("pubdate"), record.get("begdate"), record.get("enddate")]
 			record["type"] = record.get("geoform")
 			record["identifier"] = record.get("onlink")
 			record["rights"] = record.get("distliab")
@@ -224,6 +225,7 @@ class OAIRepository(HarvestRepository):
 			record["pub_date"] = ""
 
 		# If there are multiple dates choose the longest one (likely the most specific)
+		# If there are a few dates with the same length the first one will be used, which assumes we grabbed them in a preferred order
 		# Exception test added for some strange PDC dates of [null, null]
 		if isinstance(record["pub_date"], list):
 			valid_date = record["pub_date"][0] or ""
