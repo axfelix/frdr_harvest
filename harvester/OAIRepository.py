@@ -27,7 +27,8 @@ class FRDRRecord(OAIItem):
 		""" Modified from Sickle.utils to strip only some namespaces """
 		namespaces_to_strip = [
 			'http://purl.org/dc/elements/1.1/',
-			'https://schema.datacite.org/meta/kernel-3/'
+			'https://schema.datacite.org/meta/kernel-3/',
+			'http://www.openarchives.org/OAI/2.0/'
 		]
 		paths = paths or ['.//']
 		fields = defaultdict(list)
@@ -175,7 +176,7 @@ class OAIRepository(HarvestRepository):
 			# Put these dates in preferred order
 			record["pub_date"] = [record.get("pubdate"), record.get("begdate"), record.get("enddate")]
 			record["type"] = record.get("geoform")
-			record["identifier"] = record.get("onlink")
+			record["dc:source"] = record.get("onlink")
 			record["rights"] = record.get("distliab")
 
 			if "bounding" in record.keys():
@@ -342,6 +343,7 @@ class OAIRepository(HarvestRepository):
 		except IdDoesNotExist:
 			# Item no longer in this repo
 			self.db.delete_record(record)
+			return True
 
 		except Exception as e:
 			self.logger.error("Updating item failed (repo_id:%s, oai_id:%s): %s" % (self.repository_id, record['local_identifier'], str(e)) )
