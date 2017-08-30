@@ -272,7 +272,12 @@ class DBInterface:
 			cur = con.cursor()
 			source_url = ""
 			if 'dc:source' in record:
-				source_url = record["dc:source"]
+				if isinstance(record["dc:source"], list):
+					source_url = record["dc:source"][0]
+				else:
+					source_url = record["dc:source"]
+			else:
+				return None
 			if record["record_id"] is None:
 				try:
 					if self.dbtype == "postgres":
