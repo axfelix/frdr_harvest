@@ -252,6 +252,10 @@ class OAIRepository(HarvestRepository):
 			if (len(record["pub_date"]) == 8):
 				record["pub_date"] = record["pub_date"][0] + record["pub_date"][1] + record["pub_date"][2] + record["pub_date"][3] + "-" + record["pub_date"][4] + record["pub_date"][5] + "-" + record["pub_date"][6] + record["pub_date"][7]
 
+		# If a date has question marks, chuck it
+		if "?" in record["pub_date"]:
+			return None
+
 		#record["pub_date"] = dateparser.parse(record["pub_date"]).strftime("%Y-%m-%d")
 
 		if "title" not in record.keys():
