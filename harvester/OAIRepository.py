@@ -257,8 +257,8 @@ class OAIRepository(HarvestRepository):
 			return None
 
 		# Make sure dates are valid
-		if not re.search("(1|2)\d{3}(-?(0[1-9]|1[0-2])(-?(0[1-9]|1[0-9]|2[0-9]|3[0-1]))?)?", record["pub_date"]):
-			self.logger.debug("Invalid date for record %i" % (record["dc:source"]))
+		if not re.search("^(1|2)\d{3}(-?(0[1-9]|1[0-2])(-?(0[1-9]|1[0-9]|2[0-9]|3[0-1]))?)?$", record["pub_date"]):
+			self.logger.debug("Invalid date for record %s" % (record["dc:source"]))
 			return None
 
 		#record["pub_date"] = dateparser.parse(record["pub_date"]).strftime("%Y-%m-%d")
