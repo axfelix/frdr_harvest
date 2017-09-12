@@ -168,7 +168,7 @@ class OAIRepository(HarvestRepository):
 				record["geospatial"] = {"type": "Polygon", "coordinates": [[[record["northBL"][0], record["westBL"][0]], [record["northBL"][0], record["eastBL"][0]], [record["southBL"][0], record["westBL"][0]], [record["southBL"][0], record["eastBL"][0]]]]}
 
 
-		if self.metadataprefix.lower() == "fgdc":
+		if self.metadataprefix.lower() == "fgdc" or self.metadataprefix.lower() == "fgdc-std":
 			record["creator"] = record.get("origin")
 			record["subject"] = record.get("themekey")
 			record["description"] = record.get("abstract")
@@ -220,6 +220,9 @@ class OAIRepository(HarvestRepository):
 			record["creator"] = record["contributor"]
 		elif 'creator' not in record.keys() and 'publisher' in record.keys():
 			record["creator"] = record["publisher"]
+		# Workaround for WOUDC, which doesn't attribute individual datasets
+		elif self.metadataprefix.lower() == "fgdc-std":
+			record["creator"] = self.name
 
 		# If date is undefined add an empty key
 		if 'pub_date' not in record.keys():
