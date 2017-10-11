@@ -276,8 +276,7 @@ class DBInterface:
 					source_url = record["dc:source"][0]
 				else:
 					source_url = record["dc:source"]
-			else:
-				return None
+
 			if record["record_id"] is None:
 				try:
 					if self.dbtype == "postgres":
