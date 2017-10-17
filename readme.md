@@ -1,31 +1,11 @@
 This is a repository crawler which outputs gmeta.json files for indexing by Globus. It currently supports OAI and CKAN repositories.
 
-Configuration, including which repos are to be crawled, should be placed in data/config.json, in a structure like to this:
+Configuration is split into two files. The first controls the operation of the indexer, and is located in conf/harvester.conf.
+
+The list of repositories to be crawled is in conf/repos.json, in a structure like to this:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ json
 {
-    "db": {
-        "type": "sqlite",
-        "dbname": "data/globus_oai.db",
-        "host": "",
-        "schema": "",
-        "user": "",
-        "pass": ""
-    },
-    "export_filepath": "data",
-    "export_format": "gmeta",
-    "logging": {
-        "filename": "logs/log.txt",
-        "maxbytes": 10485760,
-        "keep": 7,
-        "level": "DEBUG"
-    },
-    "update_log_after_numitems": 1000,
-    "abort_after_numerrors": 5,
-    "repo_refresh_days": 7,
-    "record_refresh_days": 30,
-    "max_records_updated_per_run": 2000,
-    "prune_non_dataset_items": false,
     "repos": [
         {
             "name": "Some OAI Repository",
