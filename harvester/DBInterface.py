@@ -175,8 +175,7 @@ class DBInterface:
 						repo_id = int(cur.lastrowid)
 
 				except self.dblayer.IntegrityError as e:
-					self.logger.error("Database error in update: %s" % (e))
-					sys.exit(1)
+					self.logger.error("Cannot add repository: %s" % (e))
 
 		return repo_id
 
