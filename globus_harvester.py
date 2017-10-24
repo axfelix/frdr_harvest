@@ -29,85 +29,85 @@ from harvester.Exporter import Exporter
 
 def get_config_json(repos_json="conf/repos.json"):
 
-    configdict = {}
-    with open(repos_json, 'r') as jsonfile:
-        configdict = json.load(jsonfile)
+	configdict = {}
+	with open(repos_json, 'r') as jsonfile:
+	    configdict = json.load(jsonfile)
 
-    return configdict
+	return configdict
 
 
 def get_config_ini(config_file="conf/harvester.conf"):
-    '''
-    Read ini-formatted config file from disk
-    :param config_file: Filename of config file
-    :return: configparser-style config file
-    '''
+	'''
+	Read ini-formatted config file from disk
+	:param config_file: Filename of config file
+	:return: configparser-style config file
+	'''
 
-    config = configparser.ConfigParser()
-    config.read(config_file)
-    return config
+	config = configparser.ConfigParser()
+	config.read(config_file)
+	return config
 
 
 if __name__ == "__main__":
 
-    instance_lock = Lock()
-    tstart = time.time()
-    arguments = docopt(__doc__)
+	instance_lock = Lock()
+	tstart = time.time()
+	arguments = docopt(__doc__)
 
-    config = get_config_ini()
-    harvest_config = config['harvest']
-    final_config = {}
-    final_config['update_log_after_numitems'] = harvest_config.get('update_log_after_numitems', 1000)
-    final_config['abort_after_numerrors'] = harvest_config.get('abort_after_numerrors', 5)
-    final_config['record_refresh_days'] = harvest_config.get('record_refresh_days', 30)
-    final_config['repo_refresh_days'] = harvest_config.get('repo_refresh_days', 1)
-    final_config['temp_filepath'] = harvest_config.get('temp_filepath', "temp")
-    final_config['export_filepath'] = harvest_config.get('export_filepath', "data")
-    final_config['export_batch_size'] = harvest_config.get('export_batch_size', 8000)
-    final_config['export_format'] = harvest_config.get('export_format', "gmeta")
+	config = get_config_ini()
+	harvest_config = config['harvest']
+	final_config = {}
+	final_config['update_log_after_numitems'] = harvest_config.get('update_log_after_numitems', 1000)
+	final_config['abort_after_numerrors'] = harvest_config.get('abort_after_numerrors', 5)
+	final_config['record_refresh_days'] = harvest_config.get('record_refresh_days', 30)
+	final_config['repo_refresh_days'] = harvest_config.get('repo_refresh_days', 1)
+	final_config['temp_filepath'] = harvest_config.get('temp_filepath', "temp")
+	final_config['export_filepath'] = harvest_config.get('export_filepath', "data")
+	final_config['export_batch_size'] = harvest_config.get('export_batch_size', 8000)
+	final_config['export_format'] = harvest_config.get('export_format', "gmeta")
 
-    main_log = HarvestLogger(config['logging'])
-    main_log.info("Starting... (pid=%s)" % (os.getpid()))
+	main_log = HarvestLogger(config['logging'])
+	main_log.info("Starting... (pid=%s)" % (os.getpid()))
 
-    dbh = DBInterface(config['db'])
-    dbh.setLogger(main_log)
+	dbh = DBInterface(config['db'])
+	dbh.setLogger(main_log)
 
-    repo_configs = get_config_json()
-    if arguments["--onlyexport"] == False:
-        # Find any new information in the repositories
-        for repoconfig in repo_configs['repos']:
-            if repoconfig['type'] == "oai":
-                repo = OAIRepository(repo_configs)
-            elif repoconfig['type'] == "ckan":
-                repo = CKANRepository(repo_configs)
-            repo.setLogger(main_log)
-            repo.setRepoParams(repoconfig)
-            repo.setDatabase(dbh)
-            repo.crawl()
-            repo.update_stale_records(config['db'])
+	repo_configs = get_config_json()
+	if arguments["--onlyexport"] == False:
+	    # Find any new information in the repositories
+	    for repoconfig in repo_configs['repos']:
+	        if repoconfig['type'] == "oai":
+	            repo = OAIRepository(repo_configs)
+	        elif repoconfig['type'] == "ckan":
+	            repo = CKANRepository(repo_configs)
+	        repo.setLogger(main_log)
+	        repo.setRepoParams(repoconfig)
+	        repo.setDatabase(dbh)
+	        repo.crawl()
+	        repo.update_stale_records(config['db'])
 
-    if arguments["--onlyharvest"] == True:
-        raise SystemExit
+	if arguments["--onlyharvest"] == True:
+	    raise SystemExit
 
-    if arguments["--export-format"]:
-        final_config['export_format'] = arguments["--export-format"]
-    if arguments["--export-filepath"]:
-        final_config['export_filepath'] = arguments["--export-filepath"]
+	if arguments["--export-format"]:
+	    final_config['export_format'] = arguments["--export-format"]
+	if arguments["--export-filepath"]:
+	    final_config['export_filepath'] = arguments["--export-filepath"]
 
-    temp_filepath = final_config['temp_filepath']
+	temp_filepath = final_config['temp_filepath']
 
-    exporter = Exporter(dbh, main_log, config['db'])
+	exporter = Exporter(dbh, main_log, config['db'])
 
-    if arguments["--only-new-records"] == True:
-        exporter.export_to_file(final_config['export_format'], final_config['export_filepath'], final_config['export_batch_size'],
-                                True, final_config['temp_filepath'])
-    else:
-        exporter.export_to_file(final_config['export_format'], final_config['export_filepath'], final_config['export_batch_size'],
-                                False, final_config['temp_filepath'])
+	if arguments["--only-new-records"] == True:
+	    exporter.export_to_file(final_config['export_format'], final_config['export_filepath'], final_config['export_batch_size'],
+	                            True, final_config['temp_filepath'])
+	else:
+	    exporter.export_to_file(final_config['export_format'], final_config['export_filepath'], final_config['export_batch_size'],
+	                            False, final_config['temp_filepath'])
 
-    formatter = TimeFormatter()
-    main_log.info("Done after %s" % (formatter.humanize(time.time() - tstart)))
+	formatter = TimeFormatter()
+	main_log.info("Done after %s" % (formatter.humanize(time.time() - tstart)))
 
-    with open("data/last_run_timestamp", "w") as lastrun:
-        lastrun.write(str(time.time()))
-    instance_lock.unlock()
+	with open("data/last_run_timestamp", "w") as lastrun:
+	    lastrun.write(str(time.time()))
+	instance_lock.unlock()
