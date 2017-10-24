@@ -13,10 +13,10 @@ Options:
 """
 
 from docopt import docopt
-import sys
 import json
 import os
 import time
+import configparser
 
 from harvester.OAIRepository import OAIRepository
 from harvester.CKANRepository import CKANRepository
@@ -27,13 +27,25 @@ from harvester.Lock import Lock
 from harvester.Exporter import Exporter
 
 
-def get_config_json(repos_json="data/config.json"):
-	configdict = {}
+def get_config_json(repos_json="conf/repos.json"):
 
+	configdict = {}
 	with open(repos_json, 'r') as jsonfile:
-		configdict = json.load(jsonfile)
+	    configdict = json.load(jsonfile)
 
 	return configdict
+
+
+def get_config_ini(config_file="conf/harvester.conf"):
+	'''
+	Read ini-formatted config file from disk
+	:param config_file: Filename of config file
+	:return: configparser-style config file
+	'''
+
+	config = configparser.ConfigParser()
+	config.read(config_file)
+	return config
 
 
 if __name__ == "__main__":
@@ -42,56 +54,60 @@ if __name__ == "__main__":
 	tstart = time.time()
 	arguments = docopt(__doc__)
 
-	global configs
-	configs = get_config_json()
-	configs['update_log_after_numitems'] = configs.get('update_log_after_numitems', 1000)
-	configs['abort_after_numerrors'] = configs.get('abort_after_numerrors', 5)
-	configs['record_refresh_days'] = configs.get('record_refresh_days', 30)
-	configs['repo_refresh_days'] = configs.get('repo_refresh_days', 1)
-	configs['temp_filepath'] = configs.get('temp_filepath', "temp")
-	configs['export_filepath'] = configs.get('export_filepath', "data")
-	configs['export_batch_size'] = configs.get('export_batch_size', 8000)
-	configs['export_format'] = configs.get('export_format', "gmeta")
+	config = get_config_ini()
+	harvest_config = config['harvest']
+	final_config = {}
+	final_config['update_log_after_numitems'] = harvest_config.get('update_log_after_numitems', 1000)
+	final_config['abort_after_numerrors'] = harvest_config.get('abort_after_numerrors', 5)
+	final_config['record_refresh_days'] = harvest_config.get('record_refresh_days', 30)
+	final_config['repo_refresh_days'] = harvest_config.get('repo_refresh_days', 1)
+	final_config['temp_filepath'] = harvest_config.get('temp_filepath', "temp")
+	final_config['export_filepath'] = harvest_config.get('export_filepath', "data")
+	final_config['export_batch_size'] = harvest_config.get('export_batch_size', 8000)
+	final_config['export_format'] = harvest_config.get('export_format', "gmeta")
 
-	main_log = HarvestLogger(configs['logging'])
+	main_log = HarvestLogger(config['logging'])
 	main_log.info("Starting... (pid=%s)" % (os.getpid()))
 
-	dbh = DBInterface(configs['db'])
+	dbh = DBInterface(config['db'])
 	dbh.setLogger(main_log)
 
+	repo_configs = get_config_json()
 	if arguments["--onlyexport"] == False:
-		# Find any new information in the repositories
-		for repoconfig in configs['repos']:
-			if repoconfig['type'] == "oai":
-				repo = OAIRepository(configs)
-			elif repoconfig['type'] == "ckan":
-				repo = CKANRepository(configs)
-			repo.setLogger(main_log)
-			repo.setRepoParams(repoconfig)
-			repo.setDatabase(dbh)
-			repo.crawl()
-			repo.update_stale_records(configs['db'])
+	    # Find any new information in the repositories
+	    for repoconfig in repo_configs['repos']:
+	        if repoconfig['type'] == "oai":
+	            repo = OAIRepository(repo_configs)
+	        elif repoconfig['type'] == "ckan":
+	            repo = CKANRepository(repo_configs)
+	        repo.setLogger(main_log)
+	        repo.setRepoParams(repoconfig)
+	        repo.setDatabase(dbh)
+	        repo.crawl()
+	        repo.update_stale_records(config['db'])
 
 	if arguments["--onlyharvest"] == True:
-		raise SystemExit
+	    raise SystemExit
 
 	if arguments["--export-format"]:
-		configs['export_format'] = arguments["--export-format"]
+	    final_config['export_format'] = arguments["--export-format"]
 	if arguments["--export-filepath"]:
-		configs['export_filepath'] = arguments["--export-filepath"]
+	    final_config['export_filepath'] = arguments["--export-filepath"]
 
-	temp_filepath = configs['temp_filepath']
+	temp_filepath = final_config['temp_filepath']
 
-	exporter = Exporter(dbh, main_log, configs['db'])
+	exporter = Exporter(dbh, main_log, config['db'])
 
 	if arguments["--only-new-records"] == True:
-		exporter.export_to_file(configs['export_format'], configs['export_filepath'], configs['export_batch_size'], True, configs['temp_filepath'])
+	    exporter.export_to_file(final_config['export_format'], final_config['export_filepath'], final_config['export_batch_size'],
+	                            True, final_config['temp_filepath'])
 	else:
-		exporter.export_to_file(configs['export_format'], configs['export_filepath'], configs['export_batch_size'], False, configs['temp_filepath'])
+	    exporter.export_to_file(final_config['export_format'], final_config['export_filepath'], final_config['export_batch_size'],
+	                            False, final_config['temp_filepath'])
 
 	formatter = TimeFormatter()
 	main_log.info("Done after %s" % (formatter.humanize(time.time() - tstart)))
 
 	with open("data/last_run_timestamp", "w") as lastrun:
-		lastrun.write(str(time.time()))
+	    lastrun.write(str(time.time()))
 	instance_lock.unlock()

@@ -55,8 +55,11 @@ class HarvestRepository(object):
 
 		if (self.enabled):
 			if (self.last_crawl + self.repo_refresh_days*86400) < self.tstart:
-				self._crawl()
-				self.db.update_last_crawl(self.repository_id)
+				try:
+					self._crawl()
+					self.db.update_last_crawl(self.repository_id)
+				except Exception as e:
+					self.logger.error("Repository unable to be harvested: %s" %(e))
 			else:
 				self.logger.info("This repo is not yet due to be harvested")
 		else:

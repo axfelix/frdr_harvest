@@ -1,0 +1,13 @@
+{
+    "repos": [
+        {
+            "name": "SFU Radar",
+            "url": "http://researchdata.sfu.ca/oai2",
+            "set": "",
+            "thumbnail": "http://static.lib.sfu.ca/clf2013/sfu-logo.png",
+            "type": "oai",
+            "item_url_pattern": "http://researchdata.sfu.ca/islandora/object/%id%",
+            "enabled": true
+        }
+    ]
+}
