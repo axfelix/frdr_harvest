@@ -15,6 +15,7 @@ class Exporter(object):
 		self.db = db
 		self.logger = log
 		self.dbtype = params.get('type', None)
+		self.export_limit = params.get('export_file_limit_mb', 10)
 
 	def _construct_local_url(self, record):
 		# Check if the local_identifier has already been turned into a url
@@ -76,13 +77,12 @@ class Exporter(object):
 			repos.repository_url, repos.repository_name, repos.repository_thumbnail, repos.item_url_pattern, repos.last_crawl_timestamp 
 			FROM records recs, repositories repos WHERE recs.repository_id = repos.repository_id """))
 
-		buffer_limit = 10000000
+		buffer_limit = self.export_limit * 1024 * 1024
 
 		records_assembled = 0
 		gmeta_batches = 0
 		buffer_size = 0
 		for row in records_cursor:
-			#if records_assembled % batch_size == 0 and records_assembled!=0:
 			if buffer_size > buffer_limit:
 				gmeta_batches += 1
 				self.logger.debug("Writing batch %s to output file" % (gmeta_batches))
