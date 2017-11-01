@@ -11,11 +11,10 @@ class Exporter(object):
 
 	__records_per_loop = 500
 
-	def __init__(self, db, log, params):
+	def __init__(self, db, log, finalconfig):
 		self.db = db
 		self.logger = log
-		self.dbtype = params.get('type', None)
-		self.export_limit = params.get('export_file_limit_mb', 10)
+		self.export_limit = finalconfig.get('export_file_limit_mb', 10)
 
 	def _construct_local_url(self, record):
 		# Check if the local_identifier has already been turned into a url
@@ -59,7 +58,7 @@ class Exporter(object):
 		return local_url
 
 
-	def _generate_gmeta(self, batch_size, export_filepath, temp_filepath, only_new_records):
+	def _generate_gmeta(self, export_filepath, temp_filepath, only_new_records):
 		self.logger.info("Exporter: generate_gmeta called")
 		gmeta = []
 
@@ -77,7 +76,8 @@ class Exporter(object):
 			repos.repository_url, repos.repository_name, repos.repository_thumbnail, repos.item_url_pattern, repos.last_crawl_timestamp 
 			FROM records recs, repositories repos WHERE recs.repository_id = repos.repository_id """))
 
-		buffer_limit = self.export_limit * 1024 * 1024
+		buffer_limit = int(self.export_limit) * 1024 * 1024
+		self.logger.info("Exporter: output file size limited to %d MB each" % (int(self.export_limit)))
 
 		records_assembled = 0
 		gmeta_batches = 0
@@ -88,7 +88,6 @@ class Exporter(object):
 				self.logger.debug("Writing batch %s to output file" % (gmeta_batches))
 				gingest_block = {"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":gmeta}}
 				self._write_to_file(json.dumps(gingest_block), export_filepath, temp_filepath, "gmeta", gmeta_batches)
-				del gmeta[:batch_size]
 				buffer_size = 0
 
 			record = (dict(zip(['record_id','title', 'pub_date', 'contact', 'series', 'source_url', 'deleted', 'local_identifier', 'modified_timestamp',
@@ -112,11 +111,11 @@ class Exporter(object):
 
 			con = self.db.getConnection()
 			with con:
-				if self.dbtype == "sqlite":
+				if self.db.getType() == "sqlite":
 					from sqlite3 import Row
 					con.row_factory = Row
 					litecur = con.cursor()
-				elif self.dbtype == "postgres":
+				elif self.db.getType() == "postgres":
 					litecur = con.cursor(cursor_factory=None)
 
 				litecur.execute(self.db._prep("SELECT coordinate_type, lat, lon FROM geospatial WHERE record_id=?"), (record["record_id"],) )
@@ -137,10 +136,10 @@ class Exporter(object):
 					record["frdr:geospatial"].append({"frdr:geospatial_type":"Feature", "frdr:geospatial_geometry":{"frdr:geometry_type":"Polygon", "frdr:geometry_coordinates": polycoordinates}})
 
 			with con:
-				if self.dbtype == "sqlite":
+				if self.db.getType() == "sqlite":
 					con.row_factory = lambda cursor, row: row[0]
 					litecur = con.cursor()
-				elif self.dbtype == "postgres":
+				elif self.db.getType() == "postgres":
 					from psycopg2.extras import DictCursor as DictCursor
 					litecur = con.cursor(cursor_factory=DictCursor)
 
@@ -176,11 +175,11 @@ class Exporter(object):
 
 			domain_schemas = {}
 			with con:
-				if self.dbtype == "sqlite":
+				if self.db.getType() == "sqlite":
 					from sqlite3 import Row
 					con.row_factory = Row
 					litecur = con.cursor()
-				elif self.dbtype == "postgres":
+				elif self.db.getType() == "postgres":
 					litecur = con.cursor(cursor_factory=None)
 
 				litecur.execute(self.db._prep("SELECT ds.namespace, dm.field_name, dm.field_value FROM domain_metadata dm, domain_schemas ds WHERE dm.schema_id=ds.schema_id and dm.record_id=?"), (record["record_id"],) )
@@ -291,13 +290,13 @@ class Exporter(object):
 		except:
 			pass
 
-	def export_to_file(self, export_format, export_filepath, export_batch_size, only_new_records, temp_filepath="temp"):
+	def export_to_file(self, export_format, export_filepath, only_new_records, temp_filepath="temp"):
 		output = None
 		self._cleanup_previous_exports(export_filepath, export_format)
 		self._cleanup_previous_exports(temp_filepath, export_format)
 
 		if export_format == "gmeta":
-			gmeta_block = self._generate_gmeta(export_batch_size, export_filepath, temp_filepath, only_new_records)
+			gmeta_block = self._generate_gmeta(export_filepath, temp_filepath, only_new_records)
 			output = json.dumps({"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":gmeta_block}})
 		elif export_format == "rifcs":
 			from lxml import etree

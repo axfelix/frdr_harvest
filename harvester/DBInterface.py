@@ -26,6 +26,9 @@ class DBInterface:
 			self.dblayer = __import__('psycopg2')
 			con = self.getConnection()
 
+		else:
+			raise ValueError('Database type must be sqlite or postgres in config file')
+
 		with con:
 			cur = con.cursor()
 			cur.execute(
@@ -112,6 +115,9 @@ class DBInterface:
 
 	def getRow(self):
 		return self.dblayer.Row
+
+	def getType(self):
+		return self.dbtype
 
 	def _prep(self, statement):
 		if (self.dbtype == "postgres"):

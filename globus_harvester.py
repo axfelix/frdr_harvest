@@ -55,16 +55,15 @@ if __name__ == "__main__":
 	arguments = docopt(__doc__)
 
 	config = get_config_ini()
-	harvest_config = config['harvest']
 	final_config = {}
-	final_config['update_log_after_numitems'] = harvest_config.get('update_log_after_numitems', 1000)
-	final_config['abort_after_numerrors'] = harvest_config.get('abort_after_numerrors', 5)
-	final_config['record_refresh_days'] = harvest_config.get('record_refresh_days', 30)
-	final_config['repo_refresh_days'] = harvest_config.get('repo_refresh_days', 1)
-	final_config['temp_filepath'] = harvest_config.get('temp_filepath', "temp")
-	final_config['export_filepath'] = harvest_config.get('export_filepath', "data")
-	final_config['export_batch_size'] = harvest_config.get('export_batch_size', 8000)
-	final_config['export_format'] = harvest_config.get('export_format', "gmeta")
+	final_config['update_log_after_numitems'] = int(config['harvest'].get('update_log_after_numitems', 1000))
+	final_config['abort_after_numerrors']     = int(config['harvest'].get('abort_after_numerrors', 5))
+	final_config['record_refresh_days']       = int(config['harvest'].get('record_refresh_days', 30))
+	final_config['repo_refresh_days']         = int(config['harvest'].get('repo_refresh_days', 1))
+	final_config['temp_filepath']             = config['harvest'].get('temp_filepath', "temp")
+	final_config['export_filepath']           = config['export'].get('export_filepath', "data")
+	final_config['export_file_limit_mb']      = int(config['export'].get('export_file_limit_mb', 10))
+	final_config['export_format']             = config['export'].get('export_format', "gmeta")
 
 	main_log = HarvestLogger(config['logging'])
 	main_log.info("Starting... (pid=%s)" % (os.getpid()))
@@ -77,9 +76,9 @@ if __name__ == "__main__":
 	    # Find any new information in the repositories
 	    for repoconfig in repo_configs['repos']:
 	        if repoconfig['type'] == "oai":
-	            repo = OAIRepository(repo_configs)
+	            repo = OAIRepository(final_config)
 	        elif repoconfig['type'] == "ckan":
-	            repo = CKANRepository(repo_configs)
+	            repo = CKANRepository(final_config)
 	        repo.setLogger(main_log)
 	        repo.setRepoParams(repoconfig)
 	        repo.setDatabase(dbh)
@@ -94,16 +93,12 @@ if __name__ == "__main__":
 	if arguments["--export-filepath"]:
 	    final_config['export_filepath'] = arguments["--export-filepath"]
 
-	temp_filepath = final_config['temp_filepath']
-
-	exporter = Exporter(dbh, main_log, config['db'])
+	exporter = Exporter(dbh, main_log, final_config)
 
 	if arguments["--only-new-records"] == True:
-	    exporter.export_to_file(final_config['export_format'], final_config['export_filepath'], final_config['export_batch_size'],
-	                            True, final_config['temp_filepath'])
+	    exporter.export_to_file(final_config['export_format'], final_config['export_filepath'], True, final_config['temp_filepath'])
 	else:
-	    exporter.export_to_file(final_config['export_format'], final_config['export_filepath'], final_config['export_batch_size'],
-	                            False, final_config['temp_filepath'])
+	    exporter.export_to_file(final_config['export_format'], final_config['export_filepath'], False, final_config['temp_filepath'])
 
 	formatter = TimeFormatter()
 	main_log.info("Done after %s" % (formatter.humanize(time.time() - tstart)))
