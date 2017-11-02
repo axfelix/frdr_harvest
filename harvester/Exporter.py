@@ -198,7 +198,6 @@ class Exporter(object):
 			record["frdr:contact"]     = record["contact"]
 			record["frdr:series"]      = record["series"]
 			record["frdr:origin.id"]   = record["repository_name"]
-			record["nrdr:origin.id"]   = record["repository_name"]
 			record["frdr:origin.icon"] = record["repository_thumbnail"]
 
 			# remove unneeded columns from output
@@ -219,7 +218,6 @@ class Exporter(object):
 
 			record["@context"] = {
 				"dc": "http://dublincore.org/documents/dcmi-terms", 
-				"nrdr": "http://nrdr-ednr.ca/schema/1.0", 
 				"frdr": "https://frdr.ca/schema/1.0", 
 				"datacite": "https://schema.labs.datacite.org/meta/kernel-4.0/metadata.xsd"
 			}
