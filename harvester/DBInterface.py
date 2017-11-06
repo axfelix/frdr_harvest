@@ -56,6 +56,8 @@ class DBInterface:
 				"create table if not exists tags (tag_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, tag TEXT, language TEXT)")
 			cur.execute(
 				"create table if not exists settings (setting_id INTEGER PRIMARY KEY NOT NULL, setting_name TEXT, setting_value TEXT)")
+			cur.execute(
+				"create table if not exists access (access_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, access TEXT)")
 
 			# Postgres doesn't do magic auto-increment
 			if self.dbtype == "postgres":
@@ -87,6 +89,8 @@ class DBInterface:
 				cur.execute("ALTER TABLE tags ALTER tag_id SET DEFAULT NEXTVAL('tags_id_sequence')")
 				cur.execute("CREATE SEQUENCE IF NOT EXISTS settings_id_sequence")
 				cur.execute("ALTER TABLE settings ALTER setting_id SET DEFAULT NEXTVAL('settings_id_sequence')")
+				cur.execute("CREATE SEQUENCE IF NOT EXISTS access_id_sequence")
+				cur.execute("ALTER TABLE access ALTER access_id SET DEFAULT NEXTVAL('access_id_sequence')")
 
 			cur.execute("create index IF NOT EXISTS creators_by_record on creators(record_id)")
 			cur.execute("create index IF NOT EXISTS descriptions_by_record on descriptions(record_id,language)")
@@ -95,6 +99,7 @@ class DBInterface:
 			cur.execute("create index IF NOT EXISTS publishers_by_record on publishers(record_id)")
 			cur.execute("create index IF NOT EXISTS rights_by_record on rights(record_id)")
 			cur.execute("create index IF NOT EXISTS geospatial_by_record on geospatial(record_id)")
+			cur.execute("create index IF NOT EXISTS access_by_record on access(record_id)")
 			cur.execute("create index IF NOT EXISTS domain_metadata_by_record on domain_metadata(record_id,schema_id)")
 			cur.execute("create index IF NOT EXISTS domain_schemas_by_schema_id on domain_schemas(schema_id)")
 			cur.execute(
@@ -304,6 +309,7 @@ class DBInterface:
 				cur.execute(self._prep("DELETE from tags where record_id=?"), (record['record_id'],))
 				cur.execute(self._prep("DELETE from geospatial where record_id=?"), (record['record_id'],))
 				cur.execute(self._prep("DELETE from domain_metadata where record_id=?"), (record['record_id'],))
+				cur.execute(self._prep("DELETE from access where record_id=?"), (record['record_id'],))
 			except:
 				self.logger.error("Unable to delete related table rows for record %s" % (record['local_identifier'],))
 				return False
@@ -530,6 +536,20 @@ class DBInterface:
 						cur.execute(self._prep(
 							"INSERT INTO geospatial (record_id, coordinate_type, lat, lon) VALUES (?,?,?,?)"),
 							(record["record_id"], record["geospatial"]["type"], coordinates[0], coordinates[1]))
+					except self.dblayer.IntegrityError:
+						pass
+
+			if "access" in record:
+				try:
+					cur.execute(self._prep("DELETE from access where record_id = ?"), (record["record_id"],))
+				except:
+					pass
+				if not isinstance(record["access"], list):
+					record["access"] = [record["access"]]
+				for access in record["access"]:
+					try:
+						cur.execute(self._prep("INSERT INTO access (record_id, access) VALUES (?,?)"),
+									(record["record_id"], access))
 					except self.dblayer.IntegrityError:
 						pass
 

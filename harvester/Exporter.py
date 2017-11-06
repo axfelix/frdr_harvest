@@ -174,6 +174,9 @@ class Exporter(object):
 				litecur.execute(self.db._prep("SELECT tag FROM tags WHERE record_id=? AND language='fr'"), (record["record_id"],) )
 				record["frdr:tags_fr"] = litecur.fetchall()
 
+				litecur.execute(self.db._prep("SELECT access FROM access WHERE record_id=?"), (record["record_id"],) )
+				record["frdr:access"] = litecur.fetchall()
+
 			domain_schemas = {}
 			with con:
 				if self.db.getType() == "sqlite":

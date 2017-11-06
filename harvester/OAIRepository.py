@@ -178,6 +178,7 @@ class OAIRepository(HarvestRepository):
 			record["type"] = record.get("geoform")
 			record["dc:source"] = record.get("onlink")
 			record["rights"] = record.get("distliab")
+			record["access"] = record.get("accconst")
 
 			if "bounding" in record.keys():
 				# Sometimes point data is hacked in as a bounding box

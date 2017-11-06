@@ -123,6 +123,15 @@ class CKANRepository(HarvestRepository):
 		elif ('spatial' in ckan_record) and ckan_record['spatial']:
 			record["geospatial"] = json.loads(ckan_record["spatial"])
 
+		# Access Constraints, if available
+		if ('private' in ckan_record) and ckan_record['private'] == True:
+			record["access"] = "Limited"
+		elif ('private' in ckan_record) and ckan_record['private'] == False:
+			record["access"] = "Public"
+		else:
+			record["access"] = ckan_record.get("download_audience")
+			record["access"] = ckan_record.get("view_audience")
+
 		return record
 
 	def _rate_limited(max_per_second):
