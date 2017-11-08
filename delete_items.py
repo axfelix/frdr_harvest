@@ -7,6 +7,9 @@ For example, via the update_search.py script in /opt/rdm
 
 Usage:
   delete_items.py file_of_ids
+
+  or
+
   cat list_of_ids | delete_items.py
 
 """
@@ -14,54 +17,23 @@ Usage:
 import json
 import sys
 import copy
+import os
 
-# Where to put the gemta files
-out_prefix = "data/gmeta_delete"
+cmd = "/opt/rdm/search_client/search-client"
+host = "search.api.globus.org"
 
-# Number of bytes to accumulate before dumping to file
-buffer_limit = 5000000
-
-gIngestTemplate = {
-    "@datatype": "GIngest",
-    "@version": "2016-11-09",
-    "ingest_type": "GMetaList",
-    "source_id": "ComputeCanada",
-    "ingest_data": {
-        "@datatype": "GMetaList",
-        "@version": "2016-11-09",
-        "gmeta": []
-    }
-}
-
-gIngest = copy.deepcopy(gIngestTemplate)
-
-buffer_size = len(json.dumps(gIngest,indent=4))
-batchnum = 1
-
-def dump_to_file(outname):
-    with open(outname, "w") as f:
-        json.dump(gIngest, f, indent=4)
-    print("Wrote file: %s" % outname)
-    return
+# Globus has changed from index NAMES to index UUIDs. Use one of the following for the index:
+# frdr:      "9be6dd95-48f0-48bb-82aa-c6577a988775"
+# frdr-test: "5f262052-d6cc-4a2d-8fee-79678088af04"
+# frdr-demo: "f317467b-98d4-43d1-b73a-fbeb6f0fd7d6"
+# frdr-dev:  "37169d3a-beff-4367-bc6e-78f7e39e902c"
+index = "5f262052-d6cc-4a2d-8fee-79678088af04"
 
 with open(sys.argv[1], 'r') if len(sys.argv) > 1 else sys.stdin as f:
     myline = f.readline()
     while myline:
         id = myline.rstrip('\n')
-        item = {
-            "@datatype": "GMetaEntry", "@version": "2016-11-09", "content": {},
-            "id": id,
-            "mimetype": "application/json",
-            "subject": id,
-            "visible_to": [ "public" ]
-        }
-        gIngest["ingest_data"]["gmeta"].append(item)
-        buffer_size = buffer_size + len(json.dumps(item,indent=4)) + 135
-        if (buffer_size > buffer_limit):
-            dump_to_file(out_prefix + "_" + str(batchnum) + ".json")
-            gIngest = None
-            gIngest = copy.deepcopy(gIngestTemplate)
-            buffer_size = len(json.dumps(gIngest,indent=4))
-            batchnum += 1
+        print("Deleting item: %s" % (id) )
+        command = [ cmd, "--host " + host, "--index " + index, "subject delete " + id ]
+        ret = os.popen(" ".join(command) ).read()
         myline = f.readline()
-    dump_to_file(out_prefix + "_" + str(batchnum) + ".json")
