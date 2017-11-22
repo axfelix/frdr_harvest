@@ -20,6 +20,7 @@ import configparser
 
 from harvester.OAIRepository import OAIRepository
 from harvester.CKANRepository import CKANRepository
+from harvester.MarkLogicRepository import MarkLogicRepository
 from harvester.DBInterface import DBInterface
 from harvester.HarvestLogger import HarvestLogger
 from harvester.TimeFormatter import TimeFormatter
@@ -79,6 +80,8 @@ if __name__ == "__main__":
 	            repo = OAIRepository(final_config)
 	        elif repoconfig['type'] == "ckan":
 	            repo = CKANRepository(final_config)
+	        elif repoconfig['type'] == "marklogic":
+	            repo = MarkLogicRepository(final_config)
 	        repo.setLogger(main_log)
 	        repo.setRepoParams(repoconfig)
 	        repo.setDatabase(dbh)
