@@ -129,9 +129,9 @@ class DBInterface:
 			return statement.replace('?', '%s')
 		return statement
 
-	def update_repo(self, repo_id, repo_url, repo_set, repo_name, repo_type, enabled, repo_thumbnail, item_url_pattern,
-					abort_after_numerrors, max_records_updated_per_run, update_log_after_numitems, record_refresh_days,
-					repo_refresh_days):
+	def update_repo(self, **kwargs):
+		for key, value in kwargs.items():
+			setattr(self, key, value)
 		con = self.getConnection()
 		with con:
 			if self.dbtype == "sqlite":
@@ -140,7 +140,7 @@ class DBInterface:
 			if self.dbtype == "postgres":
 				from psycopg2.extras import RealDictCursor
 				cur = con.cursor(cursor_factory=RealDictCursor)
-			if repo_id > 0:
+			if self.repo_id > 0:
 				# Existing repo
 				try:
 					self.logger.debug("This repo already exists in the database; updating")
@@ -148,15 +148,13 @@ class DBInterface:
 						set repository_url=?, repository_set=?, repository_name=?, repository_type=?, repository_thumbnail=?, last_crawl_timestamp=?, item_url_pattern=?,enabled=?,
 						abort_after_numerrors=?,max_records_updated_per_run=?,update_log_after_numitems=?,record_refresh_days=?,repo_refresh_days=?
 						WHERE repository_id=?"""), (
-						repo_url, repo_set, repo_name, repo_type, repo_thumbnail, time.time(), item_url_pattern,
-						enabled,
-						abort_after_numerrors, max_records_updated_per_run, update_log_after_numitems,
-						record_refresh_days,
-						repo_refresh_days, repo_id))
+						self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail, time.time(), self.item_url_pattern,
+						self.enabled, self.abort_after_numerrors, self.max_records_updated_per_run, self.update_log_after_numitems,
+						self.record_refresh_days, self.repo_refresh_days, self.repo_id))
 				except self.dblayer.IntegrityError as e:
 					# record already present in repo
 					self.logger.error("Integrity error in update %s " % (e))
-					return repo_id
+					return self.repo_id
 			else:
 				# Create new repo record
 				try:
@@ -166,10 +164,9 @@ class DBInterface:
 							(repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
 							abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days) 
 							VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING repository_id"""), (
-							repo_url, repo_set, repo_name, repo_type, repo_thumbnail, time.time(), item_url_pattern,
-							enabled,
-							abort_after_numerrors, max_records_updated_per_run, update_log_after_numitems,
-							record_refresh_days, repo_refresh_days))
+							self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail, time.time(), self.item_url_pattern,
+							self.enabled, self.abort_after_numerrors, self.max_records_updated_per_run, self.update_log_after_numitems,
+							self.record_refresh_days, self.repo_refresh_days))
 						cur.execute("SELECT CURRVAL('repositories_id_sequence')")
 						res = cur.fetchone()
 						repo_id = int(res['currval'])
@@ -179,16 +176,15 @@ class DBInterface:
 							(repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
 							abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days) 
 							VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"""), (
-							repo_url, repo_set, repo_name, repo_type, repo_thumbnail, time.time(), item_url_pattern,
-							enabled,
-							abort_after_numerrors, max_records_updated_per_run, update_log_after_numitems,
-							record_refresh_days, repo_refresh_days))
-						repo_id = int(cur.lastrowid)
+							self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail, time.time(), self.item_url_pattern,
+							self.enabled, self.abort_after_numerrors, self.max_records_updated_per_run, self.update_log_after_numitems,
+							self.record_refresh_days, self.repo_refresh_days))
+						self.repo_id = int(cur.lastrowid)
 
 				except self.dblayer.IntegrityError as e:
 					self.logger.error("Cannot add repository: %s" % (e))
 
-		return repo_id
+		return self.repo_id
 
 	def get_repo_id(self, repo_url, repo_set):
 		returnvalue = 0
