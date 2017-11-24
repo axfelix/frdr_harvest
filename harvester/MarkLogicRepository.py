@@ -15,7 +15,6 @@ class MarkLogicRepository(HarvestRepository):
 		self.domain_metadata = []
 		self.params = {
 			"format": "json",
-			"options": "odesi-opts2",
 			"start": 0,
 			"pageLength": 10
 		}
@@ -23,6 +22,9 @@ class MarkLogicRepository(HarvestRepository):
 		if "collection" in repoParams:
 			coll = re.sub("[^a-zA-Z0-9_-]+", "", repoParams["collection"]) # Remove potentially bad chars
 			self.query += "%2520AND%2520(coll:" + coll + ")"
+		if "options" in repoParams:
+			options = re.sub("[^a-zA-Z0-9_-]+", "", repoParams["options"]) # Remove potentially bad chars
+			self.params["options"] = options
 
 	def _crawl(self):
 		kwargs = {
