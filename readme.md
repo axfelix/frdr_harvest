@@ -29,7 +29,7 @@ The list of repositories to be crawled is in conf/repos.json, in a structure lik
         {
             "name": "Some MarkLogic Repository",
             "url": "https://search2.odesi.ca/search?requestURL=((*))%2520AND%2520(coll:cora)%26options%3Dodesi-opts2%26format%3Djson%26start%3D0%26pageLength%3D10",
-            "item_url_pattern": "https://search2.odesi.ca/#/details?uri=%2Fodesi%2F%id%"
+            "item_url_pattern": "https://search2.odesi.ca/#/details?uri=%2Fodesi%2F%id%",
             "contact": "contact@person.ca",
             "type": "marklogic",
             "enabled": true
