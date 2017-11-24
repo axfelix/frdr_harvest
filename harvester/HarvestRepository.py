@@ -6,11 +6,11 @@ class HarvestRepository(object):
 	""" Top level representation of a repository """
 
 	def __init__(self, globalParams):
-		self.__dict__.update({
+		defaultParams = {
 			'url': None,
 			'type': None,
 			'name': None,
-			'set': None,
+			'set': '',
 			'thumbnail': None,
 			'abort_after_numerrors': 5,
 			'max_records_updated_per_run': 100,
@@ -24,14 +24,18 @@ class HarvestRepository(object):
 			'error_count': 0,
 			'db': None,
 			'logger': None
-		})
+		}
+		for key, value in defaultParams.items():
+			setattr(self, key, value)
 		# Inherit global config
-		self.__dict__.update(globalParams)
+		for key, value in globalParams.items():
+			setattr(self, key, value)
 		self.repository_id = 0
 
 	def setRepoParams(self, repoParams):
 		""" Set local repo params and let them override the global config """
-		self.__dict__.update(repoParams)
+		for key, value in repoParams.items():
+			setattr(self, key, value)
 
 	def setLogger(self, l):
 		self.logger = l

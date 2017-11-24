@@ -6,7 +6,6 @@ import json
 import re
 import os.path
 
-
 class MarkLogicRepository(HarvestRepository):
 	""" MarkLogic Repository """
 
@@ -14,16 +13,34 @@ class MarkLogicRepository(HarvestRepository):
 		self.metadataprefix = "marklogic"
 		super(MarkLogicRepository, self).setRepoParams(repoParams)
 		self.domain_metadata = []
-
+		self.params = {
+			"format": "json",
+			"options": "odesi-opts2",
+			"start": 0,
+			"pageLength": 10
+		}
+		self.query = "((*))"
+		if "collection" in repoParams:
+			coll = re.sub("[^a-zA-Z0-9_-]+", "", repoParams["collection"]) # Remove potentially bad chars
+			self.query += "%2520AND%2520(coll:" + coll + ")"
 
 	def _crawl(self):
-		self.repository_id = self.db.update_repo(self.repository_id, self.url, self.set, self.name, "marklogic", self.enabled, self.thumbnail, self.item_url_pattern,self.abort_after_numerrors,self.max_records_updated_per_run,self.update_log_after_numitems,self.record_refresh_days,self.repo_refresh_days)
+		kwargs = {
+			"repo_id": self.repository_id, "repo_url": self.url, "repo_set": self.set, "repo_name": self.name, "repo_type": "marklogic", 
+			"enabled": self.enabled, "repo_thumbnail": self.thumbnail, "item_url_pattern": self.item_url_pattern,
+			"abort_after_numerrors": self.abort_after_numerrors, "max_records_updated_per_run": self.max_records_updated_per_run,
+			"update_log_after_numitems": self.update_log_after_numitems, "record_refresh_days": self.record_refresh_days,
+			"repo_refresh_days": self.repo_refresh_days
+		}
+		self.repository_id = self.db.update_repo(**kwargs)
 
 		try:
 			offset = 0
 			while True:
-				offset_url = re.sub("%26start%3D\d+", ("%26start%3D" + str(offset)), self.url)
-				records = requests.get(offset_url, verify=False).json()
+				self.params["start"] = offset
+				paramstring = "requestURL=" + self.query + "%26" + "%26".join("{}%3D{}".format(k,v) for (k,v) in self.params.items() )
+				response = requests.get(self.url, params=paramstring, verify=False) #Needs to be string not dict to force specific urlencoding
+				records = response.json()
 				if not records["results"]:
 					break
 				for record in records["results"]:
