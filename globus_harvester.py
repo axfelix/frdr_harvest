@@ -98,10 +98,15 @@ if __name__ == "__main__":
 
 	exporter = Exporter(dbh, main_log, final_config)
 
+	kwargs = {
+		"export_format": final_config['export_format'],
+		"export_filepath": final_config['export_filepath'],
+		"only_new_records": False,
+		"temp_filepath": final_config['temp_filepath']
+	}
 	if arguments["--only-new-records"] == True:
-	    exporter.export_to_file(final_config['export_format'], final_config['export_filepath'], True, final_config['temp_filepath'])
-	else:
-	    exporter.export_to_file(final_config['export_format'], final_config['export_filepath'], False, final_config['temp_filepath'])
+	    kwargs["only_new_records"] = True
+	exporter.export_to_file(**kwargs)
 
 	formatter = TimeFormatter()
 	main_log.info("Done after %s" % (formatter.humanize(time.time() - tstart)))
