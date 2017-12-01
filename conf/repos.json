@@ -8,18 +8,6 @@
             "type": "oai",
             "item_url_pattern": "http://researchdata.sfu.ca/islandora/object/%id%",
             "enabled": true
-        },
-        {
-            "name": "Open Data Canada",
-            "url": "http://open.canada.ca/data",
-            "set": "",
-            "thumbnail": "http://open.canada.ca/data/static/img/leaves/fivestar.png",
-            "type": "ckan",
-            "repo_refresh_days": 7,
-            "update_log_after_numitems": 100,
-            "max_records_updated_per_run": 5000,
-            "item_url_pattern": "http://open.canada.ca/data/en/dataset/%id%",
-            "enabled": true
         }
     ]
 }
