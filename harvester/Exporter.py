@@ -61,6 +61,7 @@ class Exporter(object):
 	def _generate_gmeta(self, export_filepath, temp_filepath, only_new_records):
 		self.logger.info("Exporter: generate_gmeta called")
 		gmeta = []
+		deleted = []
 
 		try:
 			with open("data/last_run_timestamp", "r") as lastrun:
@@ -106,8 +107,7 @@ class Exporter(object):
 				continue
 
 			if record["deleted"] == 1:
-				gmeta_data = {"@datatype": "GMetaEntry", "@version": "2016-11-09", "subject": record["dc:source"], "id": record["dc:source"], "visible_to": ["public"], "mimetype": "application/json", "content": {}}
-				gmeta.append(gmeta_data)
+				deleted.append(record["dc:source"])
 				continue
 
 			con = self.db.getConnection()
@@ -235,7 +235,7 @@ class Exporter(object):
 			records_assembled += 1
 
 		self.logger.info("gmeta size: %s items in %s files" % (records_assembled, gmeta_batches + 1))
-		return gmeta
+		return gmeta, deleted
 
 	def _validate_rifcs(self, rifcs):
 		self.logger.info("Exporter: _validate_rifs called")
@@ -252,18 +252,20 @@ class Exporter(object):
 			raise SystemExit
 
 
-	def _write_to_file(self, output, export_filepath, temp_filepath, export_format, gmeta_batches=False):
+	def _write_to_file(self, output, export_filepath, temp_filepath, export_format, batch_number=False):
 		try:
 			os.mkdir(temp_filepath)
 		except:
 			pass
 
-		if gmeta_batches:
-			export_basename = "gmeta_" + str(gmeta_batches) + ".json"
+		if batch_number:
+			export_basename = "gmeta_" + str(batch_number) + ".json"
 		elif export_format == "gmeta":
 			export_basename = "gmeta.json"
 		elif export_format == "rifcs":
 			export_basename = "rifcs.xml"
+		elif export_format == "delete":
+			export_basename = "delete.txt"
 
 		temp_filename = os.path.join(temp_filepath, export_basename)
 
@@ -292,19 +294,25 @@ class Exporter(object):
 		except:
 			pass
 
-	def export_to_file(self, export_format, export_filepath, only_new_records, temp_filepath="temp"):
+	def export_to_file(self, **kwargs):
+		for key, value in kwargs.items():
+			setattr(self, key, value)
 		output = None
-		self._cleanup_previous_exports(export_filepath, export_format)
-		self._cleanup_previous_exports(temp_filepath, export_format)
+		self._cleanup_previous_exports(self.export_filepath, self.export_format)
+		self._cleanup_previous_exports(self.export_filepath, "delete")
+		self._cleanup_previous_exports(self.temp_filepath, self.export_format)
 
-		if export_format == "gmeta":
-			gmeta_block = self._generate_gmeta(export_filepath, temp_filepath, only_new_records)
+		if self.export_format == "gmeta":
+			gmeta_block, delete_list = self._generate_gmeta(self.export_filepath, self.temp_filepath, self.only_new_records)
 			output = json.dumps({"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":gmeta_block}})
-		elif export_format == "rifcs":
+		elif self.export_format == "rifcs":
 			from lxml import etree
 			output = self._generate_rifcs()
 		else:
-			self.logger.error("Unknown export format: %s" % (export_format))
+			self.logger.error("Unknown export format: %s" % (self.export_format))
 
 		if output:
-			self._write_to_file(output, export_filepath, temp_filepath, export_format)
+			self._write_to_file(output, self.export_filepath, self.temp_filepath, self.export_format)
+		if len(delete_list):
+			output = "\n".join(delete_list)
+			self._write_to_file(output, self.export_filepath, self.temp_filepath, "delete")
