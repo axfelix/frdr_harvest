@@ -6,6 +6,7 @@ import sys
 import logging.config
 import os
 import time
+import traceback
 
 """
 Utility application to manage Globus Search Indexes for FRDR.
@@ -66,7 +67,7 @@ def query_repository(repo_name, index_uuid, display_results = False):
     queryobj["filters"][0]["values"][0] = repo_name
     offset = 0
     while True:
-        command = [_cmd, "--host " + _api_host, "--index " + index_uuid, "structured-query query.txt"]
+        command = [_cmd, "--index " + index_uuid, "structured-query query.txt"]
         ret = os.popen(" ".join(command)).read()
         search_results = json.loads(ret)
         results_count = search_results['count']
@@ -133,12 +134,10 @@ def main():
             cl_parser.print_usage()
     except Exception as e:
         LOGGER.error("Parsing error: %s" %(e))
+        traceback.print_exc()
         sys.exit(1)
 
 
 if __name__ == '__main__':
     main()
 
-# -list-all
-# -delete-all
-# -catch exception on popen
