@@ -11,6 +11,7 @@ class MarkLogicRepository(HarvestRepository):
 
 	def setRepoParams(self, repoParams):
 		self.metadataprefix = "marklogic"
+		self.updated_this_run = False
 		super(MarkLogicRepository, self).setRepoParams(repoParams)
 		self.domain_metadata = []
 		self.params = {
