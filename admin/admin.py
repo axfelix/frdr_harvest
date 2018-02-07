@@ -23,17 +23,18 @@ def get_config_ini(config_file="../conf/harvester.conf"):
 
 
 def run_admin_server(with_tls=False):
-    '''
-    Read ini-formatted config file from disk
+    """
+    Set up flask-admin based CRUD server for repositories table.
     :param with_tls: Boolean on whether to run with TLS security or not.
-    '''
+    """
 
-    # Initial setup magic
     config = get_config_ini()
+    # Initial setup magic
     app = Flask(__name__)
     basic_auth = BasicAuth(app)
-    db_connection_str = "postgresql://" + str(config['db'].get('user')) + ":" + str(config['db'].get('pass')) + "@" \
-                        + str(config['db'].get('host')) + "/" + str(config['db'].get('dbname'))
+    db_connection_str = '%s%s%s%s%s%s%s%s' % (
+    'postgresql://', str(config['db'].get('user')), ':', str(config['db'].get('pass')),
+    '@', str(config['db'].get('host')), '/', str(config['db'].get('dbname')))
     app.config['SQLALCHEMY_DATABASE_URI'] = db_connection_str
     app.config['SECRET_KEY'] = os.urandom(24)
     app.config['BASIC_AUTH_USERNAME'] = config['db'].get('user')
@@ -54,21 +55,28 @@ def run_admin_server(with_tls=False):
 
     class RepositoryModelView(ModelView):
         page_size = 10
+        # Columns not to show
         column_exclude_list = ['last_crawl_timestamp', 'abort_after_numerrors',
                                'max_records_updated_per_run', 'update_log_after_numitems',
-                               'record_refresh_days', 'repo_refresh_days', ]
+                               'record_refresh_days', 'repo_refresh_days', 'repository_thumbnail',
+                               'item_url_pattern']
+        # Dropdown boxes on create/edit
         form_choices = {
             'repository_type': [
-                ('oai', 'OAI'),
-                ('ckan', 'CKAN'),
-                ('marklogic', 'Marklogic'),
+                ('oai', 'oai'),
+                ('ckan', 'ckan'),
+                ('marklogic', 'marklogic'),
             ],
             'enabled': [
                 ('true', 'Yes'),
                 ('false', 'No'),
             ]
         }
+        # Which columns support searching
+        column_searchable_list = ['repository_set', 'repository_url', 'repository_name', 'repository_thumbnail',
+                                  'item_url_pattern',]
         edit_modal = True
+        export_types = ['csv', 'json']
 
     # Initialize interface and bind to ports.
     admin = Admin(app, name='FRDR Harvester', template_mode='bootstrap3')
