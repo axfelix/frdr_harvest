@@ -1,0 +1,6 @@
+python-deamon
+sqlalchemy
+PyJWT
+flask
+flask_admin
+flask_sqlaclhemy

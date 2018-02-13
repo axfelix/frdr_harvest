@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 from flask import Flask
 from flask_basicauth import BasicAuth
 from flask_admin import Admin
@@ -8,9 +10,12 @@ import configparser
 import argparse
 import sys
 import os
+import daemon
+from lockfile.pidlockfile import PIDLockFile
 
+pid = '/var/run/hadmin.pid'
 
-def get_config_ini(config_file="../conf/harvester.conf"):
+def get_config_ini(config_file="/opt/rdm/globus_oai/conf/harvester.conf"):
     '''
     Read ini-formatted config file from disk
     :param config_file: Filename of config file
@@ -33,8 +38,8 @@ def run_admin_server(with_tls=False):
     app = Flask(__name__)
     basic_auth = BasicAuth(app)
     db_connection_str = '%s%s%s%s%s%s%s%s' % (
-    'postgresql://', str(config['db'].get('user')), ':', str(config['db'].get('pass')),
-    '@', str(config['db'].get('host')), '/', str(config['db'].get('dbname')))
+        'postgresql://', str(config['db'].get('user')), ':', str(config['db'].get('pass')),
+        '@', str(config['db'].get('host')), '/', str(config['db'].get('dbname')))
     app.config['SQLALCHEMY_DATABASE_URI'] = db_connection_str
     app.config['SECRET_KEY'] = os.urandom(24)
     app.config['BASIC_AUTH_USERNAME'] = config['db'].get('user')
@@ -56,10 +61,7 @@ def run_admin_server(with_tls=False):
     class RepositoryModelView(ModelView):
         page_size = 10
         # Columns not to show
-        column_exclude_list = ['last_crawl_timestamp', 'abort_after_numerrors',
-                               'max_records_updated_per_run', 'update_log_after_numitems',
-                               'record_refresh_days', 'repo_refresh_days', 'repository_thumbnail',
-                               'item_url_pattern']
+        column_list = ['repository_name', 'repository_url', 'repository_type', 'repository_set']
         # Dropdown boxes on create/edit
         form_choices = {
             'repository_type': [
@@ -73,8 +75,7 @@ def run_admin_server(with_tls=False):
             ]
         }
         # Which columns support searching
-        column_searchable_list = ['repository_set', 'repository_url', 'repository_name', 'repository_thumbnail',
-                                  'item_url_pattern',]
+        column_searchable_list = ['repository_set', 'repository_url', 'repository_name', 'repository_set']
         edit_modal = True
         export_types = ['csv', 'json']
 
@@ -86,9 +87,11 @@ def run_admin_server(with_tls=False):
     if (with_tls):
         cert_path = config['admin'].get('cert_path')
         key_path = config['admin'].get('key_path')
-        app.run(port=8100, host='0.0.0.0', ssl_context=(cert_path, key_path))
+        with daemon.DaemonContext(pidfile=PIDLockFile(pid)):
+            app.run(port=8100, host='0.0.0.0', ssl_context=(cert_path, key_path))
     else:
-        app.run(port=8100, host='0.0.0.0')
+        with daemon.DaemonContext(pidfile=PIDLockFile(pid)):
+            app.run(port=8100, host='0.0.0.0')
 
 
 if __name__ == '__main__':
@@ -99,4 +102,5 @@ if __name__ == '__main__':
     with_tls = False
     if (args.tls):
         with_tls = True
+
     run_admin_server(with_tls)
