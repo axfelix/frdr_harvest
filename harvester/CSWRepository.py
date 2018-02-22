@@ -29,14 +29,14 @@ class CSWRepository(HarvestRepository):
 		self.cswrepo.getrecords2()
 
 		item_count = 0
-		for rec in csw.records:
-			result = self.db.write_header(csw.records[rec].identifier, self.repository_id)
+		for rec in self.cswrepo.records:
+			result = self.db.write_header(self.cswrepo.records[rec].identifier, self.repository_id)
 			item_count = item_count + 1
 			if (item_count % self.update_log_after_numitems == 0):
 				tdelta = time.time() - self.tstart + 0.1
 				self.logger.info("Done %s item headers after %s (%.1f items/sec)" % (item_count, self.formatter.humanize(tdelta), item_count/tdelta) )
-			if item_count % csw.results['returned'] and csw.results['nextrecord'] != 0:
-				csw.getrecords2(startposition=csw.results['nextrecord'])
+			if item_count % self.cswrepo.results['returned'] and self.cswrepo.results['nextrecord'] != 0:
+				self.cswrepo.getrecords2(startposition=self.cswrepo.results['nextrecord'])
 
 		self.logger.info("Found %s items in feed" % (item_count) )
 
@@ -49,6 +49,7 @@ class CSWRepository(HarvestRepository):
 		record["identifier"] = local_identifier
 		record["creator"] = self.name
 		record["contact"] = self.contact
+		record["series"] = ""
 
 		return record
 
@@ -83,12 +84,12 @@ class CSWRepository(HarvestRepository):
 	@_rate_limited(5)
 	def _update_record(self,record):
 
-		self.cswrepo.action.getrecordbyid(id=[record['local_identifier']])
-		if csw.records:
-			csw_record = csw.records[record['local_identifier']]
+		self.cswrepo.getrecordbyid(id=[record['local_identifier']])
+		if self.cswrepo.records:
+			csw_record = self.cswrepo.records[record['local_identifier']]
 			oai_record = self.format_csw_to_oai(csw_record,record['local_identifier'])
-			csw.getrecordbyid(id=[record['local_identifier']], outputschema="http://www.isotc211.org/2005/gmd")
-			oai_record["pub_date"] = csw.records[record['local_identifier']].datestamp
+			self.cswrepo.getrecordbyid(id=[record['local_identifier']], outputschema="http://www.isotc211.org/2005/gmd")
+			oai_record["pub_date"] = self.cswrepo.records[record['local_identifier']].datestamp
 			if oai_record:
 				self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
 			return True
