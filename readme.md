@@ -35,6 +35,14 @@ The list of repositories to be crawled is in conf/repos.json, in a structure lik
             "contact": "contact@person.ca",
             "type": "marklogic",
             "enabled": true
+        },
+        {
+            "name": "Some CSW Repository",
+            "url": "https://somecswrepository.edu/geonetwork/srv/eng/csw",
+            "item_url_pattern": "https://somecswrepository.edu/geonetwork/srv/eng/catalog.search#/metadata/%id%",
+            "contact": "contact@person.ca",
+            "type": "csw",
+            "enabled": true
         }
     ]
 }
