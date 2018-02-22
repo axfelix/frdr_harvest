@@ -12,10 +12,14 @@ import sys
 import os
 import daemon
 from lockfile.pidlockfile import PIDLockFile
+import logging
+import logging.handlers
 
-pid = '/var/run/hadmin.pid'
+LOGGER = logging.getLogger(__name__)
+log_format = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
+              '-35s %(lineno) -5d: %(message)s')
 
-def get_config_ini(config_file="/opt/rdm/globus_oai/conf/harvester.conf"):
+def get_config_ini(config_file="../conf/harvester.conf"):
     '''
     Read ini-formatted config file from disk
     :param config_file: Filename of config file
@@ -45,6 +49,7 @@ def run_admin_server(with_tls=False):
     app.config['BASIC_AUTH_USERNAME'] = config['db'].get('user')
     app.config['BASIC_AUTH_PASSWORD'] = config['db'].get('pass')
     app.config['BASIC_AUTH_FORCE'] = True
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db = SQLAlchemy(app)
 
     # Load existing database into flask-admin
@@ -79,12 +84,15 @@ def run_admin_server(with_tls=False):
         edit_modal = True
         export_types = ['csv', 'json']
 
+
     # Initialize interface and bind to ports.
     admin = Admin(app, name='FRDR Harvester', template_mode='bootstrap3')
     repositories_view = RepositoryModelView(Repositories, db.session)
     admin.add_view(repositories_view)
     # Set up SSL.
+    pid = '/tmp/hadmin.pid'
     if (with_tls):
+        print("TLS")
         cert_path = config['admin'].get('cert_path')
         key_path = config['admin'].get('key_path')
         with daemon.DaemonContext(pidfile=PIDLockFile(pid)):
@@ -103,4 +111,6 @@ if __name__ == '__main__':
     if (args.tls):
         with_tls = True
 
+    syslog_handler = logging.handlers.SysLogHandler(address='/dev/log')
+    logging.basicConfig(level=logging.INFO, format=log_format, handlers=[syslog_handler])
     run_admin_server(with_tls)

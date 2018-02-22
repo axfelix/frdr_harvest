@@ -13,14 +13,15 @@
 
 set -e
 
-DAEMON=/opt/rdm/globus_oai/admin/admin.py
+DAEMON=admin.py
+DAEMONPATH=/opt/rdm/globus_oai/admin
 NAME=hadmin
 DAEMONUSER=harvest
-PIDDIR=/var/run/
+PIDDIR=/tmp/
 PIDFILE=$PIDDIR/hadmin.pid
 DESC="Harvester Admin"
 
-test -x $DAEMON || exit 0
+test -x $DAEMONPATH/$DAEMON || exit 0
 
 . /lib/lsb/init-functions
 
@@ -44,8 +45,7 @@ start_it_up()
   fi
 
   log_daemon_msg "Starting $DESC" "$NAME"
-  start-stop-daemon --start --quiet --pidfile $PIDFILE \
-    --exec $DAEMON # -c $DAEMONUSER
+  start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --chuid $DAEMONUSER --chdir $DAEMONPATH
   log_end_msg $?
 }
 
