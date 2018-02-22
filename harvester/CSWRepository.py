@@ -90,6 +90,7 @@ class CSWRepository(HarvestRepository):
 			oai_record = self.format_csw_to_oai(csw_record,record['local_identifier'])
 			self.cswrepo.getrecordbyid(id=[record['local_identifier']], outputschema="http://www.isotc211.org/2005/gmd")
 			oai_record["pub_date"] = self.cswrepo.records[record['local_identifier']].datestamp
+			oai_record["pub_date"] = re.sub("[T ][0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.?[0-9]*[Z]?$", "", oai_record["pub_date"])
 			if oai_record:
 				self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
 			return True
