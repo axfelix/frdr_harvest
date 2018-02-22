@@ -35,7 +35,7 @@ class CSWRepository(HarvestRepository):
 			if (item_count % self.update_log_after_numitems == 0):
 				tdelta = time.time() - self.tstart + 0.1
 				self.logger.info("Done %s item headers after %s (%.1f items/sec)" % (item_count, self.formatter.humanize(tdelta), item_count/tdelta) )
-			if item_count % self.cswrepo.results['returned'] and self.cswrepo.results['nextrecord'] != 0:
+			if item_count % self.cswrepo.results['returned'] == 0 and self.cswrepo.results['nextrecord'] != 0:
 				self.cswrepo.getrecords2(startposition=self.cswrepo.results['nextrecord'])
 
 		self.logger.info("Found %s items in feed" % (item_count) )
