@@ -93,6 +93,7 @@ class CSWRepository(HarvestRepository):
 		if self.cswrepo.records:
 			csw_record = self.cswrepo.records[record['local_identifier']]
 			oai_record = self.format_csw_to_oai(csw_record,record['local_identifier'])
+			# We have to request a second schema to get valid dates, no idea if issue is Hakai-specific
 			self.cswrepo.getrecordbyid(id=[record['local_identifier']], outputschema="http://www.isotc211.org/2005/gmd")
 			oai_record["pub_date"] = self.cswrepo.records[record['local_identifier']].datestamp
 			oai_record["pub_date"] = re.sub("[T ][0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.?[0-9]*[Z]?$", "", oai_record["pub_date"])
