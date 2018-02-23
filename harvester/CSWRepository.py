@@ -26,17 +26,22 @@ class CSWRepository(HarvestRepository):
 			"repo_refresh_days": self.repo_refresh_days
 		}
 		self.repository_id = self.db.update_repo(**kwargs)
-		self.cswrepo.getrecords2()
 
 		item_count = 0
-		for rec in self.cswrepo.records:
-			result = self.db.write_header(self.cswrepo.records[rec].identifier, self.repository_id)
-			item_count = item_count + 1
-			if (item_count % self.update_log_after_numitems == 0):
-				tdelta = time.time() - self.tstart + 0.1
-				self.logger.info("Done %s item headers after %s (%.1f items/sec)" % (item_count, self.formatter.humanize(tdelta), item_count/tdelta) )
-			if item_count % self.cswrepo.results['returned'] == 0 and self.cswrepo.results['nextrecord'] != 0:
+		while True:
+			try:
 				self.cswrepo.getrecords2(startposition=self.cswrepo.results['nextrecord'])
+			except:
+				self.cswrepo.getrecords2()
+
+			for rec in self.cswrepo.records:
+				result = self.db.write_header(self.cswrepo.records[rec].identifier, self.repository_id)
+				item_count = item_count + 1
+				if (item_count % self.update_log_after_numitems == 0):
+					tdelta = time.time() - self.tstart + 0.1
+					self.logger.info("Done %s item headers after %s (%.1f items/sec)" % (item_count, self.formatter.humanize(tdelta), item_count/tdelta) )
+			if item_count == self.cswrepo.results['matches']:
+				break
 
 		self.logger.info("Found %s items in feed" % (item_count) )
 
