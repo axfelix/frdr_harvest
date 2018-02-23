@@ -1,6 +1,7 @@
-python-deamon
+python-daemon
 sqlalchemy
 PyJWT
 flask
 flask_admin
-flask_sqlaclhemy
+flask_sqlalchemy
+flask_basicauth

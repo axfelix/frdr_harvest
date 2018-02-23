@@ -2,4 +2,4 @@ docopt
 sickle
 requests
 ckanapi
-psycopg
+psycopg2
