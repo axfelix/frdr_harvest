@@ -3,3 +3,4 @@ sickle
 requests
 ckanapi
 psycopg2
+owslib

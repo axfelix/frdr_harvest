@@ -26,17 +26,22 @@ class CSWRepository(HarvestRepository):
 			"repo_refresh_days": self.repo_refresh_days
 		}
 		self.repository_id = self.db.update_repo(**kwargs)
-		self.cswrepo.getrecords2()
 
 		item_count = 0
-		for rec in self.cswrepo.records:
-			result = self.db.write_header(self.cswrepo.records[rec].identifier, self.repository_id)
-			item_count = item_count + 1
-			if (item_count % self.update_log_after_numitems == 0):
-				tdelta = time.time() - self.tstart + 0.1
-				self.logger.info("Done %s item headers after %s (%.1f items/sec)" % (item_count, self.formatter.humanize(tdelta), item_count/tdelta) )
-			if item_count % self.cswrepo.results['returned'] and self.cswrepo.results['nextrecord'] != 0:
+		while True:
+			try:
 				self.cswrepo.getrecords2(startposition=self.cswrepo.results['nextrecord'])
+			except:
+				self.cswrepo.getrecords2()
+
+			for rec in self.cswrepo.records:
+				result = self.db.write_header(self.cswrepo.records[rec].identifier, self.repository_id)
+				item_count = item_count + 1
+				if (item_count % self.update_log_after_numitems == 0):
+					tdelta = time.time() - self.tstart + 0.1
+					self.logger.info("Done %s item headers after %s (%.1f items/sec)" % (item_count, self.formatter.humanize(tdelta), item_count/tdelta) )
+			if item_count == self.cswrepo.results['matches']:
+				break
 
 		self.logger.info("Found %s items in feed" % (item_count) )
 
@@ -88,8 +93,10 @@ class CSWRepository(HarvestRepository):
 		if self.cswrepo.records:
 			csw_record = self.cswrepo.records[record['local_identifier']]
 			oai_record = self.format_csw_to_oai(csw_record,record['local_identifier'])
+			# We have to request a second schema to get valid dates, no idea if issue is Hakai-specific
 			self.cswrepo.getrecordbyid(id=[record['local_identifier']], outputschema="http://www.isotc211.org/2005/gmd")
 			oai_record["pub_date"] = self.cswrepo.records[record['local_identifier']].datestamp
+			oai_record["pub_date"] = re.sub("[T ][0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.?[0-9]*[Z]?$", "", oai_record["pub_date"])
 			if oai_record:
 				self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
 			return True
