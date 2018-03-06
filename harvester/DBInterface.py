@@ -13,6 +13,7 @@ class DBInterface:
 		self.password = params.get('pass', None)
 		self.connection = None
 		self.logger = None
+
 		if self.dbtype == "sqlite":
 			self.dblayer = __import__('sqlite3')
 			con = self.getConnection()
@@ -30,80 +31,30 @@ class DBInterface:
 			raise ValueError('Database type must be sqlite or postgres in config file')
 
 		with con:
-			cur = con.cursor()
-			cur.execute(
-				"create table if not exists creators (creator_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, creator TEXT, is_contributor INTEGER)")
-			cur.execute(
-				"create table if not exists descriptions (description_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, description TEXT, language TEXT)")
-			cur.execute(
-				"create table if not exists domain_metadata (metadata_id INTEGER PRIMARY KEY NOT NULL,schema_id INTEGER NOT NULL, record_id INTEGER NOT NULL, field_name TEXT, field_value TEXT)")
-			cur.execute(
-				"create table if not exists domain_schemas (schema_id INTEGER PRIMARY KEY NOT NULL, namespace TEXT)")
-			cur.execute(
-				"create table if not exists geospatial (geospatial_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, coordinate_type TEXT, lat NUMERIC, lon NUMERIC)")
-			cur.execute("""create table if not exists records (record_id INTEGER PRIMARY KEY NOT NULL,repository_id INTEGER NOT NULL,title TEXT,pub_date TEXT,modified_timestamp INTEGER DEFAULT 0,
-				source_url TEXT,deleted NUMERIC DEFAULT 0,local_identifier TEXT,series TEXT,contact TEXT)""")
-			cur.execute("""create table if not exists repositories (repository_id INTEGER PRIMARY KEY NOT NULL,repository_set TEXT NOT NULL DEFAULT '',repository_url TEXT,repository_name TEXT,
-				repository_thumbnail TEXT,repository_type TEXT,last_crawl_timestamp INTEGER,item_url_pattern TEXT,abort_after_numerrors INTEGER,max_records_updated_per_run INTEGER,
-				update_log_after_numitems INTEGER,record_refresh_days INTEGER,repo_refresh_days INTEGER,enabled TEXT)""")
-			cur.execute(
-				"create table if not exists publishers (publisher_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, publisher TEXT)")
-			cur.execute(
-				"create table if not exists rights (rights_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, rights TEXT)")
-			cur.execute(
-				"create table if not exists subjects (subject_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, subject TEXT)")
-			cur.execute(
-				"create table if not exists tags (tag_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, tag TEXT, language TEXT)")
-			cur.execute(
-				"create table if not exists settings (setting_id INTEGER PRIMARY KEY NOT NULL, setting_name TEXT, setting_value TEXT)")
-			cur.execute(
-				"create table if not exists access (access_id INTEGER PRIMARY KEY NOT NULL,record_id INTEGER NOT NULL, access TEXT)")
+			cur = self.getCursor(con)
 
-			# Postgres doesn't do magic auto-increment
-			if self.dbtype == "postgres":
-				cur.execute("CREATE SEQUENCE IF NOT EXISTS creators_id_sequence")
-				cur.execute("ALTER TABLE creators ALTER creator_id SET DEFAULT NEXTVAL('creators_id_sequence')")
-				cur.execute("CREATE SEQUENCE IF NOT EXISTS descriptions_id_sequence")
-				cur.execute(
-					"ALTER TABLE descriptions ALTER description_id SET DEFAULT NEXTVAL('descriptions_id_sequence')")
-				cur.execute("CREATE SEQUENCE IF NOT EXISTS domain_metadata_id_sequence")
-				cur.execute(
-					"ALTER TABLE domain_metadata ALTER metadata_id SET DEFAULT NEXTVAL('domain_metadata_id_sequence')")
-				cur.execute("CREATE SEQUENCE IF NOT EXISTS domain_schema_id_sequence")
-				cur.execute(
-					"ALTER TABLE domain_schemas ALTER schema_id SET DEFAULT NEXTVAL('domain_schema_id_sequence')")
-				cur.execute("CREATE SEQUENCE IF NOT EXISTS geospatial_id_sequence")
-				cur.execute("ALTER TABLE geospatial ALTER geospatial_id SET DEFAULT NEXTVAL('geospatial_id_sequence')")
-				cur.execute("CREATE SEQUENCE IF NOT EXISTS records_id_sequence")
-				cur.execute("ALTER TABLE records ALTER record_id SET DEFAULT NEXTVAL('records_id_sequence')")
-				cur.execute("CREATE SEQUENCE IF NOT EXISTS repositories_id_sequence")
-				cur.execute(
-					"ALTER TABLE repositories ALTER repository_id SET DEFAULT NEXTVAL('repositories_id_sequence')")
-				cur.execute("CREATE SEQUENCE IF NOT EXISTS publishers_id_sequence")
-				cur.execute("ALTER TABLE publishers ALTER publisher_id SET DEFAULT NEXTVAL('publishers_id_sequence')")
-				cur.execute("CREATE SEQUENCE IF NOT EXISTS rights_id_sequence")
-				cur.execute("ALTER TABLE rights ALTER rights_id SET DEFAULT NEXTVAL('rights_id_sequence')")
-				cur.execute("CREATE SEQUENCE IF NOT EXISTS subjects_id_sequence")
-				cur.execute("ALTER TABLE subjects ALTER subject_id SET DEFAULT NEXTVAL('subjects_id_sequence')")
-				cur.execute("CREATE SEQUENCE IF NOT EXISTS tags_id_sequence")
-				cur.execute("ALTER TABLE tags ALTER tag_id SET DEFAULT NEXTVAL('tags_id_sequence')")
-				cur.execute("CREATE SEQUENCE IF NOT EXISTS settings_id_sequence")
-				cur.execute("ALTER TABLE settings ALTER setting_id SET DEFAULT NEXTVAL('settings_id_sequence')")
-				cur.execute("CREATE SEQUENCE IF NOT EXISTS access_id_sequence")
-				cur.execute("ALTER TABLE access ALTER access_id SET DEFAULT NEXTVAL('access_id_sequence')")
+			# This table must always exist
+			cur.execute("create table if not exists settings (setting_id INTEGER PRIMARY KEY NOT NULL, setting_name TEXT, setting_value TEXT)")
 
-			cur.execute("create index IF NOT EXISTS creators_by_record on creators(record_id)")
-			cur.execute("create index IF NOT EXISTS descriptions_by_record on descriptions(record_id,language)")
-			cur.execute("create index IF NOT EXISTS tags_by_record on tags(record_id,language)")
-			cur.execute("create index IF NOT EXISTS subjects_by_record on subjects(record_id)")
-			cur.execute("create index IF NOT EXISTS publishers_by_record on publishers(record_id)")
-			cur.execute("create index IF NOT EXISTS rights_by_record on rights(record_id)")
-			cur.execute("create index IF NOT EXISTS geospatial_by_record on geospatial(record_id)")
-			cur.execute("create index IF NOT EXISTS access_by_record on access(record_id)")
-			cur.execute("create index IF NOT EXISTS domain_metadata_by_record on domain_metadata(record_id,schema_id)")
-			cur.execute("create index IF NOT EXISTS domain_schemas_by_schema_id on domain_schemas(schema_id)")
-			cur.execute(
-				"create unique index IF NOT EXISTS records_by_repository on records (repository_id, local_identifier)")
+			# Determine if the database schema needs to be updated
+			dbversion = self.get_db_version()
+			files = os.listdir("sql/" + self.dbtype + "/")
+			files.sort()
+			for filename in files:
+				if '.sql' in filename:
+					scriptversion = int(filename.split('.')[0])
+					if scriptversion > dbversion:
+						# Run this script to update the schema, then record it as done
+						with open("sql/" + self.dbtype + "/" + filename, 'r') as scriptfile:
+							scriptcontents = scriptfile.read()
+						if self.dbtype == "postgres":
+							cur.execute(scriptcontents)
+						else:
+							cur.executescript(scriptcontents)
+						self.set_db_version(scriptversion)
+						dbversion = scriptversion
+						print("Updated database to version: %i" % (scriptversion))
+
 
 	def setLogger(self, l):
 		self.logger = l
@@ -116,7 +67,18 @@ class DBInterface:
 				self.connection = self.dblayer.connect("dbname='%s' user='%s' password='%s' host='%s'" % (
 					self.dbname, self.user, self.password, self.host))
 				self.connection.autocommit = True
+
 		return self.connection
+
+	def getCursor(self, con):
+		if self.dbtype == "sqlite":
+			con.row_factory = self.getRow()
+		cur = con.cursor()
+		if self.dbtype == "postgres":
+			from psycopg2.extras import RealDictCursor
+			cur = con.cursor(cursor_factory=RealDictCursor)
+
+		return cur
 
 	def getRow(self):
 		return self.dblayer.Row
@@ -129,17 +91,40 @@ class DBInterface:
 			return statement.replace('?', '%s')
 		return statement
 
+	def get_db_version(self):
+		dbversion = 0
+		con = self.getConnection()
+		res = None
+		with con:
+			cur = self.getCursor(con)
+			cur.execute(
+				self._prep("select setting_value from settings where setting_name = ? order by setting_value desc"),
+				("dbversion",))
+			if cur is not None:
+				res = cur.fetchone()
+			if res is not None:
+				dbversion = int(res['setting_value'])
+
+		return dbversion
+
+	def set_db_version(self, v):
+		curent_version = self.get_db_version()
+		con = self.getConnection()
+		with con:
+			cur = self.getCursor(con)
+			if curent_version == 0:
+				cur.execute(self._prep("insert into settings(setting_value, setting_name) values (?,?)"),
+						(v, "dbversion"))
+			else:
+				cur.execute(self._prep("update settings set setting_value = ? where setting_name = ?"),
+						(v, "dbversion"))
+
 	def update_repo(self, **kwargs):
 		for key, value in kwargs.items():
 			setattr(self, key, value)
 		con = self.getConnection()
 		with con:
-			if self.dbtype == "sqlite":
-				con.row_factory = self.getRow()
-				cur = con.cursor()
-			if self.dbtype == "postgres":
-				from psycopg2.extras import RealDictCursor
-				cur = con.cursor(cursor_factory=RealDictCursor)
+			cur = self.getCursor(con)
 			if self.repo_id > 0:
 				# Existing repo
 				try:
@@ -190,12 +175,7 @@ class DBInterface:
 		returnvalue = 0
 		con = self.getConnection()
 		with con:
-			if self.dbtype == "sqlite":
-				con.row_factory = self.getRow()
-			cur = con.cursor()
-			if self.dbtype == "postgres":
-				from psycopg2.extras import RealDictCursor
-				cur = con.cursor(cursor_factory=RealDictCursor)
+			cur = self.getCursor(con)
 			cur.execute(
 				self._prep("select repository_id from repositories where repository_url = ? and repository_set = ?"),
 				(repo_url, repo_set))
@@ -205,6 +185,7 @@ class DBInterface:
 				return 0
 			for record in records:
 				returnvalue = int(record['repository_id'])
+				
 		return returnvalue
 
 	def get_repo_last_crawl(self, repo_id):
@@ -213,12 +194,7 @@ class DBInterface:
 			return 0
 		con = self.getConnection()
 		with con:
-			if self.dbtype == "sqlite":
-				con.row_factory = self.getRow()
-			cur = con.cursor()
-			if self.dbtype == "postgres":
-				from psycopg2.extras import RealDictCursor
-				cur = con.cursor(cursor_factory=RealDictCursor)
+			cur = self.getCursor(con)
 			cur.execute(self._prep("select last_crawl_timestamp from repositories where repository_id = ?"), (repo_id,))
 			if cur is not None:
 				records = cur.fetchall()
@@ -226,6 +202,7 @@ class DBInterface:
 				return 0
 			for record in records:
 				returnvalue = int(record['last_crawl_timestamp'])
+
 		self.logger.debug("Last crawl ts for repo_id %s is %s" % (repo_id, returnvalue))
 		return returnvalue
 
@@ -233,12 +210,7 @@ class DBInterface:
 		returnvalue = 0
 		con = self.getConnection()
 		with con:
-			if self.dbtype == "sqlite":
-				con.row_factory = self.getRow()
-			cur = con.cursor()
-			if self.dbtype == "postgres":
-				from psycopg2.extras import RealDictCursor
-				cur = con.cursor(cursor_factory=RealDictCursor)
+			cur = self.getCursor(con)
 			cur.execute(self._prep("select schema_id from domain_schemas where namespace = ?"), (namespace,))
 			if cur is not None:
 				records = cur.fetchall()
@@ -246,18 +218,14 @@ class DBInterface:
 				return 0
 			for record in records:
 				returnvalue = int(record['schema_id'])
+
 		return returnvalue
 
 	def create_domain_schema(self, namespace):
 		con = self.getConnection()
 		schema_id = self.get_domain_schema_id(namespace)
 		with con:
-			if self.dbtype == "sqlite":
-				con.row_factory = self.getRow()
-				cur = con.cursor()
-			if self.dbtype == "postgres":
-				from psycopg2.extras import RealDictCursor
-				cur = con.cursor(cursor_factory=RealDictCursor)
+			cur = self.getCursor(con)
 			# Create new domain_schema record
 			try:
 				if self.dbtype == "postgres":
@@ -274,12 +242,13 @@ class DBInterface:
 				# record already present in repo
 				self.logger.error("Error creating domain schema: %s " % (e))
 				return schema_id
+
 		return schema_id
 
 	def update_last_crawl(self, repo_id):
 		con = self.getConnection()
 		with con:
-			cur = con.cursor()
+			cur = self.getCursor(con)
 			cur.execute(self._prep("update repositories set last_crawl_timestamp = ? where repository_id = ?"),
 						(int(time.time()), repo_id))
 
@@ -288,7 +257,7 @@ class DBInterface:
 		if record['record_id'] == 0:
 			return False
 		with con:
-			cur = con.cursor()
+			cur = self.getCursor(con)
 
 			try:
 				cur.execute(self._prep("UPDATE records set deleted = 1, modified_timestamp = ? where record_id=?"),
@@ -317,12 +286,7 @@ class DBInterface:
 		returnvalue = None
 		con = self.getConnection()
 		with con:
-			if self.dbtype == "sqlite":
-				con.row_factory = self.getRow()
-			cur = con.cursor()
-			if self.dbtype == "postgres":
-				from psycopg2.extras import RealDictCursor
-				cur = con.cursor(cursor_factory=RealDictCursor)
+			cur = self.getCursor(con)
 			cur.execute(self._prep("select record_id from records where local_identifier=? and repository_id = ?"),
 						(local_identifier, repo_id))
 			if cur is not None:
@@ -331,6 +295,7 @@ class DBInterface:
 				return None
 			for record in records:
 				returnvalue = int(record['record_id'])
+
 		return returnvalue
 
 	def write_record(self, record, repo_id, metadata_prefix, domain_metadata):
@@ -340,7 +305,7 @@ class DBInterface:
 
 		con = self.getConnection()
 		with con:
-			cur = con.cursor()
+			cur = self.getCursor(con)
 			source_url = ""
 			if 'dc:source' in record:
 				if isinstance(record["dc:source"], list):
@@ -577,12 +542,7 @@ class DBInterface:
 		con = self.getConnection()
 		records = []
 		with con:
-			if self.dbtype == "sqlite":
-				con.row_factory = self.getRow()
-				cur = con.cursor()
-			if self.dbtype == "postgres":
-				from psycopg2.extras import RealDictCursor
-				cur = con.cursor(cursor_factory=RealDictCursor)
+			cur = self.getCursor(con)
 			cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.contact, recs.series, recs.modified_timestamp, recs.local_identifier, 
 				repos.repository_id, repos.repository_type
 				FROM records recs, repositories repos
@@ -590,12 +550,13 @@ class DBInterface:
 				LIMIT ?"""), (stale_timestamp, repo_id, max_records_updated_per_run))
 			if cur is not None:
 				records = cur.fetchall()
+
 		return records
 
 	def touch_record(self, record):
 		con = self.getConnection()
 		with con:
-			cur = con.cursor()
+			cur = self.getCursor(con)
 			try:
 				cur.execute(self._prep("UPDATE records set modified_timestamp = ? where record_id = ?"),
 							(time.time(), record['record_id']))
@@ -608,7 +569,7 @@ class DBInterface:
 	def write_header(self, local_identifier, repo_id):
 		con = self.getConnection()
 		with con:
-			cur = con.cursor()
+			cur = self.getCursor(con)
 
 			try:
 				cur.execute(self._prep(
