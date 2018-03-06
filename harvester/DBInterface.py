@@ -41,7 +41,7 @@ class DBInterface:
 			files = os.listdir("sql/" + self.dbtype + "/")
 			files.sort()
 			for filename in files:
-				if '.sql' in filename:
+				if filename.endswith(".sql"):
 					scriptversion = int(filename.split('.')[0])
 					if scriptversion > dbversion:
 						# Run this script to update the schema, then record it as done
