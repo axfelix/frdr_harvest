@@ -77,6 +77,7 @@ class MarkLogicRepository(HarvestRepository):
 				record["pub_date"] = str(entry["date"]).strip()
 		record["identifier"] = marklogic_record["uri"].rsplit('/', 1)[1]
 		record["contact"] = self.contact
+		record["publisher"] = self.publisher
 		record["series"] = ""
 
 		return record
