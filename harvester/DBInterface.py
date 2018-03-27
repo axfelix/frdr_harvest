@@ -1,7 +1,7 @@
 import os
 import time
 import sys
-
+import hashlib
 
 class DBInterface:
 	def __init__(self, params):
@@ -16,7 +16,6 @@ class DBInterface:
 
 		if self.dbtype == "sqlite":
 			self.dblayer = __import__('sqlite3')
-			con = self.getConnection()
 			if os.name == "posix":
 				try:
 					os.chmod(self.dbname, 0o664)
@@ -25,11 +24,11 @@ class DBInterface:
 
 		elif self.dbtype == "postgres":
 			self.dblayer = __import__('psycopg2')
-			con = self.getConnection()
 
 		else:
 			raise ValueError('Database type must be sqlite or postgres in config file')
 
+		con = self.getConnection()
 		with con:
 			cur = self.getCursor(con)
 
@@ -38,14 +37,14 @@ class DBInterface:
 
 			# Determine if the database schema needs to be updated
 			dbversion = self.get_db_version()
-			files = os.listdir("sql/" + self.dbtype + "/")
+			files = os.listdir("sql/" + str(self.dbtype) + "/")
 			files.sort()
 			for filename in files:
 				if filename.endswith(".sql"):
 					scriptversion = int(filename.split('.')[0])
 					if scriptversion > dbversion:
 						# Run this script to update the schema, then record it as done
-						with open("sql/" + self.dbtype + "/" + filename, 'r') as scriptfile:
+						with open("sql/" + str(self.dbtype) + "/" + filename, 'r') as scriptfile:
 							scriptcontents = scriptfile.read()
 						if self.dbtype == "postgres":
 							cur.execute(scriptcontents)
@@ -53,7 +52,7 @@ class DBInterface:
 							cur.executescript(scriptcontents)
 						self.set_db_version(scriptversion)
 						dbversion = scriptversion
-						print("Updated database to version: %i" % (scriptversion))
+						print("Updated database to version: %i" % (scriptversion)) # No logger yet
 
 
 	def setLogger(self, l):
@@ -152,9 +151,7 @@ class DBInterface:
 							self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail, time.time(), self.item_url_pattern,
 							self.enabled, self.abort_after_numerrors, self.max_records_updated_per_run, self.update_log_after_numitems,
 							self.record_refresh_days, self.repo_refresh_days))
-						cur.execute("SELECT CURRVAL('repositories_id_sequence')")
-						res = cur.fetchone()
-						repo_id = int(res['currval'])
+						repo_id = int(cur.fetchone()[0])
 
 					if self.dbtype == "sqlite":
 						cur.execute(self._prep("""INSERT INTO repositories 
@@ -206,45 +203,6 @@ class DBInterface:
 		self.logger.debug("Last crawl ts for repo_id %s is %s" % (repo_id, returnvalue))
 		return returnvalue
 
-	def get_domain_schema_id(self, namespace):
-		returnvalue = 0
-		con = self.getConnection()
-		with con:
-			cur = self.getCursor(con)
-			cur.execute(self._prep("select schema_id from domain_schemas where namespace = ?"), (namespace,))
-			if cur is not None:
-				records = cur.fetchall()
-			else:
-				return 0
-			for record in records:
-				returnvalue = int(record['schema_id'])
-
-		return returnvalue
-
-	def create_domain_schema(self, namespace):
-		con = self.getConnection()
-		schema_id = self.get_domain_schema_id(namespace)
-		with con:
-			cur = self.getCursor(con)
-			# Create new domain_schema record
-			try:
-				if self.dbtype == "postgres":
-					cur.execute(self._prep("""INSERT INTO domain_schemas (namespace) VALUES (?) RETURNING schema_id"""),
-								(namespace,))
-					res = cur.fetchone()
-					schema_id = int(res[0])
-
-				if self.dbtype == "sqlite":
-					cur.execute(self._prep("""INSERT INTO domain_schemas (namespace) VALUES (?)"""), (namespace,))
-					schema_id = int(cur.lastrowid)
-
-			except self.dblayer.IntegrityError as e:
-				# record already present in repo
-				self.logger.error("Error creating domain schema: %s " % (e))
-				return schema_id
-
-		return schema_id
-
 	def update_last_crawl(self, repo_id):
 		con = self.getConnection()
 		with con:
@@ -267,14 +225,15 @@ class DBInterface:
 				return False
 
 			try:
-				cur.execute(self._prep("DELETE from creators where record_id=?"), (record['record_id'],))
-				cur.execute(self._prep("DELETE from subjects where record_id=?"), (record['record_id'],))
-				cur.execute(self._prep("DELETE from rights where record_id=?"), (record['record_id'],))
-				cur.execute(self._prep("DELETE from descriptions where record_id=?"), (record['record_id'],))
-				cur.execute(self._prep("DELETE from tags where record_id=?"), (record['record_id'],))
-				cur.execute(self._prep("DELETE from geospatial where record_id=?"), (record['record_id'],))
-				cur.execute(self._prep("DELETE from domain_metadata where record_id=?"), (record['record_id'],))
-				cur.execute(self._prep("DELETE from access where record_id=?"), (record['record_id'],))
+				self.delete_related_records("records_x_access", record['record_id'])
+				self.delete_related_records("records_x_creators", record['record_id'])
+				self.delete_related_records("records_x_publishers", record['record_id'])
+				self.delete_related_records("records_x_rights", record['record_id'])
+				self.delete_related_records("records_x_subjects", record['record_id'])
+				self.delete_related_records("records_x_tags", record['record_id'])
+				self.delete_related_records("descriptions", record['record_id'])
+				self.delete_related_records("geospatial", record['record_id'])
+				self.delete_related_records("domain_metadata", record['record_id'])
 			except:
 				self.logger.error("Unable to delete related table rows for record %s" % (record['local_identifier'],))
 				return False
@@ -282,26 +241,155 @@ class DBInterface:
 		self.logger.debug("Marked as deleted: record %s" % (record['local_identifier'],))
 		return True
 
-	def get_record_id(self, repo_id, local_identifier):
+	def delete_related_records(self, crosstable, record_id):
+		con = self.getConnection()
+		with con:
+			cur = self.getCursor(con)
+			try:
+				sqlstring1 = "DELETE from {} where record_id=?".format(crosstable)
+				cur.execute(self._prep(sqlstring1), (record_id,))
+			except:
+				return False
+
+		return True
+
+	def get_table_id_column(self, tablename):
+		if tablename == "rights":
+			return "rights_id"
+		elif tablename == "access":
+			return "access_id"
+		elif tablename == "records_x_access":
+			return "record_x_access_id"
+		elif tablename == "repositories":
+			return "repository_id"
+		elif tablename == "geospatial":
+			return "geospatial_id"
+		elif tablename == "domain_metadata":
+			return "metadata_id"
+		elif tablename == "domain_schemas":
+			return "schema_id"
+		else:
+			return tablename[:-1] + "_id"
+
+	def get_table_value_column(self, tablename):
+		if tablename == "rights":
+			return "rights_hash"
+		elif tablename == "access":
+			return "access"
+		elif tablename == "geospatial":
+			return "coordinate_type"
+		elif tablename == "domain_metadata":
+			return "schema_id"
+		elif tablename == "domain_schemas":
+			return "namespace"
+		elif tablename == "repositories":
+			return "repository_url"
+		elif tablename == "records":
+			return "local_identifier"
+		else:
+			return tablename[:-1]
+
+	def insert_related_record(self, tablename, val, **kwargs):
+		valcolumn = self.get_table_value_column(tablename)
+		idcolumn = self.get_table_id_column(tablename)
+		related_record_id = None
+		paramlist = [val]
+		sqlstring1 = "INSERT INTO {} ({}".format(tablename, valcolumn)
+		sqlstring2 = "VALUES(?"
+		for key, value in kwargs.items():
+			sqlstring1 += "," + str(key)
+			sqlstring2 += ",?"
+			paramlist.append(value)
+		sqlstring1 += ")"
+		sqlstring2 += ")"
+		con = self.getConnection()
+		with con:
+			cur = self.getCursor(con)
+			try:
+				if self.dbtype == "postgres":
+					cur.execute(self._prep(sqlstring1 + " " + sqlstring2 + " RETURNING " + idcolumn), paramlist)
+					related_record_id = int(cur.fetchone()[0])
+				if self.dbtype == "sqlite":
+					cur.execute(self._prep(sqlstring1 + " " + sqlstring2), paramlist)
+					related_record_id = int(cur.lastrowid)
+			except self.dblayer.IntegrityError as e:
+				self.logger.error("Record insertion problem: %s" %e)
+
+		return related_record_id
+
+	def insert_cross_record(self, crosstable, relatedtable, related_id, record_id, **kwargs):
+		cross_table_id = None
+		idcolumn = self.get_table_id_column(crosstable)
+		relatedidcolumn = self.get_table_id_column(relatedtable)
+		paramlist = [record_id, related_id]
+		sqlstring1 = "INSERT INTO {} (record_id,{}".format(crosstable, relatedidcolumn)
+		sqlstring2 = "VALUES(?,?"
+		for key, value in kwargs.items():
+			sqlstring1 += "," + str(key)
+			sqlstring2 += ",?"
+			paramlist.append(value)
+		sqlstring1 += ")"
+		sqlstring2 += ")"
+		con = self.getConnection()
+		with con:
+			cur = self.getCursor(con)
+			try:
+				if self.dbtype == "postgres":
+					cur.execute(self._prep(sqlstring1 + " " + sqlstring2 + " RETURNING " + idcolumn), paramlist)
+					cross_table_id = int(cur.fetchone()[0])
+				if self.dbtype == "sqlite":
+					cur.execute(self._prep(sqlstring1 + " " + sqlstring2), paramlist)
+					cross_table_id = int(cur.lastrowid)
+			except self.dblayer.IntegrityError as e:
+				self.logger.error("Record insertion problem: %s" %e)
+
+	def get_multiple_record_ids(self, tablename, related_col, given_col, given_val, extrawhere=""):
+		sqlstring1 = "select {} from {} where {}=? {}".format(related_col, tablename, given_col, extrawhere)
+		con = self.getConnection()
+		with con:
+			cur = self.getCursor(con)
+			cur.execute(self._prep(sqlstring1),	(given_val,))
+			if cur is not None:
+				records = cur.fetchall()
+				return records
+
+		return None
+
+	def get_single_record_id(self, tablename, val, extrawhere = ""):
+		returnvalue = None
+		idcolumn = self.get_table_id_column(tablename)
+		valcolumn = self.get_table_value_column(tablename)
+		records = self.get_multiple_record_ids(tablename, idcolumn, valcolumn, val, extrawhere)
+		for record in records:
+			returnvalue = int(record[0])
+
+		return returnvalue
+
+	def create_new_record(self, rec, source_url, repo_id):
 		returnvalue = None
 		con = self.getConnection()
 		with con:
 			cur = self.getCursor(con)
-			cur.execute(self._prep("select record_id from records where local_identifier=? and repository_id = ?"),
-						(local_identifier, repo_id))
-			if cur is not None:
-				records = cur.fetchall()
-			else:
-				return None
-			for record in records:
-				returnvalue = int(record['record_id'])
+			try:
+				if self.dbtype == "postgres":
+					cur.execute(self._prep(
+						"INSERT INTO records (title, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, repository_id) VALUES(?,?,?,?,?,?,?,?,?) RETURNING record_id"),
+						(rec["title"], rec["pub_date"], rec["contact"], rec["series"], time.time(), source_url, 0, rec["identifier"], repo_id))
+					returnvalue = int(cur.fetchone()[0])
+				if self.dbtype == "sqlite":
+					cur.execute(self._prep(
+						"INSERT INTO records (title, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, repository_id) VALUES(?,?,?,?,?,?,?,?,?)"),
+						(rec["title"], rec["pub_date"], rec["contact"], rec["series"], time.time(), source_url, 0, rec["identifier"], repo_id))
+					returnvalue = int(cur.lastrowid)
+			except self.dblayer.IntegrityError as e:
+				self.logger.error("Record insertion problem: %s" %e)
 
 		return returnvalue
 
 	def write_record(self, record, repo_id, metadata_prefix, domain_metadata):
 		if record == None:
 			return None
-		record["record_id"] = self.get_record_id(repo_id, record["identifier"])
+		record["record_id"] = self.get_single_record_id("records", record["identifier"], "and repository_id=" + str(repo_id))
 
 		con = self.getConnection()
 		with con:
@@ -314,25 +402,7 @@ class DBInterface:
 					source_url = record["dc:source"]
 
 			if record["record_id"] is None:
-				try:
-					if self.dbtype == "postgres":
-						cur.execute(self._prep(
-							"INSERT INTO records (title, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, repository_id) VALUES(?,?,?,?,?,?,?,?,?) RETURNING record_id"),
-							(record["title"], record["pub_date"], record["contact"], record["series"],
-							 time.time(), source_url, 0, record["identifier"], repo_id))
-						cur.execute("SELECT CURRVAL('records_id_sequence')")
-						res = cur.fetchone()
-						record_id = int(res[0])
-						record["record_id"] = record_id
-					if self.dbtype == "sqlite":
-						cur.execute(self._prep(
-							"INSERT INTO records (title, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, repository_id) VALUES(?,?,?,?,?,?,?,?,?)"),
-							(record["title"], record["pub_date"], record["contact"], record["series"],
-							 time.time(), source_url, 0, record["identifier"], repo_id))
-						record["record_id"] = int(cur.lastrowid)
-				except self.dblayer.IntegrityError as e:
-					self.logger.error("Record insertion problem: %s" %e)
-					return None
+				record["record_id"] =  self.create_new_record(record, source_url, repo_id)
 			else:
 				cur.execute(self._prep(
 					"UPDATE records set title=?, pub_date=?, contact=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=? WHERE record_id = ?"),
@@ -343,198 +413,150 @@ class DBInterface:
 				return None
 
 			if "creator" in record:
-				try:
-					# TODO: figure out a cleaner way to remove related table data other than just purging it all each time
-					cur.execute(self._prep("DELETE from creators where record_id = ? and is_contributor=0"),
-								(record["record_id"],))
-				except:
-					pass
 				if not isinstance(record["creator"], list):
 					record["creator"] = [record["creator"]]
+				existing_creator_ids = self.get_multiple_record_ids("records_x_creators", "creator_id", "record_id", record["record_id"])
 				for creator in record["creator"]:
-					try:
-						cur.execute(
-							self._prep("INSERT INTO creators (record_id, creator, is_contributor) VALUES (?,?,?)"),
-							(record["record_id"], creator, 0))
-					except self.dblayer.IntegrityError as e:
-						self.logger.error("Record insertion problem: %s" %e)
-						pass
+					creator_id = self.get_single_record_id("creators", creator)
+					if creator_id is None:
+						creator_id = self.insert_related_record("creators", creator)
+					if creator_id is not None:
+						if creator_id not in existing_creator_ids:
+							extras = {"is_contributor": 0}
+							self.insert_cross_record("records_x_creators", "creators", creator_id, record["record_id"], **extras)
 
 			if "contributor" in record:
-				try:
-					cur.execute(self._prep("DELETE from creators where record_id = ? and is_contributor=1"),
-								(record["record_id"],))
-				except:
-					pass
 				if not isinstance(record["contributor"], list):
 					record["contributor"] = [record["contributor"]]
+				existing_creator_ids = self.get_multiple_record_ids("records_x_creators", "creator_id", "record_id", record["record_id"])
 				for creator in record["contributor"]:
-					try:
-						cur.execute(
-							self._prep("INSERT INTO creators (record_id, creator, is_contributor) VALUES (?,?,?)"),
-							(record["record_id"], creator, 1))
-					except self.dblayer.IntegrityError as e:
-						self.logger.error("Record insertion problem: %s" %e)
-						pass
+					creator_id = self.get_single_record_id("creators", creator)
+					if creator_id is None:
+						creator_id= self.insert_related_record("creators", creator)
+					if creator_id is not None:
+						if creator_id not in existing_creator_ids:
+							extras = {"is_contributor": 1}
+							self.insert_cross_record("records_x_creators", "creators", creator_id, record["record_id"], **extras)
 
 			if "subject" in record:
-				try:
-					cur.execute(self._prep("DELETE from subjects where record_id = ?"), (record["record_id"],))
-				except:
-					pass
 				if not isinstance(record["subject"], list):
 					record["subject"] = [record["subject"]]
+				existing_subject_ids = self.get_multiple_record_ids("records_x_subjects", "subject_id", "record_id", record["record_id"])
 				for subject in record["subject"]:
-					if (subject == "form_descriptors"):
-						continue
-					try:
-						if subject is not None and len(subject) > 0:
-							cur.execute(self._prep("INSERT INTO subjects (record_id, subject) VALUES (?,?)"),
-										(record["record_id"], subject))
-					except self.dblayer.IntegrityError as e:
-						self.logger.error("Record insertion problem: %s" %e)
-						pass
+					subject_id = self.get_single_record_id("subjects", subject)
+					if subject_id is None:
+						subject_id = self.insert_related_record("subjects", subject)
+					if subject_id is not None:
+						if subject_id not in existing_subject_ids:
+							self.insert_cross_record("records_x_subjects", "subjects", subject_id, record["record_id"])
 
 			if "publisher" in record:
-				try:
-					cur.execute(self._prep("DELETE from publishers where record_id = ?"), (record["record_id"],))
-				except:
-					pass
 				if not isinstance(record["publisher"], list):
 					record["publisher"] = [record["publisher"]]
+				existing_publisher_ids = self.get_multiple_record_ids("records_x_publishers", "publisher_id", "record_id", record["record_id"])
 				for publisher in record["publisher"]:
-					try:
-						if publisher is not None and len(publisher) > 0:
-							cur.execute(self._prep("INSERT INTO publishers (record_id, publisher) VALUES (?,?)"),
-										(record["record_id"], publisher))
-					except self.dblayer.IntegrityError as e:
-						self.logger.error("Record insertion problem: %s" %e)
-						pass
+					publisher_id = self.get_single_record_id("publishers", publisher)
+					if publisher_id is None:
+						publisher_id = self.insert_related_record("publishers", publisher)
+					if publisher_id is not None:
+						if publisher_id not in existing_publisher_ids:
+							self.insert_cross_record("records_x_publishers", "publishers", publisher_id, record["record_id"])
 
 			if "rights" in record:
-				try:
-					cur.execute(self._prep("DELETE from rights where record_id = ?"), (record["record_id"],))
-				except:
-					pass
 				if not isinstance(record["rights"], list):
 					record["rights"] = [record["rights"]]
+				existing_rights_ids = self.get_multiple_record_ids("records_x_rights", "rights_id", "record_id", record["record_id"])
 				for rights in record["rights"]:
-					try:
-						cur.execute(self._prep("INSERT INTO rights (record_id, rights) VALUES (?,?)"),
-									(record["record_id"], rights))
-					except self.dblayer.IntegrityError:
-						pass
+					sha1 = hashlib.sha1()
+					sha1.update(rights.encode('utf-8'))
+					rights_hash = sha1.hexdigest()
+					rights_id = self.get_single_record_id("rights", rights_hash)
+					if rights_id is None:
+						self.delete_related_records("records_x_rights",record["record_id"]) # Needed for transition, can be removed once all rights rows have hashes
+						extras = {"rights": rights}
+						rights_id = self.insert_related_record("rights", rights_hash, **extras)
+					if rights_id is not None:
+						if rights_id not in existing_rights_ids:
+							self.insert_cross_record("records_x_rights", "rights", rights_id, record["record_id"])
 
 			if "description" in record:
-				try:
-					cur.execute(self._prep("DELETE from descriptions where record_id = ? and language='en' "),
-								(record["record_id"],))
-				except:
-					pass
 				if not isinstance(record["description"], list):
 					record["description"] = [record["description"]]
 				for description in record["description"]:
-					try:
-						cur.execute(
-							self._prep("INSERT INTO descriptions (record_id, description, language) VALUES (?,?,?)"),
-							(record["record_id"], description, 'en'))
-					except self.dblayer.IntegrityError:
-						pass
+					description_id = self.get_single_record_id("descriptions", description, "and record_id=" + str(record["record_id"]) + " and language='en'" )
+					if description_id is None:
+						extras = {"record_id": record["record_id"], "language": "en"}
+						self.insert_related_record("descriptions", description, **extras)
 
 			if "description_fr" in record:
-				try:
-					cur.execute(self._prep("DELETE from descriptions where record_id = ? and language='fr' "),
-								(record["record_id"],))
-				except:
-					pass
-				if not isinstance(record["description_fr"], list):
-					record["description_fr"] = [record["description_fr"]]
-				for description_fr in record["description_fr"]:
-					try:
-						cur.execute(
-							self._prep("INSERT INTO descriptions (record_id, description, language) VALUES (?,?,?)"),
-							(record["record_id"], description_fr, 'fr'))
-					except self.dblayer.IntegrityError:
-						pass
+				if not isinstance(record["description"], list):
+					record["description"] = [record["description"]]
+				for description in record["description"]:
+					description_id = self.get_single_record_id("descriptions", description, "and record_id=" + str(record["record_id"]) + " and language='fr'" )
+					if description_id is None:
+						extras = {"record_id": record["record_id"], "language": "fr"}
+						self.insert_related_record("descriptions", description, **extras)
 
 			if "tags" in record:
-				try:
-					cur.execute(self._prep("DELETE from tags where record_id = ? and language='en' "),
-								(record["record_id"],))
-				except:
-					pass
 				if not isinstance(record["tags"], list):
 					record["tags"] = [record["tags"]]
+				existing_tag_ids = self.get_multiple_record_ids("records_x_tags", "tag_id", "record_id", record["record_id"])
 				for tag in record["tags"]:
-					try:
-						cur.execute(self._prep("INSERT INTO tags (record_id, tag, language) VALUES (?,?,?)"),
-									(record["record_id"], tag, "en"))
-					except self.dblayer.IntegrityError:
-						pass
+					tag_id = self.get_single_record_id("tags", tag, "and language='en'")
+					if tag_id is None:
+						extras = {"language":"en"}
+						tag_id = self.insert_related_record("tags", tag, **extras)
+					if tag_id is not None:
+						if tag_id not in existing_tag_ids:
+							self.insert_cross_record("records_x_tags", "tags", tag_id, record["record_id"])
 
 			if "tags_fr" in record:
-				try:
-					cur.execute(self._prep("DELETE from tags where record_id = ? and language='fr' "),
-								(record["record_id"],))
-				except:
-					pass
 				if not isinstance(record["tags_fr"], list):
 					record["tags_fr"] = [record["tags_fr"]]
-				for tag_fr in record["tags_fr"]:
-					try:
-						cur.execute(self._prep("INSERT INTO tags (record_id, tag, language) VALUES (?,?,?)"),
-									(record["record_id"], tag_fr, "fr"))
-					except self.dblayer.IntegrityError:
-						pass
-
-			if "geospatial" in record:
-				try:
-					cur.execute(self._prep("DELETE from geospatial where record_id = ?"), (record["record_id"],))
-				except:
-					pass
-				for coordinates in record["geospatial"]["coordinates"][0]:
-					try:
-						cur.execute(self._prep(
-							"INSERT INTO geospatial (record_id, coordinate_type, lat, lon) VALUES (?,?,?,?)"),
-							(record["record_id"], record["geospatial"]["type"], coordinates[0], coordinates[1]))
-					except self.dblayer.IntegrityError:
-						pass
+				existing_tag_ids = self.get_multiple_record_ids("records_x_tags", "tag_id", "record_id", record["record_id"])
+				for tag in record["tags_fr"]:
+					tag_id = self.get_single_record_id("tags", tag, "and language='fr'")
+					if tag_id is None:
+						extras = {"language":"fr"}
+						tag_id = self.insert_related_record("tags", tag, **extras)
+					if tag_id is not None:
+						if tag_id not in existing_tag_ids:
+							self.insert_cross_record("records_x_tags", "tags", tag_id, record["record_id"])
 
 			if "access" in record:
-				try:
-					cur.execute(self._prep("DELETE from access where record_id = ?"), (record["record_id"],))
-				except:
-					pass
 				if not isinstance(record["access"], list):
 					record["access"] = [record["access"]]
+				existing_access_ids = self.get_multiple_record_ids("records_x_access", "access_id", "record_id", record["record_id"])
 				for access in record["access"]:
-					try:
-						cur.execute(self._prep("INSERT INTO access (record_id, access) VALUES (?,?)"),
-									(record["record_id"], access))
-					except self.dblayer.IntegrityError:
-						pass
+					access_id = self.get_single_record_id("access", access)
+					if access_id is None:
+						access_id = self.insert_related_record("access", access)
+					if access_id is not None:
+						if access_id not in existing_access_ids:
+							self.insert_cross_record("records_x_access", "access", access_id, record["record_id"])
+
+			if "geospatial" in record:
+				existing_geospatial_ids = self.get_multiple_record_ids("geospatial", "geospatial_id", "record_id", record["record_id"])
+				if existing_geospatial_ids is None:
+					for coordinates in record["geospatial"]["coordinates"][0]:
+						extras = {"record_id": record["record_id"], "lat": coordinates[0], "lon": coordinates[1]}
+						self.insert_related_record("geospatial", record["geospatial"]["type"], **extras)
 
 			if len(domain_metadata) > 0:
-				try:
-					cur.execute(self._prep("DELETE from domain_metadata where record_id = ?"), (record["record_id"],))
-				except:
-					pass
-				for field_uri in domain_metadata:
-					field_pieces = field_uri.split("#")
-					domain_schema = field_pieces[0]
-					field_name = field_pieces[1]
-					schema_id = self.get_domain_schema_id(domain_schema)
-					if (schema_id == 0):
-						schema_id = self.create_domain_schema(domain_schema)
-					if not isinstance(domain_metadata[field_uri], list):
-						domain_metadata[field_uri] = [domain_metadata[field_uri]]
-					for field_value in domain_metadata[field_uri]:
-						try:
-							cur.execute(self._prep(
-								"INSERT INTO domain_metadata (record_id, schema_id, field_name, field_value) VALUES (?,?,?,?)"),
-								(record["record_id"], schema_id, field_name, field_value))
-						except self.dblayer.IntegrityError:
-							pass
+				existing_metadata_ids = self.get_multiple_record_ids("domain_metadata", "metadata_id", "record_id", record["record_id"])
+				if existing_metadata_ids is None:
+					for field_uri in domain_metadata:
+						field_pieces = field_uri.split("#")
+						domain_schema = field_pieces[0]
+						field_name = field_pieces[1]
+						schema_id = self.get_single_record_id("domain_schemas", domain_schema)
+						if schema_id is None:
+							schema_id = self.insert_related_record("domain_schemas", domain_schema)
+						if not isinstance(domain_metadata[field_uri], list):
+							domain_metadata[field_uri] = [domain_metadata[field_uri]]
+						for field_value in domain_metadata[field_uri]:
+							extras = {"record_id": record["record_id"], "field_name": field_name, "field_value": field_value}
+							self.insert_related_record("domain_metadata", schema_id, **extras)
 
 		return None
 
@@ -546,7 +568,7 @@ class DBInterface:
 			cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.contact, recs.series, recs.modified_timestamp, recs.local_identifier, 
 				repos.repository_id, repos.repository_type
 				FROM records recs, repositories repos
-				where recs.repository_id = repos.repository_id and recs.modified_timestamp < ? and repos.repository_id = ?
+				where recs.repository_id = repos.repository_id and recs.modified_timestamp < ? and repos.repository_id = ? and recs.deleted = 0
 				LIMIT ?"""), (stale_timestamp, repo_id, max_records_updated_per_run))
 			if cur is not None:
 				records = cur.fetchall()
@@ -567,17 +589,16 @@ class DBInterface:
 		return True
 
 	def write_header(self, local_identifier, repo_id):
-		con = self.getConnection()
-		with con:
-			cur = self.getCursor(con)
-
-			try:
-				cur.execute(self._prep(
-					"INSERT INTO records (title, pub_date, contact, series, modified_timestamp, local_identifier, repository_id) VALUES(?,?,?,?,?,?,?)"),
-					("", "", "", "", 0, local_identifier, repo_id))
-			except self.dblayer.IntegrityError as e:
-				# record already present in repo
-				self.logger.error("Error creating record header: %s " % (e))
-				return None
+		record_id = self.get_single_record_id("records", local_identifier, "and repository_id=" + str(repo_id))
+		if record_id is None:
+			con = self.getConnection()
+			with con:
+				cur = self.getCursor(con)
+				try:
+					cur.execute(self._prep(
+						"INSERT INTO records (title, pub_date, contact, series, modified_timestamp, local_identifier, repository_id) VALUES(?,?,?,?,?,?,?)"),
+						("", "", "", "", 0, local_identifier, repo_id))
+				except self.dblayer.IntegrityError as e:
+					self.logger.error("Error creating record header: %s " % (e))
 
 		return None
