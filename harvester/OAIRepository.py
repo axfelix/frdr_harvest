@@ -349,10 +349,13 @@ class OAIRepository(HarvestRepository):
 		try:
 			single_record = self.sickle.GetRecord(identifier=record["local_identifier"], metadataPrefix=self.metadataprefix)
 
-			metadata = single_record.metadata
-			if 'identifier' in metadata.keys() and isinstance(metadata['identifier'], list):
-				if "http" in metadata['identifier'][0].lower():
-					metadata['dc:source'] = metadata['identifier'][0]
+			try:
+				metadata = single_record.metadata
+				if 'identifier' in metadata.keys() and isinstance(metadata['identifier'], list):
+					if "http" in metadata['identifier'][0].lower():
+						metadata['dc:source'] = metadata['identifier'][0]
+			except AttributeError:
+				metadata = {}
 
 			# EPrints workaround for using header datestamp in lieu of date
 			if 'date' not in metadata.keys() and single_record.header.datestamp:
