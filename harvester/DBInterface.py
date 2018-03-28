@@ -151,7 +151,7 @@ class DBInterface:
 							self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail, time.time(), self.item_url_pattern,
 							self.enabled, self.abort_after_numerrors, self.max_records_updated_per_run, self.update_log_after_numitems,
 							self.record_refresh_days, self.repo_refresh_days))
-						repo_id = int(cur.fetchone()[0])
+						repo_id = int(cur.fetchone()['repository_id'])
 
 					if self.dbtype == "sqlite":
 						cur.execute(self._prep("""INSERT INTO repositories 
@@ -258,8 +258,6 @@ class DBInterface:
 			return "rights_id"
 		elif tablename == "access":
 			return "access_id"
-		elif tablename == "records_x_access":
-			return "record_x_access_id"
 		elif tablename == "repositories":
 			return "repository_id"
 		elif tablename == "geospatial":
@@ -268,6 +266,8 @@ class DBInterface:
 			return "metadata_id"
 		elif tablename == "domain_schemas":
 			return "schema_id"
+		elif "records_x_" in tablename:
+			return tablename + "_id"
 		else:
 			return tablename[:-1] + "_id"
 
@@ -308,7 +308,7 @@ class DBInterface:
 			try:
 				if self.dbtype == "postgres":
 					cur.execute(self._prep(sqlstring1 + " " + sqlstring2 + " RETURNING " + idcolumn), paramlist)
-					related_record_id = int(cur.fetchone()[0])
+					related_record_id = int(cur.fetchone()[idcolumn])
 				if self.dbtype == "sqlite":
 					cur.execute(self._prep(sqlstring1 + " " + sqlstring2), paramlist)
 					related_record_id = int(cur.lastrowid)
@@ -336,7 +336,7 @@ class DBInterface:
 			try:
 				if self.dbtype == "postgres":
 					cur.execute(self._prep(sqlstring1 + " " + sqlstring2 + " RETURNING " + idcolumn), paramlist)
-					cross_table_id = int(cur.fetchone()[0])
+					cross_table_id = int(cur.fetchone()[idcolumn])
 				if self.dbtype == "sqlite":
 					cur.execute(self._prep(sqlstring1 + " " + sqlstring2), paramlist)
 					cross_table_id = int(cur.lastrowid)
@@ -361,7 +361,7 @@ class DBInterface:
 		valcolumn = self.get_table_value_column(tablename)
 		records = self.get_multiple_record_ids(tablename, idcolumn, valcolumn, val, extrawhere)
 		for record in records:
-			returnvalue = int(record[0])
+			returnvalue = int(record[idcolumn])
 
 		return returnvalue
 
@@ -375,7 +375,7 @@ class DBInterface:
 					cur.execute(self._prep(
 						"INSERT INTO records (title, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, repository_id) VALUES(?,?,?,?,?,?,?,?,?) RETURNING record_id"),
 						(rec["title"], rec["pub_date"], rec["contact"], rec["series"], time.time(), source_url, 0, rec["identifier"], repo_id))
-					returnvalue = int(cur.fetchone()[0])
+					returnvalue = int(cur.fetchone()['record_id'])
 				if self.dbtype == "sqlite":
 					cur.execute(self._prep(
 						"INSERT INTO records (title, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, repository_id) VALUES(?,?,?,?,?,?,?,?,?)"),

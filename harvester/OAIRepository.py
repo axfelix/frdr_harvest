@@ -355,15 +355,16 @@ class OAIRepository(HarvestRepository):
 					metadata['dc:source'] = metadata['identifier'][0]
 
 			# EPrints workaround for using header datestamp in lieu of date
-			if 'date' not in metadata.keys() and record.header.datestamp:
-				metadata["date"] = record.header.datestamp
+			if 'date' not in metadata.keys() and single_record.header.datestamp:
+				metadata["date"] = single_record.header.datestamp
 
 			metadata['identifier'] = single_record.header.identifier
 			oai_record = self.unpack_oai_metadata(metadata)
+			domain_metadata = self.find_domain_metadata(metadata)
 			if oai_record is None:
 				self.db.delete_record(record)
 				return False
-			self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
+			self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), domain_metadata)
 			return True
 
 		except IdDoesNotExist:

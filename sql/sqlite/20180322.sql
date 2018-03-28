@@ -9,7 +9,7 @@ INSERT INTO subjects2 (subject)
 	AND o.subject Not In (SELECT subject from subjects2);
 
 CREATE TABLE records_x_subjects (
-	record_x_subject_id INTEGER PRIMARY KEY NOT NULL,
+	records_x_subjects_id INTEGER PRIMARY KEY NOT NULL,
 	record_id INTEGER NOT NULL,
 	subject_id INTEGER NOT NULL);
 
@@ -49,7 +49,7 @@ INSERT INTO creators2 (creator)
 	AND o.creator Not In (SELECT creator from creators2);
 
 CREATE TABLE records_x_creators (
-	record_x_creator_id INTEGER PRIMARY KEY NOT NULL,
+	records_x_creators_id INTEGER PRIMARY KEY NOT NULL,
 	record_id INTEGER NOT NULL,
 	creator_id INTEGER NOT NULL,
 	is_contributor INTEGER NOT NULL);
@@ -90,7 +90,7 @@ INSERT INTO publishers2 (publisher)
 	AND o.publisher Not In (SELECT publisher from publishers2);
 
 CREATE TABLE records_x_publishers (
-	record_x_publisher_id INTEGER PRIMARY KEY NOT NULL,
+	records_x_publishers_id INTEGER PRIMARY KEY NOT NULL,
 	record_id INTEGER NOT NULL,
 	publisher_id INTEGER NOT NULL);
 
@@ -130,7 +130,7 @@ INSERT INTO access2 (access)
 	AND o.access Not In (SELECT access from access2);
 
 CREATE TABLE records_x_access (
-	record_x_access_id INTEGER PRIMARY KEY NOT NULL,
+	records_x_access_id INTEGER PRIMARY KEY NOT NULL,
 	record_id INTEGER NOT NULL,
 	access_id INTEGER NOT NULL);
 
@@ -171,7 +171,7 @@ INSERT INTO tags2 (tag, language)
 	AND o.tag Not In (SELECT tag from tags2);
 
 CREATE TABLE records_x_tags (
-	record_x_tag_id INTEGER PRIMARY KEY NOT NULL,
+	records_x_tags_id INTEGER PRIMARY KEY NOT NULL,
 	record_id INTEGER NOT NULL,
 	tag_id INTEGER NOT NULL);
 
@@ -212,7 +212,7 @@ INSERT INTO rights2 (rights)
 	AND o.rights Not In (SELECT rights from rights2);
 
 CREATE TABLE records_x_rights (
-	record_x_right_id INTEGER PRIMARY KEY NOT NULL,
+	records_x_rights_id INTEGER PRIMARY KEY NOT NULL,
 	record_id INTEGER NOT NULL,
 	rights_id INTEGER NOT NULL);
 

@@ -12,12 +12,12 @@ INSERT INTO subjects2 (subject)
 	AND o.subject Not In (SELECT subject from subjects2);
 
 CREATE TABLE records_x_subjects (
-	record_x_subject_id INTEGER PRIMARY KEY NOT NULL,
+	records_x_subjects_id INTEGER PRIMARY KEY NOT NULL,
 	record_id INTEGER NOT NULL,
 	subject_id INTEGER NOT NULL);
 
 CREATE SEQUENCE IF NOT EXISTS records_x_subjects_seq;
-ALTER TABLE records_x_subjects ALTER record_x_subject_id SET DEFAULT NEXTVAL('records_x_subjects_seq');
+ALTER TABLE records_x_subjects ALTER records_x_subjects_id SET DEFAULT NEXTVAL('records_x_subjects_seq');
 
 INSERT INTO records_x_subjects (record_id, subject_id)
 	SELECT distinct record_id, subjects2.subject_id
@@ -60,13 +60,13 @@ INSERT INTO creators2 (creator)
 	AND o.creator Not In (SELECT creator from creators2);
 
 CREATE TABLE records_x_creators (
-	record_x_creator_id INTEGER PRIMARY KEY NOT NULL,
+	records_x_creators_id INTEGER PRIMARY KEY NOT NULL,
 	record_id INTEGER NOT NULL,
 	creator_id INTEGER NOT NULL,
 	is_contributor INTEGER NOT NULL);
 
 CREATE SEQUENCE IF NOT EXISTS records_x_creators_seq;
-ALTER TABLE records_x_creators ALTER record_x_creator_id SET DEFAULT NEXTVAL('records_x_creators_seq');
+ALTER TABLE records_x_creators ALTER records_x_creators_id SET DEFAULT NEXTVAL('records_x_creators_seq');
 
 INSERT INTO records_x_creators (record_id, creator_id, is_contributor)
 	SELECT distinct record_id, creators2.creator_id, is_contributor
@@ -109,12 +109,12 @@ INSERT INTO publishers2 (publisher)
 	AND o.publisher Not In (SELECT publisher from publishers2);
 
 CREATE TABLE records_x_publishers (
-	record_x_publisher_id INTEGER PRIMARY KEY NOT NULL,
+	records_x_publishers_id INTEGER PRIMARY KEY NOT NULL,
 	record_id INTEGER NOT NULL,
 	publisher_id INTEGER NOT NULL);
 
 CREATE SEQUENCE IF NOT EXISTS records_x_publishers_seq;
-ALTER TABLE records_x_publishers ALTER record_x_publisher_id SET DEFAULT NEXTVAL('records_x_publishers_seq');
+ALTER TABLE records_x_publishers ALTER records_x_publishers_id SET DEFAULT NEXTVAL('records_x_publishers_seq');
 
 INSERT INTO records_x_publishers (record_id, publisher_id)
 	SELECT distinct record_id, publishers2.publisher_id
@@ -157,12 +157,12 @@ INSERT INTO access2 (access)
 	AND o.access Not In (SELECT access from access2);
 
 CREATE TABLE records_x_access (
-	record_x_access_id INTEGER PRIMARY KEY NOT NULL,
+	records_x_access_id INTEGER PRIMARY KEY NOT NULL,
 	record_id INTEGER NOT NULL,
 	access_id INTEGER NOT NULL);
 
 CREATE SEQUENCE IF NOT EXISTS records_x_access_seq;
-ALTER TABLE records_x_access ALTER record_x_access_id SET DEFAULT NEXTVAL('records_x_access_seq');
+ALTER TABLE records_x_access ALTER records_x_access_id SET DEFAULT NEXTVAL('records_x_access_seq');
 
 INSERT INTO records_x_access (record_id, access_id)
 	SELECT distinct record_id, access2.access_id
@@ -206,12 +206,12 @@ INSERT INTO tags2 (tag, language)
 	AND o.tag Not In (SELECT tag from tags2);
 
 CREATE TABLE records_x_tags (
-	record_x_tag_id INTEGER PRIMARY KEY NOT NULL,
+	records_x_tags_id INTEGER PRIMARY KEY NOT NULL,
 	record_id INTEGER NOT NULL,
 	tag_id INTEGER NOT NULL);
 
 CREATE SEQUENCE IF NOT EXISTS records_x_tags_seq;
-ALTER TABLE records_x_tags ALTER record_x_tag_id SET DEFAULT NEXTVAL('records_x_tags_seq');
+ALTER TABLE records_x_tags ALTER records_x_tags_id SET DEFAULT NEXTVAL('records_x_tags_seq');
 
 INSERT INTO records_x_tags (record_id, tag_id)
 	SELECT distinct record_id, tags2.tag_id
@@ -255,12 +255,12 @@ INSERT INTO rights2 (rights)
 	AND o.rights Not In (SELECT rights from rights2);
 
 CREATE TABLE records_x_rights (
-	record_x_right_id INTEGER PRIMARY KEY NOT NULL,
+	records_x_rights_id INTEGER PRIMARY KEY NOT NULL,
 	record_id INTEGER NOT NULL,
 	rights_id INTEGER NOT NULL);
 
 CREATE SEQUENCE IF NOT EXISTS records_x_rights_seq;
-ALTER TABLE records_x_rights ALTER record_x_right_id SET DEFAULT NEXTVAL('records_x_rights_seq');
+ALTER TABLE records_x_rights ALTER records_x_rights_id SET DEFAULT NEXTVAL('records_x_rights_seq');
 
 INSERT INTO records_x_rights (record_id, rights_id)
 	SELECT distinct record_id, rights2.rights_id
