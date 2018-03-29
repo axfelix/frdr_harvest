@@ -2,6 +2,7 @@ import os
 import time
 import sys
 import hashlib
+import json
 
 class DBInterface:
 	def __init__(self, params):
@@ -54,6 +55,9 @@ class DBInterface:
 						dbversion = scriptversion
 						print("Updated database to version: %i" % (scriptversion)) # No logger yet
 
+		self.tabledict = {}
+		with open("sql/tables.json", 'r') as jsonfile:
+			self.tabledict = json.load(jsonfile)
 
 	def setLogger(self, l):
 		self.logger = l
@@ -254,40 +258,14 @@ class DBInterface:
 		return True
 
 	def get_table_id_column(self, tablename):
-		if tablename == "rights":
-			return "rights_id"
-		elif tablename == "access":
-			return "access_id"
-		elif tablename == "repositories":
-			return "repository_id"
-		elif tablename == "geospatial":
-			return "geospatial_id"
-		elif tablename == "domain_metadata":
-			return "metadata_id"
-		elif tablename == "domain_schemas":
-			return "schema_id"
-		elif "records_x_" in tablename:
-			return tablename + "_id"
-		else:
-			return tablename[:-1] + "_id"
+		if tablename in self.tabledict and "idcol" in self.tabledict[tablename]:
+			return self.tabledict[tablename]["idcol"]
+		raise ValueError("tables.json missing idcol definition for {}".format(tablename))
 
 	def get_table_value_column(self, tablename):
-		if tablename == "rights":
-			return "rights_hash"
-		elif tablename == "access":
-			return "access"
-		elif tablename == "geospatial":
-			return "coordinate_type"
-		elif tablename == "domain_metadata":
-			return "schema_id"
-		elif tablename == "domain_schemas":
-			return "namespace"
-		elif tablename == "repositories":
-			return "repository_url"
-		elif tablename == "records":
-			return "local_identifier"
-		else:
-			return tablename[:-1]
+		if tablename in self.tabledict and "valcol" in self.tabledict[tablename]:
+			return self.tabledict[tablename]["valcol"]
+		raise ValueError("tables.json missing valcol definition for {}".format(tablename))
 
 	def insert_related_record(self, tablename, val, **kwargs):
 		valcolumn = self.get_table_value_column(tablename)
@@ -467,6 +445,7 @@ class DBInterface:
 					record["rights"] = [record["rights"]]
 				existing_rights_ids = self.get_multiple_record_ids("records_x_rights", "rights_id", "record_id", record["record_id"])
 				for rights in record["rights"]:
+					# Use a hash for lookups so we don't need to maintain a full text index
 					sha1 = hashlib.sha1()
 					sha1.update(rights.encode('utf-8'))
 					rights_hash = sha1.hexdigest()
@@ -483,19 +462,27 @@ class DBInterface:
 				if not isinstance(record["description"], list):
 					record["description"] = [record["description"]]
 				for description in record["description"]:
-					description_id = self.get_single_record_id("descriptions", description, "and record_id=" + str(record["record_id"]) + " and language='en'" )
+					# Use a hash for lookups so we don't need to maintain a full text index
+					sha1 = hashlib.sha1()
+					sha1.update(description.encode('utf-8'))
+					description_hash = sha1.hexdigest()
+					description_id = self.get_single_record_id("descriptions", description_hash, "and record_id=" + str(record["record_id"]) + " and language='en'" )
 					if description_id is None:
-						extras = {"record_id": record["record_id"], "language": "en"}
-						self.insert_related_record("descriptions", description, **extras)
+						extras = {"record_id": record["record_id"], "language": "en", "description": description}
+						self.insert_related_record("descriptions", description_hash, **extras)
 
 			if "description_fr" in record:
 				if not isinstance(record["description"], list):
 					record["description"] = [record["description"]]
 				for description in record["description"]:
-					description_id = self.get_single_record_id("descriptions", description, "and record_id=" + str(record["record_id"]) + " and language='fr'" )
+					# Use a hash for lookups so we don't need to maintain a full text index
+					sha1 = hashlib.sha1()
+					sha1.update(description.encode('utf-8'))
+					description_hash = sha1.hexdigest()
+					description_id = self.get_single_record_id("descriptions", description_hash, "and record_id=" + str(record["record_id"]) + " and language='fr'" )
 					if description_id is None:
-						extras = {"record_id": record["record_id"], "language": "fr"}
-						self.insert_related_record("descriptions", description, **extras)
+						extras = {"record_id": record["record_id"], "language": "fr", "description": description}
+						self.insert_related_record("descriptions", description_hash, **extras)
 
 			if "tags" in record:
 				if not isinstance(record["tags"], list):
@@ -537,14 +524,14 @@ class DBInterface:
 
 			if "geospatial" in record:
 				existing_geospatial_ids = self.get_multiple_record_ids("geospatial", "geospatial_id", "record_id", record["record_id"])
-				if existing_geospatial_ids is None:
+				if not existing_geospatial_ids:
 					for coordinates in record["geospatial"]["coordinates"][0]:
 						extras = {"record_id": record["record_id"], "lat": coordinates[0], "lon": coordinates[1]}
 						self.insert_related_record("geospatial", record["geospatial"]["type"], **extras)
 
 			if len(domain_metadata) > 0:
 				existing_metadata_ids = self.get_multiple_record_ids("domain_metadata", "metadata_id", "record_id", record["record_id"])
-				if existing_metadata_ids is None:
+				if not existing_metadata_ids:
 					for field_uri in domain_metadata:
 						field_pieces = field_uri.split("#")
 						domain_schema = field_pieces[0]
