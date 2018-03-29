@@ -144,22 +144,25 @@ class Exporter(object):
 					from psycopg2.extras import DictCursor as DictCursor
 					litecur = con.cursor(cursor_factory=DictCursor)
 
-
 				# attach the other values to the dict
-				# TODO: investigate doing this purely in SQL
-				litecur.execute(self.db._prep("SELECT creator FROM creators WHERE record_id=? AND is_contributor=0"), (record["record_id"],) )
+				litecur.execute(self.db._prep("""SELECT creators.creator FROM creators JOIN records_x_creators on records_x_creators.creator_id = creators.creator_id 
+					WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=0"""), (record["record_id"],) )
 				record["dc:contributor.author"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT creator FROM creators WHERE record_id=? AND is_contributor=1"), (record["record_id"],) )
+				litecur.execute(self.db._prep("""SELECT creators.creator FROM creators JOIN records_x_creators on records_x_creators.creator_id = creators.creator_id 
+					WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=1"""), (record["record_id"],) )
 				record["dc:contributor"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT subject FROM subjects WHERE record_id=?"), (record["record_id"],) )
+				litecur.execute(self.db._prep("""SELECT subjects.subject FROM subjects JOIN records_x_subjects on records_x_subjects.subject_id = subjects.subject_id 
+					WHERE records_x_subjects.record_id=?"""), (record["record_id"],) )
 				record["dc:subject"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT publisher FROM publishers WHERE record_id=?"), (record["record_id"],) )
+				litecur.execute(self.db._prep("""SELECT publishers.publisher FROM publishers JOIN records_x_publishers on records_x_publishers.publisher_id = publishers.publisher_id 
+					WHERE records_x_publishers.record_id=?"""), (record["record_id"],) )
 				record["dc:publisher"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT rights FROM rights WHERE record_id=?"), (record["record_id"],) )
+				litecur.execute(self.db._prep("""SELECT rights.rights FROM rights JOIN records_x_rights on records_x_rights.rights_id = rights.rights_id 
+					WHERE records_x_rights.record_id=?"""), (record["record_id"],) )
 				record["dc:rights"] = litecur.fetchall()
 
 				litecur.execute(self.db._prep("SELECT description FROM descriptions WHERE record_id=? and language='en' "), (record["record_id"],) )
@@ -168,13 +171,16 @@ class Exporter(object):
 				litecur.execute(self.db._prep("SELECT description FROM descriptions WHERE record_id=? and language='fr' "), (record["record_id"],) )
 				record["frdr:description_fr"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT tag FROM tags WHERE record_id=? AND language='en'"), (record["record_id"],) )
+				litecur.execute(self.db._prep("""SELECT tags.tag FROM tags JOIN records_x_tags on records_x_tags.tag_id = tags.tag_id 
+					WHERE records_x_tags.record_id=? and tags.language = 'en' """), (record["record_id"],) )
 				record["frdr:tags"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT tag FROM tags WHERE record_id=? AND language='fr'"), (record["record_id"],) )
+				litecur.execute(self.db._prep("""SELECT tags.tag FROM tags JOIN records_x_tags on records_x_tags.tag_id = tags.tag_id 
+					WHERE records_x_tags.record_id=? and tags.language = 'fr' """), (record["record_id"],) )
 				record["frdr:tags_fr"] = litecur.fetchall()
 
-				litecur.execute(self.db._prep("SELECT access FROM access WHERE record_id=?"), (record["record_id"],) )
+				litecur.execute(self.db._prep("""SELECT access.access FROM access JOIN records_x_access on records_x_access.access_id = access.access_id 
+					WHERE records_x_access.record_id=?"""), (record["record_id"],) )
 				record["frdr:access"] = litecur.fetchall()
 
 			domain_schemas = {}
