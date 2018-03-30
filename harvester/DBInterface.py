@@ -259,12 +259,12 @@ class DBInterface:
 
 	def get_table_id_column(self, tablename):
 		if tablename in self.tabledict and "idcol" in self.tabledict[tablename]:
-			return self.tabledict[tablename]["idcol"]
+			return str(self.tabledict[tablename]["idcol"])
 		raise ValueError("tables.json missing idcol definition for {}".format(tablename))
 
 	def get_table_value_column(self, tablename):
 		if tablename in self.tabledict and "valcol" in self.tabledict[tablename]:
-			return self.tabledict[tablename]["valcol"]
+			return str(self.tabledict[tablename]["valcol"])
 		raise ValueError("tables.json missing valcol definition for {}".format(tablename))
 
 	def insert_related_record(self, tablename, val, **kwargs):
