@@ -250,8 +250,8 @@ class DBInterface:
 		with con:
 			cur = self.getCursor(con)
 			try:
-				sqlstring1 = "DELETE from {} where record_id=?".format(crosstable)
-				cur.execute(self._prep(sqlstring1), (record_id,))
+				sqlstring = "DELETE from {} where record_id=?".format(crosstable)
+				cur.execute(self._prep(sqlstring), (record_id,))
 			except:
 				return False
 
@@ -271,24 +271,21 @@ class DBInterface:
 		valcolumn = self.get_table_value_column(tablename)
 		idcolumn = self.get_table_id_column(tablename)
 		related_record_id = None
-		paramlist = [val]
-		sqlstring1 = "INSERT INTO {} ({}".format(tablename, valcolumn)
-		sqlstring2 = "VALUES(?"
+		paramlist = {valcolumn: val}
 		for key, value in kwargs.items():
-			sqlstring1 += "," + str(key)
-			sqlstring2 += ",?"
-			paramlist.append(value)
-		sqlstring1 += ")"
-		sqlstring2 += ")"
+			paramlist[key] = value
+		sqlstring = "INSERT INTO {} ({}) VALUES ({})".format(
+			tablename, ",".join(str(k) for k in paramlist.keys()), ",".join(str("?") for k in paramlist.keys())  )
+
 		con = self.getConnection()
 		with con:
 			cur = self.getCursor(con)
 			try:
 				if self.dbtype == "postgres":
-					cur.execute(self._prep(sqlstring1 + " " + sqlstring2 + " RETURNING " + idcolumn), paramlist)
+					cur.execute(self._prep(sqlstring + " RETURNING " + idcolumn), paramlist.values())
 					related_record_id = int(cur.fetchone()[idcolumn])
 				if self.dbtype == "sqlite":
-					cur.execute(self._prep(sqlstring1 + " " + sqlstring2), paramlist)
+					cur.execute(self._prep(sqlstring), paramlist.values())
 					related_record_id = int(cur.lastrowid)
 			except self.dblayer.IntegrityError as e:
 				self.logger.error("Record insertion problem: %s" %e)
@@ -299,34 +296,31 @@ class DBInterface:
 		cross_table_id = None
 		idcolumn = self.get_table_id_column(crosstable)
 		relatedidcolumn = self.get_table_id_column(relatedtable)
-		paramlist = [record_id, related_id]
-		sqlstring1 = "INSERT INTO {} (record_id,{}".format(crosstable, relatedidcolumn)
-		sqlstring2 = "VALUES(?,?"
+		paramlist = {"record_id": record_id, relatedidcolumn: related_id}
 		for key, value in kwargs.items():
-			sqlstring1 += "," + str(key)
-			sqlstring2 += ",?"
-			paramlist.append(value)
-		sqlstring1 += ")"
-		sqlstring2 += ")"
+			paramlist[key] = value
+		sqlstring = "INSERT INTO {} ({}) VALUES ({})".format(
+			crosstable, ",".join(str(k) for k in paramlist.keys()), ",".join(str("?") for k in paramlist.keys())  )
+
 		con = self.getConnection()
 		with con:
 			cur = self.getCursor(con)
 			try:
 				if self.dbtype == "postgres":
-					cur.execute(self._prep(sqlstring1 + " " + sqlstring2 + " RETURNING " + idcolumn), paramlist)
+					cur.execute(self._prep(sqlstring + " RETURNING " + idcolumn), paramlist.values())
 					cross_table_id = int(cur.fetchone()[idcolumn])
 				if self.dbtype == "sqlite":
-					cur.execute(self._prep(sqlstring1 + " " + sqlstring2), paramlist)
+					cur.execute(self._prep(sqlstring), paramlist.values())
 					cross_table_id = int(cur.lastrowid)
 			except self.dblayer.IntegrityError as e:
 				self.logger.error("Record insertion problem: %s" %e)
 
 	def get_multiple_record_ids(self, tablename, related_col, given_col, given_val, extrawhere=""):
-		sqlstring1 = "select {} from {} where {}=? {}".format(related_col, tablename, given_col, extrawhere)
+		sqlstring = "select {} from {} where {}=? {}".format(related_col, tablename, given_col, extrawhere)
 		con = self.getConnection()
 		with con:
 			cur = self.getCursor(con)
-			cur.execute(self._prep(sqlstring1),	(given_val,))
+			cur.execute(self._prep(sqlstring),	(given_val,))
 			if cur is not None:
 				records = cur.fetchall()
 				return records
