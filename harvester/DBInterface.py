@@ -275,17 +275,17 @@ class DBInterface:
 		for key, value in kwargs.items():
 			paramlist[key] = value
 		sqlstring = "INSERT INTO {} ({}) VALUES ({})".format(
-			tablename, ",".join(str(k) for k in paramlist.keys()), ",".join(str("?") for k in paramlist.keys())  )
+			tablename, ",".join(str(k) for k in list(paramlist.keys())), ",".join(str("?") for k in list(paramlist.keys()))  )
 
 		con = self.getConnection()
 		with con:
 			cur = self.getCursor(con)
 			try:
 				if self.dbtype == "postgres":
-					cur.execute(self._prep(sqlstring + " RETURNING " + idcolumn), paramlist.values())
+					cur.execute(self._prep(sqlstring + " RETURNING " + idcolumn), list(paramlist.values()))
 					related_record_id = int(cur.fetchone()[idcolumn])
 				if self.dbtype == "sqlite":
-					cur.execute(self._prep(sqlstring), paramlist.values())
+					cur.execute(self._prep(sqlstring), list(paramlist.values()))
 					related_record_id = int(cur.lastrowid)
 			except self.dblayer.IntegrityError as e:
 				self.logger.error("Record insertion problem: %s" %e)
@@ -300,17 +300,17 @@ class DBInterface:
 		for key, value in kwargs.items():
 			paramlist[key] = value
 		sqlstring = "INSERT INTO {} ({}) VALUES ({})".format(
-			crosstable, ",".join(str(k) for k in paramlist.keys()), ",".join(str("?") for k in paramlist.keys())  )
+			crosstable, ",".join(str(k) for k in list(paramlist.keys())), ",".join(str("?") for k in list(paramlist.keys()))  )
 
 		con = self.getConnection()
 		with con:
 			cur = self.getCursor(con)
 			try:
 				if self.dbtype == "postgres":
-					cur.execute(self._prep(sqlstring + " RETURNING " + idcolumn), paramlist.values())
+					cur.execute(self._prep(sqlstring + " RETURNING " + idcolumn), list(paramlist.values()))
 					cross_table_id = int(cur.fetchone()[idcolumn])
 				if self.dbtype == "sqlite":
-					cur.execute(self._prep(sqlstring), paramlist.values())
+					cur.execute(self._prep(sqlstring), list(paramlist.values()))
 					cross_table_id = int(cur.lastrowid)
 			except self.dblayer.IntegrityError as e:
 				self.logger.error("Record insertion problem: %s" %e)
