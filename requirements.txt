@@ -1,6 +1,8 @@
-docopt
-sickle
-requests
 ckanapi
-psycopg2
+docopt
+Flask
+flask-restful
 owslib
+psycopg2
+requests
+sickle
