@@ -46,11 +46,17 @@ class RepoList(Resource):
         api_log.debug("{} GET /repos".format(request.remote_addr))
         return REPOS
 
+# Default response
+class Default(Resource):
+    def get(self):
+        api_log.debug("{} GET /".format(request.remote_addr))
+        return {}
 
 ## API resource routing
 
 api.add_resource(RepoList, '/repos')
 api.add_resource(Repo, '/repos/<repo_id>')
+api.add_resource(Default, '/')
 
 
 if __name__ == '__main__':
