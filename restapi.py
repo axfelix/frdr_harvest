@@ -6,6 +6,8 @@ from flask_restful import reqparse, abort, Api, Resource
 import configparser
 import logging
 import atexit
+import daemon
+from lockfile.pidlockfile import PIDLockFile
 
 from harvester.DBInterface import DBInterface
 from harvester.HarvestLogger import HarvestLogger
@@ -18,6 +20,7 @@ log.disabled = True
 api = Api(app)
 
 LISTEN_PORT = 8101
+PIDFILE = '/tmp/harvestapi.pid'
 REPOS = {"count": 0, "repositories": []}
 api_log = None
 
@@ -83,4 +86,6 @@ if __name__ == '__main__':
 
     atexit.register(log_shutdown)
     api_log.info("REST API process starting on port {}".format(LISTEN_PORT))
-    app.run(host='0.0.0.0', port=LISTEN_PORT)
+
+    with daemon.DaemonContext(pidfile=PIDLockFile(PIDFILE)):
+        app.run(host='0.0.0.0', port=LISTEN_PORT)
