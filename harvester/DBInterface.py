@@ -174,7 +174,10 @@ class DBInterface:
 
 	def get_repo_id(self, repo_url, repo_set):
 		returnvalue = 0
-		records = self.get_multiple_records("repositories", "repository_id", "repository_url", repo_url, "and repository_set={}".format(repo_set))
+		extrawhere = ""
+		if repo_set is not None:
+			extrawhere = "and repository_set={}".format(repo_set)
+		records = self.get_multiple_records("repositories", "repository_id", "repository_url", repo_url, extrawhere)
 		for record in records:
 			returnvalue = int(record['repository_id'])
 		return returnvalue
@@ -190,7 +193,7 @@ class DBInterface:
 		return returnvalue
 
 	def get_repositories(self):
-		return self.get_multiple_records("repositories", "*", "enabled", "1")
+		return self.get_multiple_records("repositories", "*", "enabled", "1", "or enabled = 'true'")
 
 	def update_last_crawl(self, repo_id):
 		con = self.getConnection()
