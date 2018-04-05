@@ -174,38 +174,26 @@ class DBInterface:
 
 	def get_repo_id(self, repo_url, repo_set):
 		returnvalue = 0
-		con = self.getConnection()
-		with con:
-			cur = self.getCursor(con)
-			cur.execute(
-				self._prep("select repository_id from repositories where repository_url = ? and repository_set = ?"),
-				(repo_url, repo_set))
-			if cur is not None:
-				records = cur.fetchall()
-			else:
-				return 0
-			for record in records:
-				returnvalue = int(record['repository_id'])
-				
+		extrawhere = ""
+		if repo_set is not None:
+			extrawhere = "and repository_set='{}'".format(repo_set)
+		records = self.get_multiple_records("repositories", "repository_id", "repository_url", repo_url, extrawhere)
+		for record in records:
+			returnvalue = int(record['repository_id'])
 		return returnvalue
 
 	def get_repo_last_crawl(self, repo_id):
 		returnvalue = 0
 		if repo_id == 0 or repo_id is None:
 			return 0
-		con = self.getConnection()
-		with con:
-			cur = self.getCursor(con)
-			cur.execute(self._prep("select last_crawl_timestamp from repositories where repository_id = ?"), (repo_id,))
-			if cur is not None:
-				records = cur.fetchall()
-			else:
-				return 0
-			for record in records:
-				returnvalue = int(record['last_crawl_timestamp'])
-
+		records = self.get_multiple_records("repositories", "last_crawl_timestamp", "repository_id", repo_id)
+		for record in records:
+			returnvalue = int(record['last_crawl_timestamp'])
 		self.logger.debug("Last crawl ts for repo_id %s is %s" % (repo_id, returnvalue))
 		return returnvalue
+
+	def get_repositories(self):
+		return self.get_multiple_records("repositories", "*", "enabled", "1", "or enabled = 'true'")
 
 	def update_last_crawl(self, repo_id):
 		con = self.getConnection()
@@ -315,8 +303,8 @@ class DBInterface:
 			except self.dblayer.IntegrityError as e:
 				self.logger.error("Record insertion problem: %s" %e)
 
-	def get_multiple_record_ids(self, tablename, related_col, given_col, given_val, extrawhere=""):
-		sqlstring = "select {} from {} where {}=? {}".format(related_col, tablename, given_col, extrawhere)
+	def get_multiple_records(self, tablename, columnlist, given_col, given_val, extrawhere=""):
+		sqlstring = "select {} from {} where {}=? {}".format(columnlist, tablename, given_col, extrawhere)
 		con = self.getConnection()
 		with con:
 			cur = self.getCursor(con)
@@ -331,7 +319,7 @@ class DBInterface:
 		returnvalue = None
 		idcolumn = self.get_table_id_column(tablename)
 		valcolumn = self.get_table_value_column(tablename)
-		records = self.get_multiple_record_ids(tablename, idcolumn, valcolumn, val, extrawhere)
+		records = self.get_multiple_records(tablename, idcolumn, valcolumn, val, extrawhere)
 		for record in records:
 			returnvalue = int(record[idcolumn])
 
@@ -387,7 +375,7 @@ class DBInterface:
 			if "creator" in record:
 				if not isinstance(record["creator"], list):
 					record["creator"] = [record["creator"]]
-				existing_creator_ids = self.get_multiple_record_ids("records_x_creators", "creator_id", "record_id", record["record_id"])
+				existing_creator_ids = self.get_multiple_records("records_x_creators", "creator_id", "record_id", record["record_id"])
 				for creator in record["creator"]:
 					creator_id = self.get_single_record_id("creators", creator)
 					if creator_id is None:
@@ -400,7 +388,7 @@ class DBInterface:
 			if "contributor" in record:
 				if not isinstance(record["contributor"], list):
 					record["contributor"] = [record["contributor"]]
-				existing_creator_ids = self.get_multiple_record_ids("records_x_creators", "creator_id", "record_id", record["record_id"])
+				existing_creator_ids = self.get_multiple_records("records_x_creators", "creator_id", "record_id", record["record_id"])
 				for creator in record["contributor"]:
 					creator_id = self.get_single_record_id("creators", creator)
 					if creator_id is None:
@@ -413,7 +401,7 @@ class DBInterface:
 			if "subject" in record:
 				if not isinstance(record["subject"], list):
 					record["subject"] = [record["subject"]]
-				existing_subject_ids = self.get_multiple_record_ids("records_x_subjects", "subject_id", "record_id", record["record_id"])
+				existing_subject_ids = self.get_multiple_records("records_x_subjects", "subject_id", "record_id", record["record_id"])
 				for subject in record["subject"]:
 					subject_id = self.get_single_record_id("subjects", subject)
 					if subject_id is None:
@@ -425,7 +413,7 @@ class DBInterface:
 			if "publisher" in record:
 				if not isinstance(record["publisher"], list):
 					record["publisher"] = [record["publisher"]]
-				existing_publisher_ids = self.get_multiple_record_ids("records_x_publishers", "publisher_id", "record_id", record["record_id"])
+				existing_publisher_ids = self.get_multiple_records("records_x_publishers", "publisher_id", "record_id", record["record_id"])
 				for publisher in record["publisher"]:
 					publisher_id = self.get_single_record_id("publishers", publisher)
 					if publisher_id is None:
@@ -437,7 +425,7 @@ class DBInterface:
 			if "rights" in record:
 				if not isinstance(record["rights"], list):
 					record["rights"] = [record["rights"]]
-				existing_rights_ids = self.get_multiple_record_ids("records_x_rights", "rights_id", "record_id", record["record_id"])
+				existing_rights_ids = self.get_multiple_records("records_x_rights", "rights_id", "record_id", record["record_id"])
 				for rights in record["rights"]:
 					# Use a hash for lookups so we don't need to maintain a full text index
 					sha1 = hashlib.sha1()
@@ -481,7 +469,7 @@ class DBInterface:
 			if "tags" in record:
 				if not isinstance(record["tags"], list):
 					record["tags"] = [record["tags"]]
-				existing_tag_ids = self.get_multiple_record_ids("records_x_tags", "tag_id", "record_id", record["record_id"])
+				existing_tag_ids = self.get_multiple_records("records_x_tags", "tag_id", "record_id", record["record_id"])
 				for tag in record["tags"]:
 					tag_id = self.get_single_record_id("tags", tag, "and language='en'")
 					if tag_id is None:
@@ -494,7 +482,7 @@ class DBInterface:
 			if "tags_fr" in record:
 				if not isinstance(record["tags_fr"], list):
 					record["tags_fr"] = [record["tags_fr"]]
-				existing_tag_ids = self.get_multiple_record_ids("records_x_tags", "tag_id", "record_id", record["record_id"])
+				existing_tag_ids = self.get_multiple_records("records_x_tags", "tag_id", "record_id", record["record_id"])
 				for tag in record["tags_fr"]:
 					tag_id = self.get_single_record_id("tags", tag, "and language='fr'")
 					if tag_id is None:
@@ -507,7 +495,7 @@ class DBInterface:
 			if "access" in record:
 				if not isinstance(record["access"], list):
 					record["access"] = [record["access"]]
-				existing_access_ids = self.get_multiple_record_ids("records_x_access", "access_id", "record_id", record["record_id"])
+				existing_access_ids = self.get_multiple_records("records_x_access", "access_id", "record_id", record["record_id"])
 				for access in record["access"]:
 					access_id = self.get_single_record_id("access", access)
 					if access_id is None:
@@ -517,14 +505,14 @@ class DBInterface:
 							self.insert_cross_record("records_x_access", "access", access_id, record["record_id"])
 
 			if "geospatial" in record:
-				existing_geospatial_ids = self.get_multiple_record_ids("geospatial", "geospatial_id", "record_id", record["record_id"])
+				existing_geospatial_ids = self.get_multiple_records("geospatial", "geospatial_id", "record_id", record["record_id"])
 				if not existing_geospatial_ids:
 					for coordinates in record["geospatial"]["coordinates"][0]:
 						extras = {"record_id": record["record_id"], "lat": coordinates[0], "lon": coordinates[1]}
 						self.insert_related_record("geospatial", record["geospatial"]["type"], **extras)
 
 			if len(domain_metadata) > 0:
-				existing_metadata_ids = self.get_multiple_record_ids("domain_metadata", "metadata_id", "record_id", record["record_id"])
+				existing_metadata_ids = self.get_multiple_records("domain_metadata", "metadata_id", "record_id", record["record_id"])
 				if not existing_metadata_ids:
 					for field_uri in domain_metadata:
 						field_pieces = field_uri.split("#")
