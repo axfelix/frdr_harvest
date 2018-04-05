@@ -176,7 +176,7 @@ class DBInterface:
 		returnvalue = 0
 		extrawhere = ""
 		if repo_set is not None:
-			extrawhere = "and repository_set={}".format(repo_set)
+			extrawhere = "and repository_set='{}'".format(repo_set)
 		records = self.get_multiple_records("repositories", "repository_id", "repository_url", repo_url, extrawhere)
 		for record in records:
 			returnvalue = int(record['repository_id'])
