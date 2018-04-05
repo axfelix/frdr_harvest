@@ -4,5 +4,6 @@ Flask
 flask-restful
 owslib
 psycopg2
+python-daemon
 requests
 sickle
