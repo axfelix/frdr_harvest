@@ -304,6 +304,7 @@ class DBInterface:
 				self.logger.error("Record insertion problem: %s" %e)
 
 	def get_multiple_records(self, tablename, columnlist, given_col, given_val, extrawhere=""):
+		records = {}
 		sqlstring = "select {} from {} where {}=? {}".format(columnlist, tablename, given_col, extrawhere)
 		con = self.getConnection()
 		with con:
@@ -311,9 +312,8 @@ class DBInterface:
 			cur.execute(self._prep(sqlstring),	(given_val,))
 			if cur is not None:
 				records = cur.fetchall()
-				return records
 
-		return None
+		return records
 
 	def get_single_record_id(self, tablename, val, extrawhere = ""):
 		returnvalue = None
@@ -375,7 +375,8 @@ class DBInterface:
 			if "creator" in record:
 				if not isinstance(record["creator"], list):
 					record["creator"] = [record["creator"]]
-				existing_creator_ids = self.get_multiple_records("records_x_creators", "creator_id", "record_id", record["record_id"])
+				existing_creator_recs = self.get_multiple_records("records_x_creators", "creator_id", "record_id", record["record_id"])
+				existing_creator_ids = list(existing_creator_recs.values())
 				for creator in record["creator"]:
 					creator_id = self.get_single_record_id("creators", creator)
 					if creator_id is None:
@@ -388,7 +389,8 @@ class DBInterface:
 			if "contributor" in record:
 				if not isinstance(record["contributor"], list):
 					record["contributor"] = [record["contributor"]]
-				existing_creator_ids = self.get_multiple_records("records_x_creators", "creator_id", "record_id", record["record_id"])
+				existing_creator_recs = self.get_multiple_records("records_x_creators", "creator_id", "record_id", record["record_id"])
+				existing_creator_ids = list(existing_creator_recs.values())
 				for creator in record["contributor"]:
 					creator_id = self.get_single_record_id("creators", creator)
 					if creator_id is None:
@@ -401,7 +403,8 @@ class DBInterface:
 			if "subject" in record:
 				if not isinstance(record["subject"], list):
 					record["subject"] = [record["subject"]]
-				existing_subject_ids = self.get_multiple_records("records_x_subjects", "subject_id", "record_id", record["record_id"])
+				existing_subject_recs = self.get_multiple_records("records_x_subjects", "subject_id", "record_id", record["record_id"])
+				existing_subject_ids = list(existing_subject_recs.values())
 				for subject in record["subject"]:
 					subject_id = self.get_single_record_id("subjects", subject)
 					if subject_id is None:
@@ -413,7 +416,8 @@ class DBInterface:
 			if "publisher" in record:
 				if not isinstance(record["publisher"], list):
 					record["publisher"] = [record["publisher"]]
-				existing_publisher_ids = self.get_multiple_records("records_x_publishers", "publisher_id", "record_id", record["record_id"])
+				existing_publisher_recs = self.get_multiple_records("records_x_publishers", "publisher_id", "record_id", record["record_id"])
+				existing_publisher_ids = list(existing_publisher_recs.values())
 				for publisher in record["publisher"]:
 					publisher_id = self.get_single_record_id("publishers", publisher)
 					if publisher_id is None:
@@ -425,7 +429,8 @@ class DBInterface:
 			if "rights" in record:
 				if not isinstance(record["rights"], list):
 					record["rights"] = [record["rights"]]
-				existing_rights_ids = self.get_multiple_records("records_x_rights", "rights_id", "record_id", record["record_id"])
+				existing_rights_recs = self.get_multiple_records("records_x_rights", "rights_id", "record_id", record["record_id"])
+				existing_rights_ids = list(existing_rights_recs.values())
 				for rights in record["rights"]:
 					# Use a hash for lookups so we don't need to maintain a full text index
 					sha1 = hashlib.sha1()
@@ -469,7 +474,8 @@ class DBInterface:
 			if "tags" in record:
 				if not isinstance(record["tags"], list):
 					record["tags"] = [record["tags"]]
-				existing_tag_ids = self.get_multiple_records("records_x_tags", "tag_id", "record_id", record["record_id"])
+				existing_tag_recs = self.get_multiple_records("records_x_tags", "tag_id", "record_id", record["record_id"])
+				existing_tag_ids = list(existing_tag_recs.values())
 				for tag in record["tags"]:
 					tag_id = self.get_single_record_id("tags", tag, "and language='en'")
 					if tag_id is None:
@@ -482,7 +488,8 @@ class DBInterface:
 			if "tags_fr" in record:
 				if not isinstance(record["tags_fr"], list):
 					record["tags_fr"] = [record["tags_fr"]]
-				existing_tag_ids = self.get_multiple_records("records_x_tags", "tag_id", "record_id", record["record_id"])
+				existing_tag_recs = self.get_multiple_records("records_x_tags", "tag_id", "record_id", record["record_id"])
+				existing_tag_ids = list(existing_tag_recs.values())
 				for tag in record["tags_fr"]:
 					tag_id = self.get_single_record_id("tags", tag, "and language='fr'")
 					if tag_id is None:
@@ -495,7 +502,8 @@ class DBInterface:
 			if "access" in record:
 				if not isinstance(record["access"], list):
 					record["access"] = [record["access"]]
-				existing_access_ids = self.get_multiple_records("records_x_access", "access_id", "record_id", record["record_id"])
+				existing_access_recs = self.get_multiple_records("records_x_access", "access_id", "record_id", record["record_id"])
+				existing_access_ids = list(existing_access_recs.values())
 				for access in record["access"]:
 					access_id = self.get_single_record_id("access", access)
 					if access_id is None:
