@@ -78,7 +78,7 @@ class Exporter(object):
 			FROM records recs, repositories repos WHERE recs.repository_id = repos.repository_id """))
 
 		buffer_limit = int(self.export_limit) * 1024 * 1024
-		self.logger.info("Exporter: output file size limited to %d MB each" % (int(self.export_limit)))
+		self.logger.info("Exporter: output file size limited to {} MB each".format(int(self.export_limit)))
 
 		records_assembled = 0
 		gmeta_batches = 0
@@ -86,7 +86,7 @@ class Exporter(object):
 		for row in records_cursor:
 			if buffer_size > buffer_limit:
 				gmeta_batches += 1
-				self.logger.debug("Writing batch %s to output file" % (gmeta_batches))
+				self.logger.debug("Writing batch {} to output file".format(gmeta_batches))
 				gingest_block = {"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":gmeta}}
 				self._write_to_file(json.dumps(gingest_block), export_filepath, temp_filepath, "gmeta", gmeta_batches)
 				gmeta = []
@@ -239,8 +239,10 @@ class Exporter(object):
 
 			buffer_size = buffer_size + len(json.dumps(gmeta_data))
 			records_assembled += 1
+			if (records_assembled % 1000 == 0):
+				self.logger.info("Done processing {} records for export".format(records_assembled))
 
-		self.logger.info("gmeta size: %s items in %s files" % (records_assembled, gmeta_batches + 1))
+		self.logger.info("gmeta size: {} items in {} files".format(records_assembled, gmeta_batches + 1))
 		return gmeta, deleted
 
 	def _validate_rifcs(self, rifcs):
@@ -279,7 +281,7 @@ class Exporter(object):
 			with open(temp_filename, "w") as tempfile:
 				tempfile.write(output)
 		except:
-			self.logger.error("Unable to write output data to temporary file: %s" % (temp_filename))
+			self.logger.error("Unable to write output data to temporary file: {}".format(temp_filename))
 
 		try:
 			os.remove(export_filepath)
@@ -289,7 +291,7 @@ class Exporter(object):
 		try:
 			os.rename(temp_filename, os.path.join(export_filepath, export_basename))
 		except:
-			self.logger.error("Unable to move temp file %s into output file location %s" % (temp_filename, export_filepath))
+			self.logger.error("Unable to move temp file {} into output file location {}".format(temp_filename, export_filepath))
 
 	def _cleanup_previous_exports(self, dirname, export_format):
 		pattern = export_format + '_?[\d]*\.[a-z]*$'
@@ -315,7 +317,7 @@ class Exporter(object):
 			from lxml import etree
 			output = self._generate_rifcs()
 		else:
-			self.logger.error("Unknown export format: %s" % (self.export_format))
+			self.logger.error("Unknown export format: {}".format(self.export_format))
 
 		if output:
 			self._write_to_file(output, self.export_filepath, self.temp_filepath, self.export_format)
