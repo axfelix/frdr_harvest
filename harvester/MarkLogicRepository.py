@@ -54,7 +54,7 @@ class MarkLogicRepository(HarvestRepository):
 			return True
 
 		except Exception as e:
-			self.logger.error("Updating MarkLogic Repository failed: %s" % (str(e)) )
+			self.logger.error("Updating MarkLogic Repository failed: {}".format(e) )
 			self.error_count =  self.error_count + 1
 			if self.error_count < self.abort_after_numerrors:
 				return True

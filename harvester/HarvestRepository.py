@@ -53,9 +53,9 @@ class HarvestRepository(object):
 		self.last_crawl = self.db.get_repo_last_crawl(self.repository_id)
 
 		if self.last_crawl == 0:
-			self.logger.info("*** Repo: %s, type: %s, (last harvested: never)" % (self.name, self.type ) )
+			self.logger.info("*** Repo: {}, type: {}, (last harvested: never)".format(self.name, self.type ) )
 		else:
-			self.logger.info("*** Repo: %s, type: %s, (last harvested: %s ago)" % (self.name, self.type, self.formatter.humanize(self.tstart - self.last_crawl) ) )
+			self.logger.info("*** Repo: {}, type: {}, (last harvested: {} ago)".format(self.name, self.type, self.formatter.humanize(self.tstart - self.last_crawl) ) )
 
 		if (self.enabled):
 			if (self.last_crawl + self.repo_refresh_days*86400) < self.tstart:
@@ -63,7 +63,7 @@ class HarvestRepository(object):
 					self._crawl()
 					self.db.update_last_crawl(self.repository_id)
 				except Exception as e:
-					self.logger.error("Repository unable to be harvested: %s" %(e))
+					self.logger.error("Repository unable to be harvested: {}".format(e))
 			else:
 				self.logger.info("This repo is not yet due to be harvested")
 		else:
@@ -91,16 +91,16 @@ class HarvestRepository(object):
 		records = self.db.get_stale_records(stale_timestamp,self.repository_id, self.max_records_updated_per_run)
 		for record in records:
 			if record_count == 0:
-				self.logger.info("Started processing for %d records" % (len(records)) )
+				self.logger.info("Started processing for {} records".format(len(records)) )
 
 			status = self._update_record(record)
 			if not status:
-				self.logger.error("Aborting due to errors after %s items updated in %s (%.1f items/sec)" % (record_count, self.formatter.humanize(time.time() - tstart), record_count/(time.time() - tstart + 0.1)))
+				self.logger.error("Aborting due to errors after {} items updated in {} ({:.1f} items/sec)".format(record_count, self.formatter.humanize(time.time() - tstart), record_count/(time.time() - tstart + 0.1)))
 				break
 
 			record_count = record_count + 1
 			if (record_count % self.update_log_after_numitems == 0):
 				tdelta = time.time() - tstart + 0.1
-				self.logger.info("Done %s items after %s (%.1f items/sec)" % (record_count, self.formatter.humanize(tdelta), (record_count/tdelta)))
+				self.logger.info("Done {} items after {} ({:.1f} items/sec)".format(record_count, self.formatter.humanize(tdelta), (record_count/tdelta)))
 
-		self.logger.info("Updated %s items in %s (%.1f items/sec)" % (record_count, self.formatter.humanize(time.time() - tstart),record_count/(time.time() - tstart + 0.1)))
+		self.logger.info("Updated {} items in {} ({:.1f} items/sec)".format(record_count, self.formatter.humanize(time.time() - tstart),record_count/(time.time() - tstart + 0.1)))
