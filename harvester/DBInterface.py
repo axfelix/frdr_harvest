@@ -196,7 +196,7 @@ class DBInterface:
 		records = self.get_multiple_records("repositories", "*", "enabled", "1", "or enabled = 'true'")
 		repos = [dict(rec) for rec in records]
 		for i in range(len(repos)):
-			records = self.get_multiple_records("records", "count(*) as cnt", "repository_id", repos[i]["repository_id"])
+			records = self.get_multiple_records("records", "count(*) as cnt", "repository_id", repos[i]["repository_id"], "and deleted=0")
 			for rec in records:
 				repos[i]["item_count"] = int(rec["cnt"])
 		return repos
