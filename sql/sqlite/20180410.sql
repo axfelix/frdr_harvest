@@ -1,0 +1,1 @@
+create index descriptions_by_record_id on descriptions(record_id, language);
