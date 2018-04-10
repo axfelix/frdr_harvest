@@ -193,7 +193,13 @@ class DBInterface:
 		return returnvalue
 
 	def get_repositories(self):
-		return self.get_multiple_records("repositories", "*", "enabled", "1", "or enabled = 'true'")
+		records = self.get_multiple_records("repositories", "*", "enabled", "1", "or enabled = 'true'")
+		repos = [dict(rec) for rec in records]
+		for i in range(len(repos)):
+			records = self.get_multiple_records("records", "count(*) as cnt", "repository_id", repos[i]["repository_id"])
+			for rec in records:
+				repos[i]["item_count"] = int(rec["cnt"])
+		return repos
 
 	def update_last_crawl(self, repo_id):
 		con = self.getConnection()

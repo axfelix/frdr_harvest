@@ -79,7 +79,8 @@ if __name__ == '__main__':
             "repository_name":      record["repository_name"],
             "repository_url":       record["repository_url"],
             "repository_thumbnail": record["repository_thumbnail"],
-            "repository_type":      record["repository_type"]
+            "repository_type":      record["repository_type"],
+            "item_count":           record["item_count"]
         }
         REPOS["repositories"].append(this_repo)
     REPOS["count"] = len(records)
