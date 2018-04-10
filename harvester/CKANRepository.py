@@ -114,6 +114,12 @@ class CKANRepository(HarvestRepository):
 		except:
 			record["series"] = ckan_record.get("data_series_name", "")
 
+		if isinstance(record["series"], dict):
+			if len(record["series"]) > 0:
+				record["series"] = ",".join(str(v) for v in list(record["series"].values()))
+			else:
+				record["series"] = ""
+
 		record["tags"] = []
 		record["tags_fr"] = []
 		if isinstance(ckan_record.get("keywords", ""), dict):
