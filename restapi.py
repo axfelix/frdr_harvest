@@ -74,10 +74,12 @@ if __name__ == '__main__':
 
     records = dbh.get_repositories()
     for record in records:
+        # Explicitly expose selected info here, so we do not accidentally leak internal data or something added in the future
         this_repo = {
             "repository_id":        record["repository_id"],
             "repository_name":      record["repository_name"],
             "repository_url":       record["repository_url"],
+            "homepage_url":         record["homepage_url"],
             "repository_thumbnail": record["repository_thumbnail"],
             "repository_type":      record["repository_type"],
             "item_count":           record["item_count"]

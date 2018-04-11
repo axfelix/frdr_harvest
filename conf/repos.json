@@ -2,7 +2,8 @@
     "repos": [
         {
             "name": "SFU Radar",
-            "url": "http://researchdata.sfu.ca/oai2",
+            "url": "https://researchdata.sfu.ca/oai2",
+            "homepage_url": "https://researchdata.sfu.ca/",
             "set": "",
             "thumbnail": "http://static.lib.sfu.ca/clf2013/sfu-logo.png",
             "type": "oai",
