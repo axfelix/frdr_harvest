@@ -136,19 +136,18 @@ class OAIRepository(HarvestRepository):
 				item_count = item_count + 1
 				if (item_count % self.update_log_after_numitems == 0):
 					tdelta = time.time() - self.tstart + 0.1
-					self.logger.info("Done %s items after %s (%.1f items/sec)" % (
-					item_count, self.formatter.humanize(tdelta), (item_count / tdelta)))
+					self.logger.info("Done {} items after {} ({:.1f} items/sec)".format(item_count, self.formatter.humanize(tdelta), (item_count / tdelta)))
 
 			except AttributeError:
 				# probably not a valid OAI record
 				# Islandora throws this for non-object directories
-				self.logger.debug("AttributeError while working on item %i" % (item_count))
+				self.logger.debug("AttributeError while working on item {}".format(item_count))
 				pass
 
 			except StopIteration:
 				break
 
-		self.logger.info("Processed %s items in feed" % (item_count))
+		self.logger.info("Processed {} items in feed".format(item_count))
 
 	def unpack_oai_metadata(self, record):
 		record["pub_date"] = record.get("date")
@@ -222,7 +221,7 @@ class OAIRepository(HarvestRepository):
 			record["identifier"] = valid_id
 
 		if 'creator' not in record.keys() and 'contributor' not in record.keys() and 'publisher' not in record.keys():
-			self.logger.debug("Item %s is missing creator - will not be added" % (record["identifier"]))
+			self.logger.debug("Item {} is missing creator - will not be added".format(record["identifier"]))
 			return None
 		elif 'creator' not in record.keys() and 'contributor' in record.keys():
 			record["creator"] = record["contributor"]
@@ -269,7 +268,7 @@ class OAIRepository(HarvestRepository):
 
 		# Make sure dates are valid
 		if not re.search("^(1|2)\d{3}(-?(0[1-9]|1[0-2])(-?(0[1-9]|1[0-9]|2[0-9]|3[0-1]))?)?$", record["pub_date"]):
-			self.logger.debug("Invalid date for record %s" % (record["dc:source"]))
+			self.logger.debug("Invalid date for record {}".format(record["dc:source"]))
 			return None
 
 		#record["pub_date"] = dateparser.parse(record["pub_date"]).strftime("%Y-%m-%d")
@@ -344,7 +343,7 @@ class OAIRepository(HarvestRepository):
 
 	@_rate_limited(5)
 	def _update_record(self, record):
-		self.logger.debug("Updating OAI record %s" % (record['local_identifier']) )
+		self.logger.debug("Updating OAI record {}".format(record['local_identifier']) )
 
 		try:
 			single_record = self.sickle.GetRecord(identifier=record["local_identifier"], metadataPrefix=self.metadataprefix)
@@ -376,7 +375,7 @@ class OAIRepository(HarvestRepository):
 			return True
 
 		except Exception as e:
-			self.logger.error("Updating item failed (repo_id:%s, oai_id:%s): %s" % (self.repository_id, record['local_identifier'], str(e)) )
+			self.logger.error("Updating item failed (repo_id:{}, oai_id:{}): {}".format(self.repository_id, record['local_identifier'], e) )
 			# Touch the record so we do not keep requesting it on every run
 			self.db.touch_record(record)
 			self.error_count = self.error_count + 1

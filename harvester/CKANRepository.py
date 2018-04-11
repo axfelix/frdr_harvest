@@ -34,9 +34,9 @@ class CKANRepository(HarvestRepository):
 			item_count = item_count + 1
 			if (item_count % self.update_log_after_numitems == 0):
 				tdelta = time.time() - self.tstart + 0.1
-				self.logger.info("Done %s item headers after %s (%.1f items/sec)" % (item_count, self.formatter.humanize(tdelta), item_count/tdelta) )
+				self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count, self.formatter.humanize(tdelta), item_count/tdelta) )
 
-		self.logger.info("Found %s items in feed" % (item_count) )
+		self.logger.info("Found {} items in feed".format(item_count) )
 
 	def format_ckan_to_oai(self, ckan_record, local_identifier):
 		record = {}
@@ -114,6 +114,12 @@ class CKANRepository(HarvestRepository):
 		except:
 			record["series"] = ckan_record.get("data_series_name", "")
 
+		if isinstance(record["series"], dict):
+			if len(record["series"]) > 0:
+				record["series"] = ",".join(str(v) for v in list(record["series"].values()))
+			else:
+				record["series"] = ""
+
 		record["tags"] = []
 		record["tags_fr"] = []
 		if isinstance(ckan_record.get("keywords", ""), dict):
@@ -171,7 +177,7 @@ class CKANRepository(HarvestRepository):
 
 	@_rate_limited(5)
 	def _update_record(self,record):
-		#self.logger.debug("Updating CKAN record %s" % (record['local_identifier']) )
+		#self.logger.debug("Updating CKAN record {}".format(record['local_identifier']) )
 
 		try:
 			ckan_record = self.ckanrepo.action.package_show(id=record['local_identifier'])
@@ -191,7 +197,7 @@ class CKANRepository(HarvestRepository):
 			return True
 
 		except Exception as e:
-			self.logger.error("Updating item failed: %s" % (str(e)) )
+			self.logger.error("Updating record {} failed: {}".format(record['local_identifier'],e) )
 			# Touch the record so we do not keep requesting it on every run
 			self.db.touch_record(record)
 			self.error_count =  self.error_count + 1

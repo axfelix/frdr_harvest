@@ -53,7 +53,7 @@ class DBInterface:
 							cur.executescript(scriptcontents)
 						self.set_db_version(scriptversion)
 						dbversion = scriptversion
-						print("Updated database to version: %i" % (scriptversion)) # No logger yet
+						print("Updated database to version: {:d}".format(scriptversion)) # No logger yet
 
 		self.tabledict = {}
 		with open("sql/tables.json", 'r') as jsonfile:
@@ -141,7 +141,7 @@ class DBInterface:
 						self.record_refresh_days, self.repo_refresh_days, self.repo_id))
 				except self.dblayer.IntegrityError as e:
 					# record already present in repo
-					self.logger.error("Integrity error in update %s " % (e))
+					self.logger.error("Integrity error in update {}".format(e))
 					return self.repo_id
 			else:
 				# Create new repo record
@@ -168,7 +168,7 @@ class DBInterface:
 						self.repo_id = int(cur.lastrowid)
 
 				except self.dblayer.IntegrityError as e:
-					self.logger.error("Cannot add repository: %s" % (e))
+					self.logger.error("Cannot add repository: {}".format(e))
 
 		return self.repo_id
 
@@ -189,11 +189,17 @@ class DBInterface:
 		records = self.get_multiple_records("repositories", "last_crawl_timestamp", "repository_id", repo_id)
 		for record in records:
 			returnvalue = int(record['last_crawl_timestamp'])
-		self.logger.debug("Last crawl ts for repo_id %s is %s" % (repo_id, returnvalue))
+		self.logger.debug("Last crawl ts for repo_id {} is {}".format(repo_id, returnvalue))
 		return returnvalue
 
 	def get_repositories(self):
-		return self.get_multiple_records("repositories", "*", "enabled", "1", "or enabled = 'true'")
+		records = self.get_multiple_records("repositories", "*", "enabled", "1", "or enabled = 'true'")
+		repos = [dict(rec) for rec in records]
+		for i in range(len(repos)):
+			records = self.get_multiple_records("records", "count(*) as cnt", "repository_id", repos[i]["repository_id"], "and deleted=0")
+			for rec in records:
+				repos[i]["item_count"] = int(rec["cnt"])
+		return repos
 
 	def update_last_crawl(self, repo_id):
 		con = self.getConnection()
@@ -213,7 +219,7 @@ class DBInterface:
 				cur.execute(self._prep("UPDATE records set deleted = 1, modified_timestamp = ? where record_id=?"),
 							(time.time(), record['record_id']))
 			except:
-				self.logger.error("Unable to mark as deleted record %s" % (record['local_identifier'],))
+				self.logger.error("Unable to mark as deleted record {}".format(record['local_identifier']))
 				return False
 
 			try:
@@ -227,10 +233,10 @@ class DBInterface:
 				self.delete_related_records("geospatial", record['record_id'])
 				self.delete_related_records("domain_metadata", record['record_id'])
 			except:
-				self.logger.error("Unable to delete related table rows for record %s" % (record['local_identifier'],))
+				self.logger.error("Unable to delete related table rows for record {}".format(record['local_identifier']))
 				return False
 
-		self.logger.debug("Marked as deleted: record %s" % (record['local_identifier'],))
+		self.logger.debug("Marked as deleted: record {}".format(record['local_identifier']))
 		return True
 
 	def delete_related_records(self, crosstable, record_id):
@@ -276,7 +282,7 @@ class DBInterface:
 					cur.execute(self._prep(sqlstring), list(paramlist.values()))
 					related_record_id = int(cur.lastrowid)
 			except self.dblayer.IntegrityError as e:
-				self.logger.error("Record insertion problem: %s" %e)
+				self.logger.error("Record insertion problem: {}".format(e))
 
 		return related_record_id
 
@@ -301,7 +307,7 @@ class DBInterface:
 					cur.execute(self._prep(sqlstring), list(paramlist.values()))
 					cross_table_id = int(cur.lastrowid)
 			except self.dblayer.IntegrityError as e:
-				self.logger.error("Record insertion problem: %s" %e)
+				self.logger.error("Record insertion problem: {}".format(e))
 
 	def get_multiple_records(self, tablename, columnlist, given_col, given_val, extrawhere=""):
 		records = []
@@ -342,7 +348,7 @@ class DBInterface:
 						(rec["title"], rec["pub_date"], rec["contact"], rec["series"], time.time(), source_url, 0, rec["identifier"], repo_id))
 					returnvalue = int(cur.lastrowid)
 			except self.dblayer.IntegrityError as e:
-				self.logger.error("Record insertion problem: %s" %e)
+				self.logger.error("Record insertion problem: {}".format(e))
 
 		return returnvalue
 
@@ -560,7 +566,7 @@ class DBInterface:
 				cur.execute(self._prep("UPDATE records set modified_timestamp = ? where record_id = ?"),
 							(time.time(), record['record_id']))
 			except:
-				self.logger.error("Unable to update modified_timestamp for record id %s" % (record['record_id'],))
+				self.logger.error("Unable to update modified_timestamp for record id {}".format(record['record_id']))
 				return False
 
 		return True
@@ -576,6 +582,6 @@ class DBInterface:
 						"INSERT INTO records (title, pub_date, contact, series, modified_timestamp, local_identifier, repository_id) VALUES(?,?,?,?,?,?,?)"),
 						("", "", "", "", 0, local_identifier, repo_id))
 				except self.dblayer.IntegrityError as e:
-					self.logger.error("Error creating record header: %s " % (e))
+					self.logger.error("Error creating record header: {}".format(e))
 
 		return None

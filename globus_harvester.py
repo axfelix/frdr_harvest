@@ -68,7 +68,7 @@ if __name__ == "__main__":
 	final_config['export_format']             = config['export'].get('export_format', "gmeta")
 
 	main_log = HarvestLogger(config['logging'])
-	main_log.info("Starting... (pid=%s)" % (os.getpid()))
+	main_log.info("Starting... (pid={})".format(os.getpid()))
 
 	dbh = DBInterface(config['db'])
 	dbh.setLogger(main_log)
@@ -112,7 +112,7 @@ if __name__ == "__main__":
 	exporter.export_to_file(**kwargs)
 
 	formatter = TimeFormatter()
-	main_log.info("Done after %s" % (formatter.humanize(time.time() - tstart)))
+	main_log.info("Done after {}".format(formatter.humanize(time.time() - tstart)))
 
 	with open("data/last_run_timestamp", "w") as lastrun:
 	    lastrun.write(str(time.time()))
