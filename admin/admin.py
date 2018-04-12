@@ -73,6 +73,7 @@ def run_admin_server(with_tls=False):
                 ('oai', 'oai'),
                 ('ckan', 'ckan'),
                 ('marklogic', 'marklogic'),
+                ('csw','csw'),
             ],
             'enabled': [
                 ('true', 'Yes'),
