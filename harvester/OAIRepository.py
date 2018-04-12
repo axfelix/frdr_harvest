@@ -169,9 +169,18 @@ class OAIRepository(HarvestRepository):
 			record["rights"] = record.get("copyright")
 
 			if "northBL" in record.keys():
-				# This record has geoSpatial bounding lines
-				# Convert into an array of closed bounding box points (clockwise polygon)
-				record["geospatial"] = {"type": "Polygon", "coordinates": [[[record["northBL"][0], record["westBL"][0]], [record["northBL"][0], record["eastBL"][0]], [record["southBL"][0], record["westBL"][0]], [record["southBL"][0], record["eastBL"][0]]]]}
+				try:
+					# This record has geoSpatial bounding lines
+					# Convert into an array of closed bounding box points (clockwise polygon)
+					record["geospatial"] = {"type": "Polygon", "coordinates": [[
+						[float(record["northBL"][0]), float(record["westBL"][0])],
+						[float(record["northBL"][0]), float(record["eastBL"][0])], 
+						[float(record["southBL"][0]), float(record["westBL"][0])], 
+						[float(record["southBL"][0]), float(record["eastBL"][0])]
+					]]}
+				except ValueError:
+					self.logger.error("Problem parsing geo data for record: {}".format(record["identifier"]))
+					pass
 
 
 		if self.metadataprefix.lower() == "fgdc" or self.metadataprefix.lower() == "fgdc-std":
@@ -189,21 +198,46 @@ class OAIRepository(HarvestRepository):
 			if "bounding" in record.keys():
 				# Sometimes point data is hacked in as a bounding box
 				if record["westbc"] == record["eastbc"] and record["northbc"] == record["southbc"]:
-					record["geospatial"] = {"type": "Point", "coordinates": [[[record["northbc"][0], record["westbc"][0]]]]}
+					try:
+						record["geospatial"] = {"type": "Point", "coordinates": [[
+							[float(record["northbc"][0]), float(record["westbc"][0])]
+						]]}
+					except ValueError:
+						self.logger.error("Problem parsing geo data for record: {}".format(record["identifier"]))
+						pass
 				else:
-					record["geospatial"] = {"type": "Polygon", "coordinates": [[[record["northbc"][0], record["westbc"][0]], [record["northbc"][0], record["eastbc"][0]], [record["southbc"][0], record["westbc"][0]], [record["southbc"][0], record["eastbc"][0]]]]}
-
+					try:
+						record["geospatial"] = {"type": "Polygon", "coordinates": [[
+							[float(record["northbc"][0]), float(record["westbc"][0])],
+							[float(record["northbc"][0]), float(record["eastbc"][0])],
+							[float(record["southbc"][0]), float(record["westbc"][0])],
+							[float(record["southbc"][0]), float(record["eastbc"][0])]
+						]]}
+					except ValueError:
+						self.logger.error("Problem parsing geo data for record: {}".format(record["identifier"]))
+						pass
 
 		if self.metadataprefix.lower() == "frdr":
 			record["coverage"] = record.get("geolocationPlace")
 
 			if "geolocationPoint" in record.keys():
-				record["geospatial"] = {"type": "Point", "coordinates": [[record["geolocationPoint"][0].split()]]}
+				try:
+					record["geospatial"] = {"type": "Point", "coordinates": [
+						[float(v) for v in record["geolocationPoint"][0].split()]
+					]}
+				except ValueError:
+					self.logger.error("Problem parsing geo data for record: {}".format(record["identifier"]))
+					pass					
 			
 			if "geolocationBox" in record.keys():
-				boxcoordinates = record["geolocationBox"][0].split()
-				record["geospatial"] = {"type": "Polygon", "coordinates": [[boxcoordinates[x:x+2] for x in range (0, len(boxcoordinates),2)]]}
-
+				try:
+					boxcoordinates = [float(v) for v in record["geolocationBox"][0].split()]
+					record["geospatial"] = {"type": "Polygon", "coordinates": [
+						[boxcoordinates[x:x+2] for x in range (0, len(boxcoordinates),2)]
+					]}
+				except ValueError:
+					self.logger.error("Problem parsing geo data for record: {}".format(record["identifier"]))
+					pass
 
 		if 'identifier' not in record.keys():
 			return None

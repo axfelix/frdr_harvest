@@ -2,6 +2,9 @@ import time
 import re
 from harvester.TimeFormatter import TimeFormatter
 
+import urllib3
+urllib3.disable_warnings() #We are not loading any unsafe sites, just repos we trust
+
 class HarvestRepository(object):
 	""" Top level representation of a repository """
 
