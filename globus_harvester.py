@@ -86,10 +86,14 @@ if __name__ == "__main__":
 	        elif repoconfig['type'] == "csw":
 	        	repo = CSWRepository(final_config)
 	        repo.setLogger(main_log)
+	        if 'copyerrorstoemail' in repoconfig and not repoconfig['copyerrorstoemail']:
+	        	main_log.setErrorsToEmail(False)
 	        repo.setRepoParams(repoconfig)
 	        repo.setDatabase(dbh)
 	        repo.crawl()
 	        repo.update_stale_records(config['db'])
+	        if 'copyerrorstoemail' in repoconfig and not repoconfig['copyerrorstoemail']:
+	        	main_log.restoreErrorsToEmail()
 
 	if arguments["--onlyharvest"] == True:
 	    raise SystemExit

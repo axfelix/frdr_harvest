@@ -66,7 +66,7 @@ class HarvestRepository(object):
 					self._crawl()
 					self.db.update_last_crawl(self.repository_id)
 				except Exception as e:
-					self.logger.error("Repository unable to be harvested: {}".format(e))
+					self.logger.error("Repository {} unable to be harvested: {}".format(self.name,e))
 			else:
 				self.logger.info("This repo is not yet due to be harvested")
 		else:
