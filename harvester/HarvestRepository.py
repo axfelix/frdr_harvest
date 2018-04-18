@@ -89,7 +89,6 @@ class HarvestRepository(object):
 		tstart = time.time()
 		self.logger.info("Looking for stale records to update")
 		stale_timestamp = int(time.time() - self.record_refresh_days*86400)
-		self.dbtype = dbparams.get('type', None)
 
 		records = self.db.get_stale_records(stale_timestamp,self.repository_id, self.max_records_updated_per_run)
 		for record in records:
