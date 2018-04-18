@@ -180,6 +180,12 @@ class DBInterface:
 		records = self.get_multiple_records("repositories", "repository_id", "repository_url", repo_url, extrawhere)
 		for record in records:
 			returnvalue = int(record['repository_id'])
+		# If not found, look for insecure version of the url, it may have just changed to https on this pass
+		if returnvalue == 0 and repo_url.startswith('https:'):
+			repo_url = repo_url.replace("https:", "http:")
+			records = self.get_multiple_records("repositories", "repository_id", "repository_url", repo_url, extrawhere)
+			for record in records:
+				returnvalue = int(record['repository_id'])			
 		return returnvalue
 
 	def get_repo_last_crawl(self, repo_id):

@@ -2,6 +2,9 @@ import time
 import re
 from harvester.TimeFormatter import TimeFormatter
 
+import urllib3
+urllib3.disable_warnings() #We are not loading any unsafe sites, just repos we trust
+
 class HarvestRepository(object):
 	""" Top level representation of a repository """
 
@@ -63,7 +66,7 @@ class HarvestRepository(object):
 					self._crawl()
 					self.db.update_last_crawl(self.repository_id)
 				except Exception as e:
-					self.logger.error("Repository unable to be harvested: {}".format(e))
+					self.logger.error("Repository {} unable to be harvested: {}".format(self.name,e))
 			else:
 				self.logger.info("This repo is not yet due to be harvested")
 		else:
@@ -86,7 +89,6 @@ class HarvestRepository(object):
 		tstart = time.time()
 		self.logger.info("Looking for stale records to update")
 		stale_timestamp = int(time.time() - self.record_refresh_days*86400)
-		self.dbtype = dbparams.get('type', None)
 
 		records = self.db.get_stale_records(stale_timestamp,self.repository_id, self.max_records_updated_per_run)
 		for record in records:
