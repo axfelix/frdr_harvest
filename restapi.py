@@ -1,61 +1,99 @@
 #!/usr/bin/python3
 
-from flask import Flask
-from flask import request
+from flask import Flask, request
 from flask_restful import reqparse, abort, Api, Resource
 import configparser
 import logging
 import atexit
+import time
 import daemon
+import os
 from lockfile.pidlockfile import PIDLockFile
 
 from harvester.DBInterface import DBInterface
 from harvester.HarvestLogger import HarvestLogger
 
 app = Flask(__name__)
+
+# Disable the default logging, it will not work in daemon mode
 app.logger.disabled = True
 log = logging.getLogger('werkzeug')
 log.disabled = True
 
 api = Api(app)
 
-LISTEN_PORT = 8101
-PIDFILE = '/tmp/harvestapi.pid'
-REPOS = {"count": 0, "repositories": []}
-api_log = None
+CACHE = {"repositories": {"count": 0, "repositories": [], "timestamp": 0}}
+CONFIG = {"restapi": None, "db": None, "handles": {}}
+
+def get_log():
+	if "log" not in CONFIG["handles"]:
+		CONFIG["handles"]["log"] = HarvestLogger(CONFIG["restapi"]["logging"])
+		CONFIG["handles"]["log"].info("Harvest REST API process starting on port {}".format(CONFIG["restapi"]["api"]["listen_port"]))
+	return CONFIG["handles"]["log"]
+
+def get_db():
+	if "db" not in CONFIG["handles"]:
+		CONFIG["handles"]["db"] = DBInterface(CONFIG['db'])
+	return CONFIG["handles"]["db"]
+
+def check_cache(objname):
+	if objname in CACHE:
+		if (int(time.time()) - CACHE[objname]["timestamp"] > int(CONFIG["restapi"]["api"]["max_cache_age"]) ):
+			get_log().debug("Cache expired for {}; reloading".format(objname))
+			if objname == "repositories":
+				records = get_db().get_repositories()
+				for record in records:
+					# Explicitly expose selected info here, so we do not accidentally leak internal data or something added in the future
+					this_repo = {
+						"repository_id":        record["repository_id"],
+						"repository_name":      record["repository_name"],
+						"repository_url":       record["repository_url"],
+						"homepage_url":         record["homepage_url"],
+						"repository_thumbnail": record["repository_thumbnail"],
+						"repository_type":      record["repository_type"],
+						"item_count":           record["item_count"]
+					}
+					CACHE["repositories"]["repositories"].append(this_repo)
+				CACHE["repositories"]["count"] = len(records)
+				CACHE["repositories"]["timestamp"] = int(time.time())
 
 def log_shutdown():
-    api_log.info("REST API process shutting down")
+	get_log().info("REST API process shutting down")
 
-def get_config_ini(config_file="conf/restapi.conf"):
-    config = configparser.ConfigParser()
-    config.read(config_file)
-    return config
+def get_config_ini(config_file):
+	c = configparser.ConfigParser()
+	try:
+		c.read(config_file)
+		return c
+	except:
+		return None
 
 ## API Methods
 
 # Shows a single repo
 class Repo(Resource):
-    def get(self, repo_id):
-        repo_id = int(repo_id)
-        api_log.debug("{} GET /repos/{}".format(request.remote_addr, repo_id))
-        for repo in REPOS["repositories"]:
-            if int(repo["repository_id"]) == repo_id:
-                return repo
-        abort(404, message="Repo {} doesn't exist".format(repo_id))
+	def get(self, repo_id):
+		repo_id = int(repo_id)
+		get_log().debug("{} GET /repos/{}".format(request.remote_addr, repo_id))
+		check_cache("repositories")
+		for repo in CACHE["repositories"]["repositories"]:
+			if int(repo["repository_id"]) == repo_id:
+				return repo
+		abort(404, message="Repo {} doesn't exist".format(repo_id))
 
 
 # Shows a list of all repos
 class RepoList(Resource):
-    def get(self):
-        api_log.debug("{} GET /repos".format(request.remote_addr))
-        return REPOS
+	def get(self):
+		get_log().debug("{} GET /repos".format(request.remote_addr))
+		check_cache("repositories")
+		return CACHE["repositories"]
 
 # Default response
 class Default(Resource):
-    def get(self):
-        api_log.debug("{} GET /".format(request.remote_addr))
-        return {}
+	def get(self):
+		get_log().debug("{} GET /".format(request.remote_addr))
+		return {}
 
 ## API resource routing
 
@@ -65,30 +103,10 @@ api.add_resource(Default, '/')
 
 
 if __name__ == '__main__':
-    api_config = get_config_ini()
-    harvester_config = get_config_ini("conf/harvester.conf")
-
-    api_log = HarvestLogger(api_config['logging'])
-    dbh = DBInterface(harvester_config['db'])
-    dbh.setLogger(api_log)
-
-    records = dbh.get_repositories()
-    for record in records:
-        # Explicitly expose selected info here, so we do not accidentally leak internal data or something added in the future
-        this_repo = {
-            "repository_id":        record["repository_id"],
-            "repository_name":      record["repository_name"],
-            "repository_url":       record["repository_url"],
-            "homepage_url":         record["homepage_url"],
-            "repository_thumbnail": record["repository_thumbnail"],
-            "repository_type":      record["repository_type"],
-            "item_count":           record["item_count"]
-        }
-        REPOS["repositories"].append(this_repo)
-    REPOS["count"] = len(records)
-
-    atexit.register(log_shutdown)
-    api_log.info("REST API process starting on port {}".format(LISTEN_PORT))
-
-    with daemon.DaemonContext(pidfile=PIDLockFile(PIDFILE)):
-        app.run(host='0.0.0.0', port=LISTEN_PORT)
+	CONFIG["restapi"] = get_config_ini("conf/restapi.conf")
+	CONFIG["db"] = get_config_ini("conf/harvester.conf")["db"]
+ 
+	with daemon.DaemonContext(pidfile=PIDLockFile(CONFIG["restapi"]["api"]["pidfile"]), working_directory=os.getcwd()):
+		atexit.register(log_shutdown)
+		get_log()
+		app.run(host='0.0.0.0', debug=False, port=int(CONFIG["restapi"]["api"]["listen_port"]))
