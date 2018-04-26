@@ -41,9 +41,16 @@ def run_admin_server(with_tls=False):
     # Initial setup magic
     app = Flask(__name__)
     basic_auth = BasicAuth(app)
-    db_connection_str = '%s%s%s%s%s%s%s%s' % (
-        'postgresql://', str(config['db'].get('user')), ':', str(config['db'].get('pass')),
-        '@', str(config['db'].get('host')), '/', str(config['db'].get('dbname')))
+    db_type = str(config['db'].get('type'))
+    if db_type == 'postgres':
+        db_connection_str = '%s%s%s%s%s%s%s%s' % (
+            'postgresql://', str(config['db'].get('user')), ':', str(config['db'].get('pass')),
+            '@', str(config['db'].get('host')), '/', str(config['db'].get('dbname')))
+    elif db_type == 'sqlite':
+        db_connection_str = '%s%s' % ('sqlite:///../', str(config['db'].get('dbname')))
+    else:
+        LOGGER.error("Unsupported database type, exiting")
+        sys.exit(1)
     app.config['SQLALCHEMY_DATABASE_URI'] = db_connection_str
     app.config['SECRET_KEY'] = os.urandom(24)
     app.config['BASIC_AUTH_USERNAME'] = config['db'].get('user')
@@ -92,7 +99,6 @@ def run_admin_server(with_tls=False):
     # Set up SSL.
     pid = '/tmp/hadmin.pid'
     if (with_tls):
-        print("TLS")
         cert_path = config['admin'].get('cert_path')
         key_path = config['admin'].get('key_path')
         with daemon.DaemonContext(pidfile=PIDLockFile(pid)):
