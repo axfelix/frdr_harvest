@@ -301,9 +301,9 @@ class OAIRepository(HarvestRepository):
 			if record["type"] and "Dataset" not in record["type"]:
 				return None
 
-		# EPrints workaround to fix Nones in Rights
+		# EPrints workaround to fix duplicates and Nones in Rights
 		if isinstance(record["rights"], list):
-			record["rights"] = list(filter(None.__ne__, record["rights"]))
+			record["rights"] = list(set(filter(None.__ne__, record["rights"])))
 
 		# EPrints workaround for liberal use of dc:identifier
 		# Rather not hardcode a single source URL for this
