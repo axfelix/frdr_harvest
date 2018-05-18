@@ -42,6 +42,7 @@ def check_cache(objname):
 			get_log().debug("Cache expired for {}; reloading".format(objname))
 			if objname == "repositories":
 				records = get_db().get_repositories()
+				CACHE["repositories"]["repositories"][:] = [] # Purge existing list
 				for record in records:
 					# Explicitly expose selected info here, so we do not accidentally leak internal data or something added in the future
 					this_repo = {
