@@ -1,7 +1,7 @@
 """Globus Harvester.
 
 Usage:
-  globus_harvester.py [--onlyharvest | --onlyexport] [--only-new-records] [--export-filepath=<file>] [--export-format=<format>] [--init]
+  globus_harvester.py [--onlyharvest | --onlyexport | --init] [--only-new-records] [--export-filepath=<file>] [--export-format=<format>]
 
 Options:
   --onlyharvest             Just harvest new items, do not export anything.
