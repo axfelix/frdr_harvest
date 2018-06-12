@@ -1,7 +1,7 @@
 """Globus Harvester.
 
 Usage:
-  globus_harvester.py [--onlyharvest | --onlyexport] [--only-new-records] [--export-filepath=<file>] [--export-format=<format>]
+  globus_harvester.py [--onlyharvest | --onlyexport | --init] [--only-new-records] [--export-filepath=<file>] [--export-format=<format>]
 
 Options:
   --onlyharvest             Just harvest new items, do not export anything.
@@ -9,6 +9,7 @@ Options:
   --only-new-records        Only export records changed since last crawl.
   --export-filepath=<file>  The path to export the data to.
   --export-format=<format>  The export format (gmeta or rifcs).
+  --init                    Just initialize the database, do not harvest or export.
 
 """
 
@@ -54,7 +55,17 @@ if __name__ == "__main__":
 
 	instance_lock = Lock()
 	tstart = time.time()
+
 	arguments = docopt(__doc__)
+	run_export = True
+	run_harvest = True
+	if arguments["--onlyexport"] == True:
+		run_harvest = False
+	if arguments["--onlyharvest"] == True:
+		run_export = False
+	if arguments["--init"] == True:
+		run_export = False
+		run_harvest = False
 
 	config = get_config_ini()
 	final_config = {}
@@ -72,9 +83,9 @@ if __name__ == "__main__":
 
 	dbh = DBInterface(config['db'])
 	dbh.setLogger(main_log)
-
 	repo_configs = get_config_json()
-	if arguments["--onlyexport"] == False:
+
+	if run_harvest:
 	    # Find any new information in the repositories
 	    for repoconfig in repo_configs['repos']:
 	        if repoconfig['type'] == "oai":
@@ -95,25 +106,22 @@ if __name__ == "__main__":
 	        if 'copyerrorstoemail' in repoconfig and not repoconfig['copyerrorstoemail']:
 	        	main_log.restoreErrorsToEmail()
 
-	if arguments["--onlyharvest"] == True:
-	    raise SystemExit
-
-	if arguments["--export-format"]:
-	    final_config['export_format'] = arguments["--export-format"]
-	if arguments["--export-filepath"]:
-	    final_config['export_filepath'] = arguments["--export-filepath"]
-
-	exporter = Exporter(dbh, main_log, final_config)
-
-	kwargs = {
-		"export_format": final_config['export_format'],
-		"export_filepath": final_config['export_filepath'],
-		"only_new_records": False,
-		"temp_filepath": final_config['temp_filepath']
-	}
-	if arguments["--only-new-records"] == True:
-	    kwargs["only_new_records"] = True
-	exporter.export_to_file(**kwargs)
+	if run_export:
+		# Export the database contents out to files
+		if arguments["--export-format"]:
+		    final_config['export_format'] = arguments["--export-format"]
+		if arguments["--export-filepath"]:
+		    final_config['export_filepath'] = arguments["--export-filepath"]
+		exporter = Exporter(dbh, main_log, final_config)
+		kwargs = {
+			"export_format": final_config['export_format'],
+			"export_filepath": final_config['export_filepath'],
+			"only_new_records": False,
+			"temp_filepath": final_config['temp_filepath']
+		}
+		if arguments["--only-new-records"] == True:
+		    kwargs["only_new_records"] = True
+		exporter.export_to_file(**kwargs)
 
 	formatter = TimeFormatter()
 	main_log.info("Done after {}".format(formatter.humanize(time.time() - tstart)))
