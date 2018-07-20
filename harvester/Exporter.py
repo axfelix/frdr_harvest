@@ -87,8 +87,12 @@ class Exporter(object):
 			if buffer_size > buffer_limit:
 				gmeta_batches += 1
 				self.logger.debug("Writing batch {} to output file".format(gmeta_batches))
-				gingest_block = {"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":gmeta}}
-				self._write_to_file(json.dumps(gingest_block), export_filepath, temp_filepath, "gmeta", gmeta_batches)
+				if self.export_format == "gmeta":
+					output = json.dumps({"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":gmeta}})
+				elif self.export_format == "xml":
+					output = self._wrap_xml_output(gmeta)
+				if output:
+					self._write_to_file(output, export_filepath, temp_filepath, self.export_format, gmeta_batches)
 				gmeta = []
 				buffer_size = 0
 
@@ -245,6 +249,7 @@ class Exporter(object):
 		self.logger.info("gmeta size: {} items in {} files".format(records_assembled, gmeta_batches + 1))
 		return gmeta, deleted
 
+	# Not used currently; the only other RIFCS code remaining is templates.
 	def _validate_rifcs(self, rifcs):
 		self.logger.info("Exporter: _validate_rifs called")
 		with open('schema/registryObjects.xsd', 'r') as f:
@@ -259,6 +264,19 @@ class Exporter(object):
 			self.logger.error("Invalid RIFCS Generated")
 			raise SystemExit
 
+	def _wrap_xml_output(self, gmeta_dict):
+		import dicttoxml
+		from lxml import etree
+
+		parser = etree.XMLParser(remove_blank_text=True)
+		xml_tree = etree.parse("schema/stub.xml", parser)
+		recordtag = xml_tree.find(".//records")
+
+		for entry in gmeta_dict:
+			record_xml = etree.fromstring(dicttoxml.dicttoxml(entry, attr_type=False, custom_root='record'), parser)
+			recordtag.append(record_xml)
+
+		return xml_tree
 
 	def _write_to_file(self, output, export_filepath, temp_filepath, export_format, batch_number=False):
 		try:
@@ -266,20 +284,27 @@ class Exporter(object):
 		except:
 			pass
 
-		if batch_number:
-			export_basename = "gmeta_" + str(batch_number) + ".json"
-		elif export_format == "gmeta":
-			export_basename = "gmeta.json"
-		elif export_format == "rifcs":
-			export_basename = "rifcs.xml"
+		if export_format == "gmeta":
+			if batch_number:
+				export_basename = "gmeta_" + str(batch_number) + ".json"
+			else:
+				export_basename = "gmeta.json"
+		elif export_format == "xml":
+			if batch_number:
+				export_basename = "frdr_" + str(batch_number) + ".xml"
+			else:
+				export_basename = "frdr.xml"
 		elif export_format == "delete":
 			export_basename = "delete.txt"
 
 		temp_filename = os.path.join(temp_filepath, export_basename)
 
 		try:
-			with open(temp_filename, "w") as tempfile:
-				tempfile.write(output)
+			if export_format == "gmeta":
+				with open(temp_filename, "w") as tempfile:
+					tempfile.write(output)
+			elif export_format == "xml":
+				output.write(temp_filename, pretty_print=True, xml_declaration=True, encoding='UTF-8')
 		except:
 			self.logger.error("Unable to write output data to temporary file: {}".format(temp_filename))
 
@@ -310,12 +335,11 @@ class Exporter(object):
 		self._cleanup_previous_exports(self.export_filepath, "delete")
 		self._cleanup_previous_exports(self.temp_filepath, self.export_format)
 
+		gmeta_block, delete_list = self._generate_gmeta(self.export_filepath, self.temp_filepath, self.only_new_records)
 		if self.export_format == "gmeta":
-			gmeta_block, delete_list = self._generate_gmeta(self.export_filepath, self.temp_filepath, self.only_new_records)
 			output = json.dumps({"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":gmeta_block}})
-		elif self.export_format == "rifcs":
-			from lxml import etree
-			output = self._generate_rifcs()
+		elif self.export_format == "xml":
+			output = self._wrap_xml_output(gmeta_block)
 		else:
 			self.logger.error("Unknown export format: {}".format(self.export_format))
 

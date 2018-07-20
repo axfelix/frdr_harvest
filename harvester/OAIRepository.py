@@ -302,7 +302,7 @@ class OAIRepository(HarvestRepository):
 				return None
 
 		# EPrints workaround to fix duplicates and Nones in Rights
-		if isinstance(record["rights"], list):
+		if "rights" in record.keys() and isinstance(record["rights"], list):
 			record["rights"] = list(set(filter(None.__ne__, record["rights"])))
 
 		# EPrints workaround for liberal use of dc:identifier
