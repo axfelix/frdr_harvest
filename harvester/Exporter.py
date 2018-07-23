@@ -273,6 +273,9 @@ class Exporter(object):
 		recordtag = xml_tree.find(".//records")
 
 		for entry in gmeta_dict:
+			entry.pop("@datatype", None)
+			entry.pop("@version", None)
+			entry.pop("mimetype", None)
 			record_xml = etree.fromstring(dicttoxml.dicttoxml(entry, attr_type=False, custom_root='record'), parser)
 			recordtag.append(record_xml)
 
