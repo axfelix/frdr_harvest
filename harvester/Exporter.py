@@ -279,7 +279,7 @@ class Exporter(object):
 			xml_dict["visible_to"] = entry["visible_to"]
 
 			for k,v in entry["content"].items():
-				sanitized = re.sub(":", "_", k)
+				sanitized = re.sub("[:@\.]", "_", k)
 				xml_dict[sanitized] = v
 
 			record_xml = etree.fromstring(dicttoxml.dicttoxml(xml_dict, attr_type=False, custom_root='record'), parser)
