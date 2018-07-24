@@ -270,6 +270,12 @@ class Exporter(object):
 
 		parser = etree.XMLParser(remove_blank_text=True)
 		xml_tree = etree.parse("schema/stub.xml", parser)
+
+		root_tag = xml_tree.getroot()
+		context_block = gmeta_dict[0]["content"]["@context"]
+		context_xml = etree.fromstring(dicttoxml.dicttoxml(context_block, attr_type=False, custom_root='schema'), parser)
+		root_tag.append(context_xml)
+
 		recordtag = xml_tree.find(".//records")
 
 		for entry in gmeta_dict:
@@ -279,8 +285,9 @@ class Exporter(object):
 			xml_dict["visible_to"] = entry["visible_to"]
 
 			for k,v in entry["content"].items():
-				sanitized = re.sub("[:@\.]", "_", k)
-				xml_dict[sanitized] = v
+				if k != "@context":
+					sanitized = re.sub("[:\.]", "_", k)
+					xml_dict[sanitized] = v
 
 			record_xml = etree.fromstring(dicttoxml.dicttoxml(xml_dict, attr_type=False, custom_root='record'), parser)
 			recordtag.append(record_xml)
