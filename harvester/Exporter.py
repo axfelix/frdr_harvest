@@ -273,10 +273,16 @@ class Exporter(object):
 		recordtag = xml_tree.find(".//records")
 
 		for entry in gmeta_dict:
-			entry.pop("@datatype", None)
-			entry.pop("@version", None)
-			entry.pop("mimetype", None)
-			record_xml = etree.fromstring(dicttoxml.dicttoxml(entry, attr_type=False, custom_root='record'), parser)
+			xml_dict = {}
+			xml_dict["subject"] = entry["subject"]
+			xml_dict["id"] = entry["id"]
+			xml_dict["visible_to"] = entry["visible_to"]
+
+			for k,v in entry["content"].items():
+				sanitized = re.sub(":", "_", k)
+				xml_dict[sanitized] = v
+
+			record_xml = etree.fromstring(dicttoxml.dicttoxml(xml_dict, attr_type=False, custom_root='record'), parser)
 			recordtag.append(record_xml)
 
 		return xml_tree
