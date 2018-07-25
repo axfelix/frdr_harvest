@@ -289,7 +289,7 @@ class Exporter(object):
 		context_xml = etree.fromstring(dicttoxml.dicttoxml(context_block, attr_type=False, custom_root='schema'), parser)
 		root_tag.insert(0,context_xml)
 
-		control_block = { "timestamp": int(round(time.mktime(timestamp) * 1000)), "datestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", timestamp) }
+		control_block = { "timestamp": int(round(time.mktime(timestamp))), "datestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", timestamp) }
 		control_xml = etree.fromstring(dicttoxml.dicttoxml(control_block, attr_type=False, custom_root='generated'), parser)
 		root_tag.insert(0,control_xml)
 
