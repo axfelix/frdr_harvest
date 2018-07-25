@@ -242,9 +242,44 @@ class Exporter(object):
 		self.logger.info("Export complete: {} items in {} files".format(records_assembled, self.batch_number))
 		return deleted
 
+	def change_keys(self, obj, dropkeys):
+		""" Recursively goes through the object and replaces keys """
+		if isinstance(obj, (str, int, float)):
+			return obj
+		if isinstance(obj, dict):
+			new = obj.__class__()
+			for k, v in obj.items():
+				if k in dropkeys:
+					continue
+				newkey = re.sub("[:\.]", "_", k)
+				new[newkey] = self.change_keys(v, dropkeys)
+		elif isinstance(obj, (list, set, tuple)):
+			new = obj.__class__(self.change_keys(v, dropkeys) for v in obj)
+		else:
+			return obj
+		return new
+
+	def xml_child_namer(self, parent):
+		child_keys = {
+			"dc_contributor": "contributor",
+			"dc_contributor_author": "author",
+			"dc_description": "description",
+			"dc_publisher": "publisher",
+			"dc_rights": "rights",
+			"dc_subject": "subject",
+			"frdr_access": "access",
+			"frdr_tags": "tag",
+			"frdr_tags_fr": "tag",
+			"visible_to": "visibility"
+		}
+		if parent in child_keys:
+			return child_keys[parent]
+		return "item"
+
 	def _wrap_xml_output(self, gmeta_dict, timestamp):
 		import dicttoxml
 		from lxml import etree
+		keys_to_drop = ["@context", "subject", "frdr:geospatial"]
 
 		parser = etree.XMLParser(remove_blank_text=True)
 		xml_tree = etree.parse("schema/stub.xml", parser)
@@ -252,24 +287,19 @@ class Exporter(object):
 
 		context_block = gmeta_dict[0]["content"]["@context"]
 		context_xml = etree.fromstring(dicttoxml.dicttoxml(context_block, attr_type=False, custom_root='schema'), parser)
-		root_tag.insert(1,context_xml)
+		root_tag.insert(0,context_xml)
 
 		control_block = { "timestamp": int(round(time.mktime(timestamp) * 1000)), "datestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", timestamp) }
 		control_xml = etree.fromstring(dicttoxml.dicttoxml(control_block, attr_type=False, custom_root='generated'), parser)
-		root_tag.insert(1,control_xml)
+		root_tag.insert(0,control_xml)
 
 		recordtag = xml_tree.find(".//records")
 		for entry in gmeta_dict:
-			xml_dict = {}
+			xml_dict = self.change_keys(entry["content"], keys_to_drop)
 			xml_dict["id"] = entry["id"]
 			xml_dict["visible_to"] = entry["visible_to"]
 
-			for k,v in entry["content"].items():
-				if k not in ["@context","subject"]:
-					sanitized = re.sub("[:\.]", "_", k)
-					xml_dict[sanitized] = v
-
-			record_xml = etree.fromstring(dicttoxml.dicttoxml(xml_dict, attr_type=False, custom_root='record'), parser)
+			record_xml = etree.fromstring(dicttoxml.dicttoxml(xml_dict, attr_type=False, custom_root='record', item_func=self.xml_child_namer), parser)
 			recordtag.append(record_xml)
 
 		return xml_tree
