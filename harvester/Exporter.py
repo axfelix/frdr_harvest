@@ -57,10 +57,9 @@ class Exporter(object):
 		local_url = None
 		return local_url
 
-
-	def _generate_gmeta(self, export_filepath, temp_filepath, only_new_records):
+	def _generate_gmeta(self, export_filepath, temp_filepath, only_new_records, start_time):
 		self.logger.info("Exporter: generate_gmeta called")
-		gmeta = []
+		self.output_buffer = []
 		deleted = []
 
 		try:
@@ -81,20 +80,11 @@ class Exporter(object):
 		self.logger.info("Exporter: output file size limited to {} MB each".format(int(self.export_limit)))
 
 		records_assembled = 0
-		gmeta_batches = 0
-		buffer_size = 0
+		self.batch_number = 1
+		self.buffer_size = 0
 		for row in records_cursor:
-			if buffer_size > buffer_limit:
-				gmeta_batches += 1
-				self.logger.debug("Writing batch {} to output file".format(gmeta_batches))
-				if self.export_format == "gmeta":
-					output = json.dumps({"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":gmeta}})
-				elif self.export_format == "xml":
-					output = self._wrap_xml_output(gmeta)
-				if output:
-					self._write_to_file(output, export_filepath, temp_filepath, self.export_format, gmeta_batches)
-				gmeta = []
-				buffer_size = 0
+			if self.buffer_size > buffer_limit:
+				self._write_batch(export_filepath, temp_filepath, start_time)
 
 			record = (dict(zip(['record_id','title', 'pub_date', 'contact', 'series', 'source_url', 'deleted', 'local_identifier', 'modified_timestamp',
 				'repository_url', 'repository_name', 'repository_thumbnail', 'item_url_pattern',  'last_crawl_timestamp'], row)))
@@ -239,53 +229,43 @@ class Exporter(object):
 				record["@context"].update({short_label: custom_schema})
 			record["datacite:resourceTypeGeneral"] = "dataset"
 			gmeta_data = {"@datatype": "GMetaEntry", "@version": "2016-11-09", "subject": record["dc:source"], "id": record["dc:source"], "visible_to": ["public"], "mimetype": "application/json", "content": record}
-			gmeta.append(gmeta_data)
+			self.output_buffer.append(gmeta_data)
 
-			buffer_size = buffer_size + len(json.dumps(gmeta_data))
+			self.buffer_size = self.buffer_size + len(json.dumps(gmeta_data))
 			records_assembled += 1
 			if (records_assembled % 1000 == 0):
 				self.logger.info("Done processing {} records for export".format(records_assembled))
 
-		self.logger.info("gmeta size: {} items in {} files".format(records_assembled, gmeta_batches + 1))
-		return gmeta, deleted
+		if self.output_buffer:
+			self._write_batch(export_filepath, temp_filepath, start_time)
 
-	# Not used currently; the only other RIFCS code remaining is templates.
-	def _validate_rifcs(self, rifcs):
-		self.logger.info("Exporter: _validate_rifs called")
-		with open('schema/registryObjects.xsd', 'r') as f:
-			schema_root = etree.XML(f.read())
-		schema = etree.XMLSchema(schema_root)
-		# Generate parser and fix any XML bugs from the templating.
-		xmlparser = etree.XMLParser(schema=schema, recover = True)
-		try:
-			etree.fromstring(rifcs, xmlparser)
-			self.logger.info("Valid RIFCS Generated")
-		except etree.XMLSchemaError:
-			self.logger.error("Invalid RIFCS Generated")
-			raise SystemExit
+		self.logger.info("Export complete: {} items in {} files".format(records_assembled, self.batch_number))
+		return deleted
 
-	def _wrap_xml_output(self, gmeta_dict):
+	def _wrap_xml_output(self, gmeta_dict, timestamp):
 		import dicttoxml
 		from lxml import etree
 
 		parser = etree.XMLParser(remove_blank_text=True)
 		xml_tree = etree.parse("schema/stub.xml", parser)
-
 		root_tag = xml_tree.getroot()
+
 		context_block = gmeta_dict[0]["content"]["@context"]
 		context_xml = etree.fromstring(dicttoxml.dicttoxml(context_block, attr_type=False, custom_root='schema'), parser)
-		root_tag.append(context_xml)
+		root_tag.insert(1,context_xml)
+
+		control_block = { "timestamp": int(round(time.mktime(timestamp) * 1000)), "datestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", timestamp) }
+		control_xml = etree.fromstring(dicttoxml.dicttoxml(control_block, attr_type=False, custom_root='generated'), parser)
+		root_tag.insert(1,control_xml)
 
 		recordtag = xml_tree.find(".//records")
-
 		for entry in gmeta_dict:
 			xml_dict = {}
-			xml_dict["subject"] = entry["subject"]
 			xml_dict["id"] = entry["id"]
 			xml_dict["visible_to"] = entry["visible_to"]
 
 			for k,v in entry["content"].items():
-				if k != "@context":
+				if k not in ["@context","subject"]:
 					sanitized = re.sub("[:\.]", "_", k)
 					xml_dict[sanitized] = v
 
@@ -294,33 +274,41 @@ class Exporter(object):
 
 		return xml_tree
 
-	def _write_to_file(self, output, export_filepath, temp_filepath, export_format, batch_number=False):
+	def _write_batch(self, export_filepath, temp_filepath, start_time):
+		self.logger.debug("Writing batch {} to output file".format(self.batch_number))
+		if self.export_format == "gmeta":
+			output = json.dumps({"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":self.output_buffer}})
+		elif self.export_format == "xml":
+			output = self._wrap_xml_output(self.output_buffer, start_time)
+		if output:
+			self._write_to_file(output, export_filepath, temp_filepath)
+		self.output_buffer = []
+		self.batch_number += 1
+		self.buffer_size = 0
+
+	def _write_to_file(self, output, export_filepath, temp_filepath):
 		try:
 			os.mkdir(temp_filepath)
 		except:
 			pass
 
-		if export_format == "gmeta":
-			if batch_number:
-				export_basename = "gmeta_" + str(batch_number) + ".json"
-			else:
-				export_basename = "gmeta.json"
-		elif export_format == "xml":
-			if batch_number:
-				export_basename = "frdr_" + str(batch_number) + ".xml"
-			else:
-				export_basename = "frdr.xml"
-		elif export_format == "delete":
-			export_basename = "delete.txt"
-
-		temp_filename = os.path.join(temp_filepath, export_basename)
-
 		try:
-			if export_format == "gmeta":
+			if self.export_format == "gmeta":
+				export_basename = "gmeta_" + str(self.batch_number) + ".json"
+				temp_filename = os.path.join(temp_filepath, export_basename)
 				with open(temp_filename, "w") as tempfile:
 					tempfile.write(output)
-			elif export_format == "xml":
+
+			elif self.export_format == "xml":
+				export_basename = "export_" + str(self.batch_number) + ".xml"
+				temp_filename = os.path.join(temp_filepath, export_basename)
 				output.write(temp_filename, pretty_print=True, xml_declaration=True, encoding='UTF-8')
+
+			elif self.export_format == "delete":
+				export_basename = "delete.txt"
+				temp_filename = os.path.join(temp_filepath, export_basename)
+				with open(temp_filename, "w") as tempfile:
+					tempfile.write(output)
 		except:
 			self.logger.error("Unable to write output data to temporary file: {}".format(temp_filename))
 
@@ -332,10 +320,12 @@ class Exporter(object):
 		try:
 			os.rename(temp_filename, os.path.join(export_filepath, export_basename))
 		except:
-			self.logger.error("Unable to move temp file {} into output file location {}".format(temp_filename, export_filepath))
+			self.logger.error("Unable to move temp file: {} to output file: {}".format(temp_filename, os.path.join(export_filepath, export_basename)))
 
-	def _cleanup_previous_exports(self, dirname, export_format):
-		pattern = export_format + '_?[\d]*\.[a-z]*$'
+	def _cleanup_previous_exports(self, dirname, basename):
+		pattern = basename + '_?[\d]*\.(json|xml|txt)$'
+		if basename == "xml":
+			pattern = 'export_?[\d]*\.xml$'
 		try:
 			for f in os.listdir(dirname):
 				if re.search(pattern, f):
@@ -347,20 +337,19 @@ class Exporter(object):
 		for key, value in kwargs.items():
 			setattr(self, key, value)
 		output = None
+		start_time = time.gmtime()
+
+		if self.export_format not in ["gmeta","xml"]:
+			self.logger.error("Unknown export format: {}".format(self.export_format))
+			return
+
 		self._cleanup_previous_exports(self.export_filepath, self.export_format)
 		self._cleanup_previous_exports(self.export_filepath, "delete")
 		self._cleanup_previous_exports(self.temp_filepath, self.export_format)
 
-		gmeta_block, delete_list = self._generate_gmeta(self.export_filepath, self.temp_filepath, self.only_new_records)
-		if self.export_format == "gmeta":
-			output = json.dumps({"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada", "ingest_type": "GMetaList", "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09", "gmeta":gmeta_block}})
-		elif self.export_format == "xml":
-			output = self._wrap_xml_output(gmeta_block)
-		else:
-			self.logger.error("Unknown export format: {}".format(self.export_format))
+		delete_list = self._generate_gmeta(self.export_filepath, self.temp_filepath, self.only_new_records, start_time)
 
-		if output:
-			self._write_to_file(output, self.export_filepath, self.temp_filepath, self.export_format)
 		if len(delete_list):
 			output = "\n".join(delete_list)
-			self._write_to_file(output, self.export_filepath, self.temp_filepath, "delete")
+			self.export_format = "delete"
+			self._write_to_file(output, self.export_filepath, self.temp_filepath)
