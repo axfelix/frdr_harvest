@@ -471,9 +471,9 @@ class DBInterface:
 						self.insert_related_record("descriptions", description_hash, **extras)
 
 			if "description_fr" in record:
-				if not isinstance(record["description"], list):
-					record["description"] = [record["description"]]
-				for description in record["description"]:
+				if not isinstance(record["description_fr"], list):
+					record["description_fr"] = [record["description_fr"]]
+				for description in record["description_fr"]:
 					# Use a hash for lookups so we don't need to maintain a full text index
 					sha1 = hashlib.sha1()
 					sha1.update(description.encode('utf-8'))

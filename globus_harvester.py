@@ -23,6 +23,7 @@ from harvester.OAIRepository import OAIRepository
 from harvester.CKANRepository import CKANRepository
 from harvester.MarkLogicRepository import MarkLogicRepository
 from harvester.CSWRepository import CSWRepository
+#from harvester.SocrataRepository import SocrataRepository
 from harvester.DBInterface import DBInterface
 from harvester.HarvestLogger import HarvestLogger
 from harvester.TimeFormatter import TimeFormatter
@@ -96,6 +97,8 @@ if __name__ == "__main__":
 	            repo = MarkLogicRepository(final_config)
 	        elif repoconfig['type'] == "csw":
 	        	repo = CSWRepository(final_config)
+#	        elif repoconfig['type'] == "socrata":
+#	        	repo = SocrataRepository(final_config)
 	        repo.setLogger(main_log)
 	        if 'copyerrorstoemail' in repoconfig and not repoconfig['copyerrorstoemail']:
 	        	main_log.setErrorsToEmail(False)

@@ -41,7 +41,7 @@ class CKANRepository(HarvestRepository):
 	def format_ckan_to_oai(self, ckan_record, local_identifier):
 		record = {}
 
-		if not 'date_published' in ckan_record and not 'dates' in ckan_record:
+		if not 'date_published' in ckan_record and not 'dates' in ckan_record and not 'record_publish_date' in ckan_record and not 'metadata_created' in ckan_record:
 			return None
 
 		if ('contacts' in ckan_record) and ckan_record['contacts']:
@@ -76,7 +76,8 @@ class CKANRepository(HarvestRepository):
 		record["rights"] = [ckan_record['license_title']]
 		record["rights"].append(ckan_record.get("license_url", ""))
 		record["rights"].append(ckan_record.get("attribution", ""))
-		record["rights"] = " - ".join(record["rights"])
+		record["rights"] = "\n".join(record["rights"])
+		record["rights"] = record["rights"].strip()
 
 		# Look for publication date in a few places
 		# All of these assume the date will start with year first
@@ -92,6 +93,8 @@ class CKANRepository(HarvestRepository):
 			for date_object in ckan_record['dates']:
 				if date_object.type == "Created":
 					record["pub_date"] = date_object.date
+		elif ('metadata_created' in ckan_record):
+			record["pub_date"] = ckan_record["metadata_created"]
 
 		# Some date formats have a trailing timestamp after date (ie: "2014-12-10T15:05:03.074998Z")
 		record["pub_date"] = re.sub("[T ][0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.?[0-9]*[Z]?$", "", record["pub_date"])
@@ -106,8 +109,10 @@ class CKANRepository(HarvestRepository):
 
 		if ('contacts' in ckan_record) and ckan_record['contacts']:
 			record["contact"] = ckan_record["contacts"][0].get('email', "")
+		elif ('author_email' in ckan_record) and ckan_record['author_email']:
+			record["contact"] = ckan_record.get("author_email", "")
 		else:
-			record["contact"] = ckan_record.get("author_email", ckan_record.get("maintainer_email", ""))
+			record["contact"] = ckan_record.get("maintainer_email", "")
 
 		try: 
 			record["series"] = ckan_record["data_series_name"]["en"]
@@ -135,6 +140,10 @@ class CKANRepository(HarvestRepository):
 			record["geospatial"] = ckan_record['geometry']
 		elif ('spatial' in ckan_record) and ckan_record['spatial']:
 			record["geospatial"] = json.loads(ckan_record["spatial"])
+		elif ('extras' in ckan_record) and ckan_record['extras']:
+			for dictionary in ckan_record['extras']:
+				if ('key' in dictionary) and dictionary['key'] == "spatial":
+					 record["geospatial"] = json.loads(dictionary['value'])
 
 		# Access Constraints, if available
 		if ('private' in ckan_record) and ckan_record['private'] == True:
