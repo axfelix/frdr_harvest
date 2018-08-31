@@ -528,8 +528,9 @@ class DBInterface:
 				existing_geospatial_ids = self.get_multiple_records("geospatial", "geospatial_id", "record_id", record["record_id"])
 				if not existing_geospatial_ids:
 					for coordinates in record["geospatial"]["coordinates"][0]:
-						extras = {"record_id": record["record_id"], "lat": coordinates[0], "lon": coordinates[1]}
-						self.insert_related_record("geospatial", record["geospatial"]["type"], **extras)
+						if len(coordinates) == 2:
+							extras = {"record_id": record["record_id"], "lat": coordinates[0], "lon": coordinates[1]}
+							self.insert_related_record("geospatial", record["geospatial"]["type"], **extras)
 
 			if len(domain_metadata) > 0:
 				existing_metadata_ids = self.get_multiple_records("domain_metadata", "metadata_id", "record_id", record["record_id"])
