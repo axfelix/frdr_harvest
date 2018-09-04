@@ -1,6 +1,7 @@
 import time
 import re
 from harvester.TimeFormatter import TimeFormatter
+import traceback
 
 import urllib3
 urllib3.disable_warnings() #We are not loading any unsafe sites, just repos we trust
@@ -67,6 +68,7 @@ class HarvestRepository(object):
 					self.db.update_last_crawl(self.repository_id)
 				except Exception as e:
 					self.logger.error("Repository {} unable to be harvested: {}".format(self.name,e))
+					self.logger.error(traceback.print_exc())
 			else:
 				self.logger.info("This repo is not yet due to be harvested")
 		else:
