@@ -212,6 +212,13 @@ class OAIRepository(HarvestRepository):
 		if record["pub_date"] is None:
 			return None
 
+		# Check for affiliation tag and add it to author field per DCMI reccommendation.
+		if "creatorAffiliation" in record.keys():
+			if "creator" in record.keys():
+				record["creator"] = record["creator"] + record["creatorAffiliation"]
+			else:
+				record["creator"] = record["creatorAffilation"]
+
 		# If there are multiple identifiers, and one of them contains a link, then prefer it
 		# Otherwise just take the first one
 		if isinstance(record["identifier"], list):
