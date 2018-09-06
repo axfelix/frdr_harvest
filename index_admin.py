@@ -17,6 +17,7 @@ If running on a new host you will likely have to authorize it by running a query
 _cmd = "/opt/rdm/search_client/search-client"
 _api_host = "search.api.globus.org"
 
+
 def get_index_config(config_file="conf/globus-indexes.conf"):
     '''
     Read ini-formatted list of Globus search indexes from disk
@@ -43,8 +44,7 @@ def get_repos_config(repos_json="conf/repos.json"):
     return configdict
 
 
-def query_repository(repo_name, index_uuid, display_results = False):
-
+def query_repository(repo_name, index_uuid, display_results=False):
     """
     Display the ids  ('subjects') of all items indexed in a repository.
     :param repo_name: Textual name of repository to query, corresponds to 'name' field in conf file.
@@ -53,7 +53,7 @@ def query_repository(repo_name, index_uuid, display_results = False):
     :return: List of result ids
     """
 
-    LOGGER.info("Querying index %s for repository %s" %(index_uuid, repo_name))
+    LOGGER.info("Querying index %s for repository %s" % (index_uuid, repo_name))
     querylimit = 20
     queryobj = {"@datatype": "GSearchRequest", "@version": "2016-11-09", "advanced": True, "offset": 0,
                 "limit": querylimit, "q": "*", "filters": [
@@ -71,7 +71,7 @@ def query_repository(repo_name, index_uuid, display_results = False):
         ret = os.popen(" ".join(command)).read()
         search_results = json.loads(ret)
         results_count = search_results['count']
-        LOGGER.info("Got %i results" %(results_count))
+        LOGGER.info("Got %i results" % (results_count))
         if results_count == 0:
             break
         for result in search_results['gmeta']:
@@ -86,6 +86,7 @@ def query_repository(repo_name, index_uuid, display_results = False):
 
     return result_ids
 
+
 def delete_items(delete_id_list, index_uuid):
     """
     Delete items from a search index
@@ -93,11 +94,11 @@ def delete_items(delete_id_list, index_uuid):
     :param index_uuid: uuid of index to use
     :return:
     """
-    LOGGER.info("Got %i items to delete:" %(len(delete_id_list)))
+    LOGGER.info("Got %i items to delete:" % (len(delete_id_list)))
 
     for item in delete_id_list:
         LOGGER.info("Deleting item: %s" % (item))
-        command = [ _cmd, "--host " + _api_host, "--index " + index_uuid, "subject delete " + item]
+        command = [_cmd, "--host " + _api_host, "--index " + index_uuid, "subject delete " + item]
         ret = os.popen(" ".join(command)).read()
 
 
@@ -133,11 +134,10 @@ def main():
         else:
             cl_parser.print_usage()
     except Exception as e:
-        LOGGER.error("Parsing error: %s" %(e))
+        LOGGER.error("Parsing error: %s" % (e))
         traceback.print_exc()
         sys.exit(1)
 
 
 if __name__ == '__main__':
     main()
-
