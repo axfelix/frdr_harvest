@@ -206,6 +206,7 @@ class OAIRepository(HarvestRepository):
                         [[record["northbc"][0], record["westbc"][0]], [record["northbc"][0], record["eastbc"][0]],
                          [record["southbc"][0], record["westbc"][0]], [record["southbc"][0], record["eastbc"][0]]]]}
 
+        # Parse FRDR records
         if self.metadataprefix.lower() == "frdr":
             record["coverage"] = record.get("geolocationPlace")
 
@@ -217,6 +218,9 @@ class OAIRepository(HarvestRepository):
                 boxcoordinates = record["geolocationBox"][0].split()
                 record["geospatial"] = {"type": "Polygon", "coordinates": [
                     [boxcoordinates[x:x + 2] for x in range(0, len(boxcoordinates), 2)]]}
+            # Look for datacite.creatorAffiliation
+            if "creatorAffiliation" in record:
+                record["affiliation"] = record.get("creatorAffiliation")
 
         if 'identifier' not in record.keys():
             return None

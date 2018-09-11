@@ -155,6 +155,10 @@ class Exporter(object):
                                 (record["record_id"],))
                 record["dc:contributor.author"] = litecur.fetchall()
 
+                litecur.execute(self.db._prep("""SELECT affiliations.affiliation FROM affiliations JOIN records_x_affiliations on records_x_affiliations.affiliation_id = affiliations.affiliation_id 
+					WHERE records_x_affiliations.record_id=?"""), (record["record_id"],))
+                record["datacite:creatorAffiliation"] = litecur.fetchall()
+
                 litecur.execute(self.db._prep("""SELECT creators.creator FROM creators JOIN records_x_creators on records_x_creators.creator_id = creators.creator_id 
 					WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=1"""),
                                 (record["record_id"],))
@@ -168,8 +172,8 @@ class Exporter(object):
 					WHERE records_x_publishers.record_id=?"""), (record["record_id"],))
                 record["dc:publisher"] = litecur.fetchall()
 
-                litecur.execute(self.db._prep("""SELECT rights.rights FROM rights JOIN records_x_rights on records_x_rights.rights_id = rights.rights_id 
-					WHERE records_x_rights.record_id=?"""), (record["record_id"],))
+                litecur.execute(self.db._prep("""SELECT rights.rights FROM rights JOIN records_x_rights on records_x_rights.rights_id = rights.rights_id
+                                                       WHERE records_x_rights.record_id=?"""), (record["record_id"],))
                 record["dc:rights"] = litecur.fetchall()
 
                 litecur.execute(
