@@ -82,6 +82,8 @@ class MarkLogicRepository(HarvestRepository):
                 record["title"] = entry["TI-facet"].strip()
             if "date" in entry:
                 record["pub_date"] = str(entry["date"]).strip()
+            if "AuthEnty_affiliation" in entry:
+                record["affiliation"] = entry["AuthEnty_affiliation"].strip()
         record["identifier"] = marklogic_record["uri"].rsplit('/', 1)[1]
         record["contact"] = self.contact
         record["publisher"] = self.publisher

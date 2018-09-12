@@ -243,9 +243,11 @@ class DBInterface:
                 self.delete_related_records("records_x_publishers", record['record_id'])
                 self.delete_related_records("records_x_rights", record['record_id'])
                 self.delete_related_records("records_x_subjects", record['record_id'])
+                self.delete_related_records("records_x_affiliations", record['record_id'])
                 self.delete_related_records("records_x_tags", record['record_id'])
                 self.delete_related_records("descriptions", record['record_id'])
                 self.delete_related_records("geospatial", record['record_id'])
+                self.delete_related_records("affiliations", record['record_id'])
                 self.delete_related_records("domain_metadata", record['record_id'])
             except:
                 self.logger.error(
@@ -459,7 +461,20 @@ class DBInterface:
                         if publisher_id not in existing_publisher_ids:
                             self.insert_cross_record("records_x_publishers", "publishers", publisher_id,
                                                      record["record_id"])
-
+            if "affiliation" in record:
+                if not isinstance(record["affiliation"], list):
+                    record["affiliation"] = [record["affiliation"]]
+                existing_affiliation_recs = self.get_multiple_records("records_x_affiliations", "affiliation_id", "record_id",
+                                                                    record["record_id"])
+                existing_affiliation_ids = [e["affiliation_id"] for e in existing_affiliation_recs]
+                for affil in record["affiliation"]:
+                    affiliation_id = self.get_single_record_id("affiliations", affil)
+                    if affiliation_id is None:
+                        affiliation_id = self.insert_related_record("affiliations", affil)
+                    if affiliation_id is not None:
+                        if affiliation_id not in existing_affiliation_ids:
+                            self.insert_cross_record("records_x_affiliations", "affiliations", affiliation_id,
+                                                     record["record_id"])
             if "rights" in record:
                 if not isinstance(record["rights"], list):
                     record["rights"] = [record["rights"]]
