@@ -7,3 +7,4 @@ psycopg2
 python-daemon
 requests
 sickle
+sodapy
