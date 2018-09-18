@@ -137,6 +137,11 @@ class CKANRepository(HarvestRepository):
                 record["tags"].append(tag)
             for tag in ckan_record["keywords"]["fr"]:
                 record["tags_fr"].append(tag)
+        elif isinstance(ckan_record.get("tags_translated", ""), dict):
+            for tag in ckan_record["tags_translated"]["en"]:
+                record["tags"].append(tag)
+            for tag in ckan_record["tags_translated"]["fr"]:
+                record["tags_fr"].append(tag)
         else:
             for tag in ckan_record["tags"]:
                 record["tags"].append(tag["display_name"])
