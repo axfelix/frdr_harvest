@@ -15,7 +15,7 @@ class SocrataRepository(HarvestRepository):
 		self.metadataprefix = "socrata"
 		super(SocrataRepository, self).setRepoParams(repoParams)
 		# sodapy doesn't like http/https preceding URLs
-		self.socratarepo = Socrata(self.url, None)
+		self.socratarepo = Socrata(self.url, self.socrata_app_token)
 		self.domain_metadata = []
 
 
