@@ -8,7 +8,7 @@ Options:
   --onlyexport              Just export existing items, do not harvest anything.
   --only-new-records        Only export records changed since last crawl.
   --export-filepath=<file>  The path to export the data to.
-  --export-format=<format>  The export format (gmeta or rifcs).
+  --export-format=<format>  The export format (currently gmeta or xml).
   --init                    Just initialize the database, do not harvest or export.
 
 """
