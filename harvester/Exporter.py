@@ -17,7 +17,7 @@ class Exporter(object):
         self.logger = log
         self.export_limit = finalconfig.get('export_file_limit_mb', 10)
         if self.db.dbtype == "postgres":
-            import psychopg2
+            import psycopg2
 
     def _construct_local_url(self, record):
         # Check if the local_identifier has already been turned into a url
