@@ -418,7 +418,7 @@ class Exporter(object):
 
         delete_list = self._generate_gmeta(self.export_filepath, self.temp_filepath, self.only_new_records, start_time)
 
-        if len(delete_list):
+        if len(delete_list) and self.export_format == "gmeta":
             output = "\n".join(delete_list)
             self.export_format = "delete"
             self._write_to_file(output, self.export_filepath, self.temp_filepath)
