@@ -16,6 +16,8 @@ class Exporter(object):
         self.db = db
         self.logger = log
         self.export_limit = finalconfig.get('export_file_limit_mb', 10)
+        if self.db.dbtype == "postgres":
+            import psycopg2
 
     def _construct_local_url(self, record):
         # Check if the local_identifier has already been turned into a url
@@ -269,6 +271,8 @@ class Exporter(object):
 
     def change_keys(self, obj, dropkeys):
         """ Recursively goes through the object and replaces keys """
+        if isinstance(obj, psycopg2.extras.DictRow):
+            return obj
         if isinstance(obj, (str, int, float)):
             return obj
         if isinstance(obj, dict):
@@ -414,7 +418,7 @@ class Exporter(object):
 
         delete_list = self._generate_gmeta(self.export_filepath, self.temp_filepath, self.only_new_records, start_time)
 
-        if len(delete_list):
+        if len(delete_list) and self.export_format == "gmeta":
             output = "\n".join(delete_list)
             self.export_format = "delete"
             self._write_to_file(output, self.export_filepath, self.temp_filepath)
