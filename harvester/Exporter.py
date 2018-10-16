@@ -16,6 +16,8 @@ class Exporter(object):
         self.db = db
         self.logger = log
         self.export_limit = finalconfig.get('export_file_limit_mb', 10)
+        if self.db.dbtype == "postgres":
+            import psychopg2
 
     def _construct_local_url(self, record):
         # Check if the local_identifier has already been turned into a url
@@ -269,6 +271,8 @@ class Exporter(object):
 
     def change_keys(self, obj, dropkeys):
         """ Recursively goes through the object and replaces keys """
+        if isinstance(obj, psycopg2.extras.DictRow):
+            return obj
         if isinstance(obj, (str, int, float)):
             return obj
         if isinstance(obj, dict):
