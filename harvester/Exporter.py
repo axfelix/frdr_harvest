@@ -153,7 +153,7 @@ class Exporter(object):
 
                 # attach the other values to the dict
                 litecur.execute(self.db._prep("""SELECT creators.creator FROM creators JOIN records_x_creators on records_x_creators.creator_id = creators.creator_id 
-					WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=0"""),
+					WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=0 order by records_x_creators_id asc"""),
                                 (record["record_id"],))
                 record["dc:contributor.author"] = litecur.fetchall()
 
@@ -162,7 +162,7 @@ class Exporter(object):
                 record["datacite:creatorAffiliation"] = litecur.fetchall()
 
                 litecur.execute(self.db._prep("""SELECT creators.creator FROM creators JOIN records_x_creators on records_x_creators.creator_id = creators.creator_id 
-					WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=1"""),
+					WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=1 order by records_x_creators_id asc"""),
                                 (record["record_id"],))
                 record["dc:contributor"] = litecur.fetchall()
 
