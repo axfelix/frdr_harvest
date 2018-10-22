@@ -63,12 +63,18 @@ class CKANRepository(HarvestRepository):
         if isinstance(ckan_record.get("title_translated", ""), dict):
             record["title"] = ckan_record["title_translated"].get("en", "")
             record["title_fr"] = ckan_record["title_translated"].get("fr", "")
+        elif isinstance(ckan_record.get("title", ""), dict):
+            record["title"] = ckan_record["title"].get("en", "")
+            record["title_fr"] = ckan_record["title"].get("fr", "")
         else:
             record["title"] = ckan_record.get("title", "")
 
         if isinstance(ckan_record.get("notes_translated", ""), dict):
             record["description"] = ckan_record["notes_translated"].get("en", "")
             record["description_fr"] = ckan_record["notes_translated"].get("fr", "")
+        elif isinstance(ckan_record.get("description", ""), dict):
+            record["description"] = ckan_record["description"].get("en", "")
+            record["description_fr"] = ckan_record["description"].get("fr", "")
         else:
             record["description"] = ckan_record.get("notes", "")
             record["description_fr"] = ckan_record.get("notes_fra", "")
@@ -90,7 +96,7 @@ class CKANRepository(HarvestRepository):
         if ('record_publish_date' in ckan_record):
             # Prefer an explicit publish date if it exists
             record["pub_date"] = ckan_record["record_publish_date"]
-        elif ('date_published' in ckan_record):
+        elif ('date_published' in ckan_record and ckan_record["date_published"]):
             # Another possible field name for publication date
             record["pub_date"] = ckan_record["date_published"]
         elif ('dates' in ckan_record and isinstance(ckan_record["dates"], list)):
