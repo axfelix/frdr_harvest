@@ -12,6 +12,7 @@ class CKANRepository(HarvestRepository):
 
     def setRepoParams(self, repoParams):
         self.metadataprefix = "ckan"
+        self.default_language = "en"
         super(CKANRepository, self).setRepoParams(repoParams)
         self.ckanrepo = ckanapi.RemoteCKAN(self.url)
         self.domain_metadata = []
@@ -46,7 +47,7 @@ class CKANRepository(HarvestRepository):
     def format_ckan_to_oai(self, ckan_record, local_identifier):
         record = {}
 
-        if not 'date_published' in ckan_record and not 'dates' in ckan_record and not 'record_publish_date' in ckan_record and not 'metadata_created' in ckan_record:
+        if not 'date_published' in ckan_record and not 'dates' in ckan_record and not 'record_publish_date' in ckan_record and not 'metadata_created' in ckan_record and not 'date_issued' in ckan_record:
             return None
 
         if ('contacts' in ckan_record) and ckan_record['contacts']:
@@ -55,6 +56,9 @@ class CKANRepository(HarvestRepository):
             record["creator"] = ckan_record['author']
         elif ('maintainer' in ckan_record) and ckan_record['maintainer']:
             record["creator"] = ckan_record['maintainer']
+        elif ('creator' in ckan_record) and ckan_record['creator']:
+            if isinstance(ckan_record["creator"], list):
+                record["creator"] = ckan_record["creator"][0]
         else:
             record["creator"] = ckan_record['organization'].get('title', "")
 
@@ -68,6 +72,8 @@ class CKANRepository(HarvestRepository):
             record["title_fr"] = ckan_record["title"].get("fr", "")
         else:
             record["title"] = ckan_record.get("title", "")
+            if self.default_language == "fr":
+                record["title_fr"] = ckan_record.get("title", "")
 
         if isinstance(ckan_record.get("notes_translated", ""), dict):
             record["description"] = ckan_record["notes_translated"].get("en", "")
@@ -78,6 +84,8 @@ class CKANRepository(HarvestRepository):
         else:
             record["description"] = ckan_record.get("notes", "")
             record["description_fr"] = ckan_record.get("notes_fra", "")
+            if self.default_language == "fr":
+                record["description_fr"] = ckan_record.get("notes", "")
 
         if ('sector' in ckan_record):
             record["subject"] = ckan_record.get('sector', "")
@@ -104,6 +112,8 @@ class CKANRepository(HarvestRepository):
             for date_object in ckan_record['dates']:
                 if date_object.type == "Created":
                     record["pub_date"] = date_object.date
+        elif ('date_issued' in ckan_record):
+            record["pub_date"] = ckan_record["date_issued"]
         elif ('metadata_created' in ckan_record):
             record["pub_date"] = ckan_record["metadata_created"]
 
@@ -122,6 +132,8 @@ class CKANRepository(HarvestRepository):
             record["contact"] = ckan_record["contacts"][0].get('email', "")
         elif ('author_email' in ckan_record) and ckan_record['author_email']:
             record["contact"] = ckan_record.get("author_email", "")
+        elif ('contact_email' in ckan_record) and ckan_record['contact_email']:
+            record["contact"] = ckan_record.get("contact_email", "")
         else:
             record["contact"] = ckan_record.get("maintainer_email", "")
 
@@ -150,12 +162,20 @@ class CKANRepository(HarvestRepository):
                 record["tags_fr"].append(tag)
         else:
             for tag in ckan_record["tags"]:
-                record["tags"].append(tag["display_name"])
+                if self.default_language == "fr":
+                    record["tags_fr"].append(tag["display_name"])
+                else:
+                    record["tags"].append(tag["display_name"])
 
         if ('geometry' in ckan_record) and ckan_record['geometry']:
             record["geospatial"] = ckan_record['geometry']
         elif ('spatial' in ckan_record) and ckan_record['spatial']:
             record["geospatial"] = json.loads(ckan_record["spatial"])
+        elif('spatialcoverage1' in ckan_record) and ckan_record['spatialcoverage1']:
+                record["geospatial"] = ckan_record['spatialcoverage1'].split(",")
+                record["geospatial"] = {"type": "Polygon", "coordinates": [
+                    [[record["geospatial"][3], record["geospatial"][0]], [record["geospatial"][3], record["geospatial"][2]],
+                     [record["geospatial"][1], record["geospatial"][0]], [record["geospatial"][1], record["geospatial"][2]]]]}
         elif ('extras' in ckan_record) and ckan_record['extras']:
             for dictionary in ckan_record['extras']:
                 if ('key' in dictionary) and dictionary['key'] == "spatial":
