@@ -18,6 +18,10 @@ class Exporter(object):
         self.export_limit = finalconfig.get('export_file_limit_mb', 10)
         if self.db.dbtype == "postgres":
             import psycopg2
+            global DictCursor
+            global DictRow
+            from psycopg2.extras import DictCursor
+            from psycopg2.extras import DictRow
 
     def _construct_local_url(self, record):
         # Check if the local_identifier has already been turned into a url
@@ -44,7 +48,7 @@ class Exporter(object):
         doi = re.search("(doi|DOI):\s?\S+", record["local_identifier"])
         if doi:
             doi = doi.group(0).rstrip('\.')
-            local_url = re.sub("(doi|DOI):\s?", "http://dx.doi.org/", doi)
+            local_url = re.sub("(doi|DOI):\s?", "https://dx.doi.org/", doi)
             return local_url
 
         # If the item has a source URL, use it
@@ -76,8 +80,8 @@ class Exporter(object):
             records_cursor = records_con.cursor()
 
         records_cursor.execute(self.db._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.modified_timestamp,
-			repos.repository_url, repos.repository_name, repos.repository_thumbnail, repos.item_url_pattern, repos.last_crawl_timestamp 
-			FROM records recs, repositories repos WHERE recs.repository_id = repos.repository_id """))
+            repos.repository_url, repos.repository_name, repos.repository_thumbnail, repos.item_url_pattern, repos.last_crawl_timestamp
+            FROM records recs, repositories repos WHERE recs.repository_id = repos.repository_id """))
 
         buffer_limit = int(self.export_limit) * 1024 * 1024
         self.logger.info("Exporter: output file size limited to {} MB each".format(int(self.export_limit)))
@@ -148,30 +152,29 @@ class Exporter(object):
                     con.row_factory = lambda cursor, row: row[0]
                     litecur = con.cursor()
                 elif self.db.getType() == "postgres":
-                    from psycopg2.extras import DictCursor as DictCursor
                     litecur = con.cursor(cursor_factory=DictCursor)
 
                 # attach the other values to the dict
-                litecur.execute(self.db._prep("""SELECT creators.creator FROM creators JOIN records_x_creators on records_x_creators.creator_id = creators.creator_id 
-					WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=0 order by records_x_creators_id asc"""),
+                litecur.execute(self.db._prep("""SELECT creators.creator FROM creators JOIN records_x_creators on records_x_creators.creator_id = creators.creator_id
+                    WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=0 order by records_x_creators_id asc"""),
                                 (record["record_id"],))
                 record["dc:contributor.author"] = litecur.fetchall()
 
-                litecur.execute(self.db._prep("""SELECT affiliations.affiliation FROM affiliations JOIN records_x_affiliations on records_x_affiliations.affiliation_id = affiliations.affiliation_id 
-					WHERE records_x_affiliations.record_id=?"""), (record["record_id"],))
+                litecur.execute(self.db._prep("""SELECT affiliations.affiliation FROM affiliations JOIN records_x_affiliations on records_x_affiliations.affiliation_id = affiliations.affiliation_id
+                    WHERE records_x_affiliations.record_id=?"""), (record["record_id"],))
                 record["datacite:creatorAffiliation"] = litecur.fetchall()
 
-                litecur.execute(self.db._prep("""SELECT creators.creator FROM creators JOIN records_x_creators on records_x_creators.creator_id = creators.creator_id 
-					WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=1 order by records_x_creators_id asc"""),
+                litecur.execute(self.db._prep("""SELECT creators.creator FROM creators JOIN records_x_creators on records_x_creators.creator_id = creators.creator_id
+                    WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=1 order by records_x_creators_id asc"""),
                                 (record["record_id"],))
                 record["dc:contributor"] = litecur.fetchall()
 
-                litecur.execute(self.db._prep("""SELECT subjects.subject FROM subjects JOIN records_x_subjects on records_x_subjects.subject_id = subjects.subject_id 
-					WHERE records_x_subjects.record_id=?"""), (record["record_id"],))
+                litecur.execute(self.db._prep("""SELECT subjects.subject FROM subjects JOIN records_x_subjects on records_x_subjects.subject_id = subjects.subject_id
+                    WHERE records_x_subjects.record_id=?"""), (record["record_id"],))
                 record["dc:subject"] = litecur.fetchall()
 
-                litecur.execute(self.db._prep("""SELECT publishers.publisher FROM publishers JOIN records_x_publishers on records_x_publishers.publisher_id = publishers.publisher_id 
-					WHERE records_x_publishers.record_id=?"""), (record["record_id"],))
+                litecur.execute(self.db._prep("""SELECT publishers.publisher FROM publishers JOIN records_x_publishers on records_x_publishers.publisher_id = publishers.publisher_id
+                    WHERE records_x_publishers.record_id=?"""), (record["record_id"],))
                 record["dc:publisher"] = litecur.fetchall()
 
                 litecur.execute(self.db._prep("""SELECT rights.rights FROM rights JOIN records_x_rights on records_x_rights.rights_id = rights.rights_id
@@ -188,16 +191,16 @@ class Exporter(object):
                     (record["record_id"],))
                 record["frdr:description_fr"] = litecur.fetchall()
 
-                litecur.execute(self.db._prep("""SELECT tags.tag FROM tags JOIN records_x_tags on records_x_tags.tag_id = tags.tag_id 
-					WHERE records_x_tags.record_id=? and tags.language = 'en' """), (record["record_id"],))
+                litecur.execute(self.db._prep("""SELECT tags.tag FROM tags JOIN records_x_tags on records_x_tags.tag_id = tags.tag_id
+                    WHERE records_x_tags.record_id=? and tags.language = 'en' """), (record["record_id"],))
                 record["frdr:tags"] = litecur.fetchall()
 
-                litecur.execute(self.db._prep("""SELECT tags.tag FROM tags JOIN records_x_tags on records_x_tags.tag_id = tags.tag_id 
-					WHERE records_x_tags.record_id=? and tags.language = 'fr' """), (record["record_id"],))
+                litecur.execute(self.db._prep("""SELECT tags.tag FROM tags JOIN records_x_tags on records_x_tags.tag_id = tags.tag_id
+                    WHERE records_x_tags.record_id=? and tags.language = 'fr' """), (record["record_id"],))
                 record["frdr:tags_fr"] = litecur.fetchall()
 
-                litecur.execute(self.db._prep("""SELECT access.access FROM access JOIN records_x_access on records_x_access.access_id = access.access_id 
-					WHERE records_x_access.record_id=?"""), (record["record_id"],))
+                litecur.execute(self.db._prep("""SELECT access.access FROM access JOIN records_x_access on records_x_access.access_id = access.access_id
+                    WHERE records_x_access.record_id=?"""), (record["record_id"],))
                 record["frdr:access"] = litecur.fetchall()
 
             domain_schemas = {}
@@ -271,8 +274,9 @@ class Exporter(object):
 
     def change_keys(self, obj, dropkeys):
         """ Recursively goes through the object and replaces keys """
-        if isinstance(obj, psycopg2.extras.DictRow):
-            return obj
+        if self.db.dbtype == "postgres":
+            if isinstance(obj, DictRow):
+                return obj
         if isinstance(obj, (str, int, float)):
             return obj
         if isinstance(obj, dict):
@@ -331,10 +335,12 @@ class Exporter(object):
             xml_dict["id"] = entry["id"]
             xml_dict["visible_to"] = entry["visible_to"]
 
-            record_xml = etree.fromstring(
-                dicttoxml.dicttoxml(xml_dict, attr_type=False, custom_root='record', item_func=self.xml_child_namer),
-                parser)
-            recordtag.append(record_xml)
+            try:
+                record_xml = etree.fromstring(
+                    dicttoxml.dicttoxml(xml_dict, attr_type=False, custom_root='record', item_func=self.xml_child_namer), parser)
+                recordtag.append(record_xml)
+            except:
+                self.logger.debug("Error converting dict to XML: {}".format(entry["id"]))
 
         return xml_tree
 
