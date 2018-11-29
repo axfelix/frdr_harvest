@@ -79,6 +79,7 @@ if __name__ == "__main__":
     final_config['export_file_limit_mb'] = int(config['export'].get('export_file_limit_mb', 10))
     final_config['export_format'] = config['export'].get('export_format', "gmeta")
     final_config['socrata_app_token'] = config['socrata'].get('app_token', None)
+    final_config['repository-id'] = None
 
     main_log = HarvestLogger(config['logging'])
     main_log.info("Starting... (pid={})".format(os.getpid()))
