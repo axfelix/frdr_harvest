@@ -79,9 +79,14 @@ class Exporter(object):
         with records_con:
             records_cursor = records_con.cursor()
 
-        records_cursor.execute(self.db._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.modified_timestamp,
+        records_sql = """SELECT recs.record_id, recs.title, recs.pub_date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.modified_timestamp,
             repos.repository_url, repos.repository_name, repos.repository_thumbnail, repos.item_url_pattern, repos.last_crawl_timestamp
-            FROM records recs, repositories repos WHERE recs.repository_id = repos.repository_id """))
+            FROM records recs, repositories repos WHERE recs.repository_id = repos.repository_id"""
+        if self.export_repository_id:
+            records_sql += " AND repos.repository_id = ?"
+            records_cursor.execute(self.db._prep(records_sql), (int(self.export_repository_id),) )
+        else:
+            records_cursor.execute(self.db._prep(records_sql))
 
         buffer_limit = int(self.export_limit) * 1024 * 1024
         self.logger.info("Exporter: output file size limited to {} MB each".format(int(self.export_limit)))

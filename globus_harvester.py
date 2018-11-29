@@ -9,6 +9,7 @@ Options:
   --only-new-records        Only export records changed since last crawl.
   --export-filepath=<file>  The path to export the data to.
   --export-format=<format>  The export format (currently gmeta or xml).
+  --repository-id=<id>      Only export this repository, based on the database table ID
   --init                    Just initialize the database, do not harvest or export.
 
 """
@@ -115,12 +116,15 @@ if __name__ == "__main__":
             final_config['export_format'] = arguments["--export-format"]
         if arguments["--export-filepath"]:
             final_config['export_filepath'] = arguments["--export-filepath"]
+        if arguments["--repository-id"]:
+            final_config['repository-id'] = arguments["--repository-id"]
         exporter = Exporter(dbh, main_log, final_config)
         kwargs = {
             "export_format": final_config['export_format'],
             "export_filepath": final_config['export_filepath'],
             "only_new_records": False,
-            "temp_filepath": final_config['temp_filepath']
+            "temp_filepath": final_config['temp_filepath'],
+            "export_repository_id": final_config['repository-id']
         }
         if arguments["--only-new-records"] == True:
             kwargs["only_new_records"] = True
