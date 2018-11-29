@@ -314,19 +314,19 @@ class Exporter(object):
         from lxml import etree
         keys_to_drop = ["@context", "subject", "frdr:geospatial"]
 
-        parser = etree.XMLParser(remove_blank_text=True)
-        xml_tree = etree.parse("schema/stub.xml", parser)
+        parser = etree.XMLParser(remove_blank_text=True, recover=True)
+        xml_tree = etree.parse("schema/stub.xml", parser=parser)
         root_tag = xml_tree.getroot()
 
         context_block = gmeta_dict[0]["content"]["@context"]
         context_xml = etree.fromstring(dicttoxml.dicttoxml(context_block, attr_type=False, custom_root='schema'),
-                                       parser)
+                                       parser=parser)
         root_tag.insert(0, context_xml)
 
         control_block = {"timestamp": int(round(time.mktime(timestamp))),
                          "datestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", timestamp)}
         control_xml = etree.fromstring(dicttoxml.dicttoxml(control_block, attr_type=False, custom_root='generated'),
-                                       parser)
+                                       parser=parser)
         root_tag.insert(0, control_xml)
 
         recordtag = xml_tree.find(".//records")
@@ -337,7 +337,7 @@ class Exporter(object):
 
             try:
                 record_xml = etree.fromstring(
-                    dicttoxml.dicttoxml(xml_dict, attr_type=False, custom_root='record', item_func=self.xml_child_namer), parser)
+                    dicttoxml.dicttoxml(xml_dict, attr_type=False, custom_root='record', item_func=self.xml_child_namer), parser=parser)
                 recordtag.append(record_xml)
             except:
                 self.logger.debug("Error converting dict to XML: {}".format(entry["id"]))
