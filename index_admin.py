@@ -7,6 +7,7 @@ import logging.config
 import os
 import time
 import traceback
+import requests
 
 """
 Utility application to manage Globus Search Indexes for FRDR.
@@ -16,6 +17,7 @@ If running on a new host you will likely have to authorize it by running a query
 
 _cmd = "/opt/rdm/search_client/search-client"
 _api_host = "search.api.globus.org"
+_tokens_filepath = "/home/harvest/.globus_search_client_tokens.json"
 
 
 def get_index_config(config_file="conf/globus-indexes.conf"):
@@ -102,6 +104,23 @@ def delete_items(delete_id_list, index_uuid):
         ret = os.popen(" ".join(command)).read()
 
 
+def delete_items_by_curl(delete_id_list, index_uuid, token):
+    """
+    Delete items from a search index using new API methods
+    :param delete_id_list: List of ids to delete
+    :param index_uuid: uuid of index to use
+    :return:
+    """  
+    LOGGER.info("Got %i items to delete:" % (len(delete_id_list)))
+
+    for item in delete_id_list:
+        LOGGER.info("Deleting item: %s" % (item))
+        headers = {'Authorization' : ('Bearer ' + token), 'Content-Type' : 'application/json'}
+        r = requests.delete(('https://search.api.globus.org/v1/index/' + index_uuid + '/' + item), headers=headers)
+        if r.text != '{ "removed": true }':
+            LOGGER.info("Unexpected response when deleting item: %s" % (item))
+
+
 def main():
     global LOGGER
     syslog_handler = logging.handlers.SysLogHandler()
@@ -113,6 +132,8 @@ def main():
 
     cl_parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     try:
+        with open(_tokens_filepath, 'r') as tokens_file:
+            tokens = json.loads(tokens_file.read())
         index_config = get_index_config()
         repos_config = get_repos_config()
         cl_parser.add_argument('-r', '--repository', help='Choose repository (list in conf/repos.json)')
@@ -129,6 +150,7 @@ def main():
         if args.deleteitems:
             delete_id_list = query_repository(args.repository, index_uuid)
             delete_items(delete_id_list, index_uuid)
+            #delete_items_by_curl(delete_id_list, index_uuid, tokens["access_token"])
         elif args.repository:
             query_repository(args.repository, index_uuid, display_results=True)
         else:
