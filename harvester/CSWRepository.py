@@ -13,7 +13,10 @@ class CSWRepository(HarvestRepository):
     def setRepoParams(self, repoParams):
         self.metadataprefix = "csw"
         super(CSWRepository, self).setRepoParams(repoParams)
-        self.cswrepo = CatalogueServiceWeb(self.url)
+        try:
+            self.cswrepo = CatalogueServiceWeb(self.url)
+        except:
+            self.cswrepo = None
         self.domain_metadata = []
 
     def _crawl(self):
@@ -28,6 +31,10 @@ class CSWRepository(HarvestRepository):
             "repo_refresh_days": self.repo_refresh_days, "homepage_url": self.homepage_url
         }
         self.repository_id = self.db.update_repo(**kwargs)
+
+        if self.cswrepo is None:
+            self.logger.error("Could not initiate this repo to crawl it")
+            return
 
         item_count = 0
         while True:
@@ -93,6 +100,8 @@ class CSWRepository(HarvestRepository):
 
     @_rate_limited(5)
     def _update_record(self, record):
+        if self.cswrepo is None:
+            return
 
         self.cswrepo.getrecordbyid(id=[record['local_identifier']])
         if self.cswrepo.records:
