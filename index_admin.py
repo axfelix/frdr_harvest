@@ -126,14 +126,21 @@ def main():
         cl_parser.add_argument('-p', '--purgefile', help='File name with list of items to delete. Not used with deleteall.')
         cl_parser.add_argument('-d', '--deleteall', help='Add this argument to delete all items from a repo. Not used with purgefile.',
                                action="store_true")
-        cl_parser.add_argument('-i', '--index', help='Globus index name (list in conf/globus-indexes.conf) Required',
-                               required=True)
+        cl_parser.add_argument('-i', '--index', help='Globus index name (list in conf/globus-indexes.conf). Either UUID or name is required.')
+        cl_parser.add_argument('-u', '--uuid', help='Globus index UUID. Either UUID or name is required.')
         args = cl_parser.parse_args()
         index_name = args.index
-        if index_name not in index_config["indexes"].keys():
-            LOGGER.error("Index name not found in configuration list, exiting. Check conf/globus-indexes.conf")
-            sys.exit(1)
-        index_uuid = index_config["indexes"][index_name].strip()
+        index_uuid = None
+        if args.uuid:
+            index_uuid = args.uuid.strip()
+        else:
+            if index_name not in index_config["indexes"].keys():
+                LOGGER.error("Index name not found in configuration list, exiting. Check conf/globus-indexes.conf")
+                sys.exit(1)
+            index_uuid = index_config["indexes"][index_name].strip()
+        if index_uuid is None:
+            LOGGER.error("One of index name or UUID must be supplied. exiting.")
+            sys.exit(1)        
         if args.purgefile:
             with open(args.purgefile) as f:
                 delete_id_list = f.readlines()
