@@ -46,7 +46,7 @@ def get_repos_config(repos_json="conf/repos.json"):
     return configdict
 
 
-def query_repository(repo_name, index_uuid, display_results=False):
+def query_repository(repo_name, index_uuid, token, display_results=False):
     """
     Display the ids  ('subjects') of all items indexed in a repository.
     :param repo_name: Textual name of repository to query, corresponds to 'name' field in conf file.
@@ -57,21 +57,18 @@ def query_repository(repo_name, index_uuid, display_results=False):
 
     LOGGER.info("Querying index %s for repository %s" % (index_uuid, repo_name))
     querylimit = 20
+    headers = {'Authorization' : ('Bearer ' + token), 'Content-Type' : 'application/json'}
     queryobj = {"@datatype": "GSearchRequest", "@version": "2016-11-09", "advanced": True, "offset": 0,
                 "limit": querylimit, "q": "*", "filters": [
             {"@datatype": "GFilter", "@version": "2016-11-09", "type": "match_any",
              "field_name": "https://frdr\\.ca/schema/1\\.0#origin\\.id", "values": [""]}]}
 
     result_ids = []
-    # Write 'structured query' file for use by external search client.
-    with open('query.txt', 'w') as outfile:
-        json.dump(queryobj, outfile)
     queryobj["filters"][0]["values"][0] = repo_name
     offset = 0
     while True:
-        command = [_cmd, "--index " + index_uuid, "structured-query query.txt"]
-        ret = os.popen(" ".join(command)).read()
-        search_results = json.loads(ret)
+        r = requests.post('https://' + _api_host + '/v1/index/' + index_uuid + '/search', headers=headers, json=queryobj)
+        search_results = json.loads(r.text)
         results_count = search_results['count']
         LOGGER.info("Got %i results" % (results_count))
         if results_count == 0:
@@ -80,29 +77,11 @@ def query_repository(repo_name, index_uuid, display_results=False):
             result_ids.append(result['subject'])
         offset = offset + querylimit
         queryobj["offset"] = offset
-        with open('query.txt', 'w') as outfile:
-            json.dump(queryobj, outfile)
 
     if display_results:
         print('\n'.join(result_ids))
 
     return result_ids
-
-
-def delete_items(delete_id_list, index_uuid):
-    """
-    Delete items from a search index
-    :param delete_id_list: List of ids to delete
-    :param index_uuid: uuid of index to use
-    :return:
-    """
-    LOGGER.info("Got %i items to delete:" % (len(delete_id_list)))
-
-    for item in delete_id_list:
-        LOGGER.info("Deleting item: %s" % (item))
-        command = [_cmd, "--host " + _api_host, "--index " + index_uuid, "subject delete " + item]
-        ret = os.popen(" ".join(command)).read()
-
 
 def delete_items_by_curl(delete_id_list, index_uuid, token):
     """
@@ -110,15 +89,22 @@ def delete_items_by_curl(delete_id_list, index_uuid, token):
     :param delete_id_list: List of ids to delete
     :param index_uuid: uuid of index to use
     :return:
-    """  
+    """
     LOGGER.info("Got %i items to delete:" % (len(delete_id_list)))
+    headers = {'Authorization' : ('Bearer ' + token), 'Content-Type' : 'application/json'}
+    queryobj = {"@datatype": "GSearchRequest", "@version": "2016-11-09", "advanced": True, "limit": 1, "q": "*", "filters": [
+            {"@datatype": "GFilter", "@version": "2016-11-09", "type": "match_all",
+             "field_name": "http://dublincore\\.org/documents/dcmi-terms#source", "values": [""]}]}
 
     for item in delete_id_list:
         LOGGER.info("Deleting item: %s" % (item))
-        headers = {'Authorization' : ('Bearer ' + token), 'Content-Type' : 'application/json'}
-        r = requests.delete(('https://search.api.globus.org/v1/index/' + index_uuid + '/' + item), headers=headers)
-        if r.text != '{ "removed": true }':
-            LOGGER.info("Unexpected response when deleting item: %s" % (item))
+        queryobj["filters"][0]["values"][0] = item
+        r = requests.post('https://' + _api_host + '/v1/index/' + index_uuid + '/delete_by_query', headers=headers, json=queryobj)
+        results = json.loads(r.text)
+        if "num_subjects_deleted" in results:
+            LOGGER.info("Deleted {} item(s)".format(results.get('num_subjects_deleted')))
+        else:
+            LOGGER.info("Error deleting item: {}\n{}".format(item, r.text))
 
 
 def main():
@@ -136,23 +122,35 @@ def main():
             tokens = json.loads(tokens_file.read())
         index_config = get_index_config()
         repos_config = get_repos_config()
-        cl_parser.add_argument('-r', '--repository', help='Choose repository (list in conf/repos.json)')
-        cl_parser.add_argument('-d', '--deleteitems', help='List of search record ids for deletion',
+        cl_parser.add_argument('-r', '--repository', help='Repository name (list in conf/repos.json)')
+        cl_parser.add_argument('-p', '--purgefile', help='File name with list of items to delete. Not used with deleteall.')
+        cl_parser.add_argument('-d', '--deleteall', help='Add this argument to delete all items from a repo. Not used with purgefile.',
                                action="store_true")
-        cl_parser.add_argument('-i', '--index', help='Choose index (list in conf/globus-indexes.conf) Required',
-                               required=True)
+        cl_parser.add_argument('-i', '--index', help='Globus index name (list in conf/globus-indexes.conf). Either UUID or name is required.')
+        cl_parser.add_argument('-u', '--uuid', help='Globus index UUID. Either UUID or name is required.')
         args = cl_parser.parse_args()
         index_name = args.index
-        if index_name not in index_config["indexes"].keys():
-            LOGGER.error("Index not found in configuration list, exiting. Check conf/globus-indexes.conf")
-            sys.exit(1)
-        index_uuid = index_config["indexes"][index_name].strip()
-        if args.deleteitems:
-            delete_id_list = query_repository(args.repository, index_uuid)
-            delete_items(delete_id_list, index_uuid)
-            #delete_items_by_curl(delete_id_list, index_uuid, tokens["access_token"])
+        index_uuid = None
+        if args.uuid:
+            index_uuid = args.uuid.strip()
+        else:
+            if index_name not in index_config["indexes"].keys():
+                LOGGER.error("Index name not found in configuration list, exiting. Check conf/globus-indexes.conf")
+                sys.exit(1)
+            index_uuid = index_config["indexes"][index_name].strip()
+        if index_uuid is None:
+            LOGGER.error("One of index name or UUID must be supplied. exiting.")
+            sys.exit(1)        
+        if args.purgefile:
+            with open(args.purgefile) as f:
+                delete_id_list = f.readlines()
+                delete_id_list = [x.strip() for x in delete_id_list]
+                delete_items_by_curl(delete_id_list, index_uuid, tokens["access_token"])
+        elif args.deleteall:
+            delete_id_list = query_repository(args.repository, index_uuid, tokens["access_token"])
+            delete_items_by_curl(delete_id_list, index_uuid, tokens["access_token"])
         elif args.repository:
-            query_repository(args.repository, index_uuid, display_results=True)
+            query_repository(args.repository, index_uuid, tokens["access_token"], display_results=True)
         else:
             cl_parser.print_usage()
     except Exception as e:
