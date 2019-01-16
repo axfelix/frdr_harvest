@@ -67,9 +67,13 @@ class CKANRepository(HarvestRepository):
         if isinstance(ckan_record.get("title_translated", ""), dict):
             record["title"] = ckan_record["title_translated"].get("en", "")
             record["title_fr"] = ckan_record["title_translated"].get("fr", "")
+            if "fr-t-en" in ckan_record["title_translated"]:
+                record["title_fr"] = ckan_record["title_translated"].get("fr-t-en", "")
         elif isinstance(ckan_record.get("title", ""), dict):
             record["title"] = ckan_record["title"].get("en", "")
             record["title_fr"] = ckan_record["title"].get("fr", "")
+            if "fr-t-en" in ckan_record["title"]:
+                record["title_fr"] = ckan_record["title"].get("fr-t-en", "")
         else:
             record["title"] = ckan_record.get("title", "")
             if self.default_language == "fr":
@@ -78,9 +82,13 @@ class CKANRepository(HarvestRepository):
         if isinstance(ckan_record.get("notes_translated", ""), dict):
             record["description"] = ckan_record["notes_translated"].get("en", "")
             record["description_fr"] = ckan_record["notes_translated"].get("fr", "")
+            if "fr-t-en" in ckan_record["notes_translated"]:
+                record["description_fr"] = ckan_record["notes_translated"].get("fr-t-en", "")
         elif isinstance(ckan_record.get("description", ""), dict):
             record["description"] = ckan_record["description"].get("en", "")
             record["description_fr"] = ckan_record["description"].get("fr", "")
+            if "fr-t-en" in ckan_record["description"]:
+                record["description_fr"] = ckan_record["description"].get("fr-t-en", "")
         else:
             record["description"] = ckan_record.get("notes", "")
             record["description_fr"] = ckan_record.get("notes_fra", "")
@@ -153,13 +161,21 @@ class CKANRepository(HarvestRepository):
         if isinstance(ckan_record.get("keywords", ""), dict):
             for tag in ckan_record["keywords"]["en"]:
                 record["tags"].append(tag)
-            for tag in ckan_record["keywords"]["fr"]:
-                record["tags_fr"].append(tag)
+            if "fr" in ckan_record["keywords"]:
+                for tag in ckan_record["keywords"]["fr"]:
+                    record["tags_fr"].append(tag)
+            if "fr-t-en" in ckan_record["keywords"]:
+                for tag in ckan_record["keywords"]["fr-t-en"]:
+                    record["tags_fr"].append(tag)
         elif isinstance(ckan_record.get("tags_translated", ""), dict):
             for tag in ckan_record["tags_translated"]["en"]:
                 record["tags"].append(tag)
-            for tag in ckan_record["tags_translated"]["fr"]:
-                record["tags_fr"].append(tag)
+            if "fr" in ckan_record["tags_translated"]:
+                for tag in ckan_record["tags_translated"]["fr"]:
+                    record["tags_fr"].append(tag)
+            if "fr-t-en" in ckan_record["tags_translated"]:
+                for tag in ckan_record["tags_translated"]["fr-t-en"]:
+                    record["tags_fr"].append(tag)
         else:
             for tag in ckan_record["tags"]:
                 if self.default_language == "fr":
@@ -232,8 +248,8 @@ class CKANRepository(HarvestRepository):
             return True
 
         except ckanapi.errors.NotAuthorized:
-            # Not authorized means that we currently do not have permission to access the data but we may in the future (embargo)
-            self.db.touch_record(record)
+            # Not authorized may mean the record is embargoed, but ODC also uses this to indicate the record was deleted
+            self.db.delete_record(record)
             return True
 
         except ckanapi.errors.NotFound:
