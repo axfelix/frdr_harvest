@@ -8,6 +8,7 @@ import os
 import time
 import traceback
 import requests
+from harvester.DBInterface import DBInterface
 
 """
 Utility application to manage Globus Search Indexes for FRDR.
@@ -18,7 +19,13 @@ If running on a new host you will likely have to authorize it by running a query
 _cmd = "/opt/rdm/search_client/search-client"
 _api_host = "search.api.globus.org"
 _tokens_filepath = "/home/harvest/.globus_search_client_tokens.json"
+CONFIG = {"db": None, "handles": {}}
 
+
+def get_db():
+    if "db" not in CONFIG["handles"]:
+        CONFIG["handles"]["db"] = DBInterface(CONFIG['db'])
+    return CONFIG["handles"]["db"]
 
 def get_index_config(config_file="conf/globus-indexes.conf"):
     '''
@@ -102,19 +109,31 @@ def delete_items_by_curl(delete_id_list, index_uuid, token):
         r = requests.post('https://' + _api_host + '/v1/index/' + index_uuid + '/delete_by_query', headers=headers, json=queryobj)
         results = json.loads(r.text)
         if "num_subjects_deleted" in results:
-            LOGGER.info("Deleted {} item(s)".format(results.get('num_subjects_deleted')))
+            continue
         else:
             LOGGER.info("Error deleting item: {}\n{}".format(item, r.text))
 
+    get_db().purge_deleted_records()
+
+def get_config_ini(config_file):
+    c = configparser.ConfigParser()
+    try:
+        c.read(config_file)
+        return c
+    except:
+        return None
 
 def main():
     global LOGGER
+    global CONFIG
     syslog_handler = logging.handlers.SysLogHandler()
     stderr_handler = logging.StreamHandler()
     log_format = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
                   '-35s %(lineno) -5d: %(message)s')
     logging.basicConfig(level=logging.INFO, format=log_format, handlers=[syslog_handler, stderr_handler])
     LOGGER = logging.getLogger('__name__')
+    CONFIG["db"] = get_config_ini("conf/harvester.conf")["db"]
+    get_db().setLogger(LOGGER)
 
     cl_parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     try:

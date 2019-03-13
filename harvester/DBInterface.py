@@ -257,6 +257,18 @@ class DBInterface:
         self.logger.debug("Marked as deleted: record {}".format(record['local_identifier']))
         return True
 
+    def purge_deleted_records(self):
+        con = self.getConnection()
+        with con:
+            cur = self.getCursor(con)
+            try:
+                sqlstring = "DELETE from records where deleted=1"
+                cur.execute(sqlstring)
+            except:
+                return False
+
+        return True
+
     def delete_related_records(self, crosstable, record_id):
         con = self.getConnection()
         with con:
