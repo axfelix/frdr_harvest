@@ -105,6 +105,10 @@ class Exporter(object):
                  'last_crawl_timestamp'], row)))
             record["deleted"] = int(record["deleted"])
 
+            if record["deleted"] == 1:
+                deleted.append(record["dc:source"])
+                continue
+                
             if only_new_records == True and float(lastrun_timestamp) > record["last_crawl_timestamp"]:
                 continue
 
@@ -113,10 +117,6 @@ class Exporter(object):
 
             record["dc:source"] = self._construct_local_url(record)
             if record["dc:source"] is None:
-                continue
-
-            if record["deleted"] == 1:
-                deleted.append(record["dc:source"])
                 continue
 
             con = self.db.getConnection()
