@@ -189,9 +189,14 @@ class CKANRepository(HarvestRepository):
             record["geospatial"] = json.loads(ckan_record["spatial"])
         elif('spatialcoverage1' in ckan_record) and ckan_record['spatialcoverage1']:
                 record["geospatial"] = ckan_record['spatialcoverage1'].split(",")
-                record["geospatial"] = {"type": "Polygon", "coordinates": [
-                    [[record["geospatial"][3], record["geospatial"][0]], [record["geospatial"][3], record["geospatial"][2]],
-                     [record["geospatial"][1], record["geospatial"][0]], [record["geospatial"][1], record["geospatial"][2]]]]}
+                # Check to make sure we have the right number of pieces because sometimes
+                # the spatialcoverage1 just contains an English location string
+                if len(record["geospatial"]) == 4:
+                    record["geospatial"] = {"type": "Polygon", "coordinates": [
+                        [[record["geospatial"][3], record["geospatial"][0]], [record["geospatial"][3], record["geospatial"][2]],
+                         [record["geospatial"][1], record["geospatial"][0]], [record["geospatial"][1], record["geospatial"][2]]]]}
+                else:
+                    del record["geospatial"]
         elif ('extras' in ckan_record) and ckan_record['extras']:
             for dictionary in ckan_record['extras']:
                 if ('key' in dictionary) and dictionary['key'] == "spatial":
