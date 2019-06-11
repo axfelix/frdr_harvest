@@ -277,7 +277,7 @@ class Exporter(object):
         self.logger.info("Export complete: {} items in {} files".format(records_assembled, self.batch_number))
         return deleted
 
-    def change_keys(self, obj, dropkeys):
+    def change_keys(self, obj, dropkeys, renamekeys):
         """ Recursively goes through the object and replaces keys """
         if self.db.dbtype == "postgres":
             if isinstance(obj, DictRow):
@@ -289,22 +289,27 @@ class Exporter(object):
             for k, v in obj.items():
                 if k in dropkeys:
                     continue
-                newkey = re.sub("[:\.]", "_", k)
-                new[newkey] = self.change_keys(v, dropkeys)
+                strip_dc = re.sub("dc:", "", k)
+                if strip_dc in renamekeys:
+                    datacite_key = renamekeys[strip_dc]
+                else:
+                    datacite_key = strip_dc
+                newkey = re.sub("[:\.]", "_", datacite_key)
+                new[newkey] = self.change_keys(v, dropkeys, renamekeys)
         elif isinstance(obj, (list, set, tuple)):
-            new = obj.__class__(self.change_keys(v, dropkeys) for v in obj)
+            new = obj.__class__(self.change_keys(v, dropkeys, renamekeys) for v in obj)
         else:
             return obj
         return new
 
     def xml_child_namer(self, parent):
         child_keys = {
-            "dc_contributor": "contributor",
-            "dc_contributor_author": "author",
-            "dc_description": "description",
-            "dc_publisher": "publisher",
-            "dc_rights": "rights",
-            "dc_subject": "subject",
+            "contributor": "contributor",
+            "creators": "creator",
+            "description": "description",
+            "publisher": "publisher",
+            "rightsList": "rights",
+            "subjects": "subject",
             "frdr_access": "access",
             "frdr_tags": "tag",
             "frdr_tags_fr": "tag",
@@ -318,6 +323,7 @@ class Exporter(object):
         import dicttoxml
         from lxml import etree
         keys_to_drop = ["@context", "subject", "frdr:geospatial"]
+        rename_keys = {"rights": "rightsList", "contributor.author": "creators", "subject": "subjects"}
 
         parser = etree.XMLParser(remove_blank_text=True, recover=True)
         xml_tree = etree.parse("schema/stub.xml", parser=parser)
@@ -336,9 +342,10 @@ class Exporter(object):
 
         recordtag = xml_tree.find(".//records")
         for entry in gmeta_dict:
-            xml_dict = self.change_keys(entry["content"], keys_to_drop)
-            xml_dict["id"] = entry["id"]
+            xml_dict = self.change_keys(entry["content"], keys_to_drop, rename_keys)
+            xml_dict["identifier"] = entry["id"]
             xml_dict["visible_to"] = entry["visible_to"]
+            xml_dict["language"] = "eng"
 
             try:
                 record_xml = etree.fromstring(
