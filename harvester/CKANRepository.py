@@ -142,8 +142,13 @@ class CKANRepository(HarvestRepository):
             record["contact"] = ckan_record.get("author_email", "")
         elif ('contact_email' in ckan_record) and ckan_record['contact_email']:
             record["contact"] = ckan_record.get("contact_email", "")
-        else:
+        elif ('owner_email' in ckan_record) and ckan_record['owner_email']:
+            record["contact"] = ckan_record.get("owner_email", "")
+        elif ('maintainer_email' ckan_record) and ckan_record['maintainer_email']:
             record["contact"] = ckan_record.get("maintainer_email", "")
+        elif self.contact:
+            record["contact"] = self.contact
+
 
         try:
             record["series"] = ckan_record["data_series_name"]["en"]
