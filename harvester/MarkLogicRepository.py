@@ -71,12 +71,12 @@ class MarkLogicRepository(HarvestRepository):
 
     def format_marklogic_to_oai(self, marklogic_record):
         record = {}
+        record["creator"] = []
+        record["affiliation"] = []
 
         for entry in marklogic_record["metadata"]:
-            record["creator"] = []
             if "AuthEnty" in entry:
                 record["creator"].append(entry["AuthEnty"].strip())
-            record["affiliation"] = []
             if "AuthEnty_affiliation" in entry:
                 record["affiliation"].append(entry["AuthEnty_affiliation"].strip())
             if "abstract" in entry:
@@ -90,6 +90,8 @@ class MarkLogicRepository(HarvestRepository):
         record["publisher"] = self.publisher
         record["series"] = ""
 
+        record["creator"] = list(set(record["creator"]))
+        record["affiliation"] = list(set(record["affiliation"]))
         return record
 
     def _update_record(self, record):
