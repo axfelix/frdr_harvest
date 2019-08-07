@@ -75,15 +75,15 @@ class MarkLogicRepository(HarvestRepository):
         record["affiliation"] = []
 
         for entry in marklogic_record["metadata"]:
-            if "AuthEnty" in entry:
-                record["creator"].append(entry["AuthEnty"].strip())
-            if "AuthEnty_affiliation" in entry:
+            if "AuthEnty" in entry and entry["AuthEnty"].strip() != "":
+                    record["creator"].append(entry["AuthEnty"].strip())
+            if "AuthEnty_affiliation" in entry and entry["AuthEnty_affiliation"].strip() != "":
                 record["affiliation"].append(entry["AuthEnty_affiliation"].strip())
-            if "abstract" in entry:
+            if "abstract" in entry and entry["abstract"].strip() != "":
                 record["description"] = entry["abstract"].strip()
-            if "TI-facet" in entry:
+            if "TI-facet" in entry and entry["TI-facet"].strip() != "":
                 record["title"] = entry["TI-facet"].strip()
-            if "date" in entry:
+            if "date" in entry and str(entry["date"]).strip() != "":
                 record["pub_date"] = str(entry["date"]).strip()
         record["identifier"] = marklogic_record["uri"].rsplit('/', 1)[1]
         record["contact"] = self.contact
