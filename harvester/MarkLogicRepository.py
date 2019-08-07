@@ -76,7 +76,7 @@ class MarkLogicRepository(HarvestRepository):
 
         for entry in marklogic_record["metadata"]:
             if "AuthEnty" in entry and entry["AuthEnty"].strip() != "":
-                    record["creator"].append(entry["AuthEnty"].strip())
+                record["creator"].append(entry["AuthEnty"].strip())
             if "AuthEnty_affiliation" in entry and entry["AuthEnty_affiliation"].strip() != "":
                 record["affiliation"].append(entry["AuthEnty_affiliation"].strip())
             if "abstract" in entry and entry["abstract"].strip() != "":
