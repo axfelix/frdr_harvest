@@ -322,8 +322,8 @@ class Exporter(object):
     def _wrap_xml_output(self, gmeta_dict, timestamp):
         import dicttoxml
         from lxml import etree
-        keys_to_drop = ["@context", "subject", "frdr:geospatial"]
-        rename_keys = {"rights": "rightsList", "contributor.author": "creators", "subject": "subjects"}
+        keys_to_drop = ["@context", "subject"]
+        rename_keys = {"rights": "rightsList", "contributor.author": "creators", "subject": "subjects", "frdr:geospatial": "geolocation", "datacite:resourceTypeGeneral": "resourceType"}
 
         parser = etree.XMLParser(remove_blank_text=True, recover=True)
         xml_tree = etree.parse("schema/stub.xml", parser=parser)
