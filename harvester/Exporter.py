@@ -351,6 +351,8 @@ class Exporter(object):
                 record_xml = etree.fromstring(
                     dicttoxml.dicttoxml(xml_dict, attr_type=False, custom_root='record', item_func=self.xml_child_namer), parser=parser)
                 recordtag.append(record_xml)
+                for abstract in xml_tree.findall(".//description/description"):
+                    abstract.set("descriptionType", "Abstract")
             except:
                 self.logger.debug("Error converting dict to XML: {}".format(entry["id"]))
 
