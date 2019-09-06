@@ -64,6 +64,17 @@ class Exporter(object):
         local_url = None
         return local_url
 
+    def _rows_to_dict(self, cursor):
+        newdict = []
+        if cursor:
+            for r in cursor:
+                if r:
+                    if isinstance(r, list):
+                        newdict.append(r[0])
+                    else:
+                        newdict.append(r)
+        return newdict
+
     def _generate_gmeta(self, export_filepath, temp_filepath, only_new_records, start_time):
         self.logger.info("Exporter: generate_gmeta called")
         self.output_buffer = []
@@ -163,50 +174,50 @@ class Exporter(object):
                 litecur.execute(self.db._prep("""SELECT creators.creator FROM creators JOIN records_x_creators on records_x_creators.creator_id = creators.creator_id
                     WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=0 order by records_x_creators_id asc"""),
                                 (record["record_id"],))
-                record["dc:contributor.author"] = litecur.fetchall()
+                record["dc:contributor.author"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT affiliations.affiliation FROM affiliations JOIN records_x_affiliations on records_x_affiliations.affiliation_id = affiliations.affiliation_id
                     WHERE records_x_affiliations.record_id=?"""), (record["record_id"],))
-                record["datacite:creatorAffiliation"] = litecur.fetchall()
+                record["datacite:creatorAffiliation"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT creators.creator FROM creators JOIN records_x_creators on records_x_creators.creator_id = creators.creator_id
                     WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=1 order by records_x_creators_id asc"""),
                                 (record["record_id"],))
-                record["dc:contributor"] = litecur.fetchall()
+                record["dc:contributor"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT subjects.subject FROM subjects JOIN records_x_subjects on records_x_subjects.subject_id = subjects.subject_id
                     WHERE records_x_subjects.record_id=?"""), (record["record_id"],))
-                record["dc:subject"] = litecur.fetchall()
+                record["dc:subject"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT publishers.publisher FROM publishers JOIN records_x_publishers on records_x_publishers.publisher_id = publishers.publisher_id
                     WHERE records_x_publishers.record_id=?"""), (record["record_id"],))
-                record["dc:publisher"] = litecur.fetchall()
+                record["dc:publisher"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT rights.rights FROM rights JOIN records_x_rights on records_x_rights.rights_id = rights.rights_id
                                                        WHERE records_x_rights.record_id=?"""), (record["record_id"],))
-                record["dc:rights"] = litecur.fetchall()
+                record["dc:rights"] = self._rows_to_dict(litecur)
 
                 litecur.execute(
                     self.db._prep("SELECT description FROM descriptions WHERE record_id=? and language='en' "),
                     (record["record_id"],))
-                record["dc:description"] = litecur.fetchall()
+                record["dc:description"] = self._rows_to_dict(litecur)
 
                 litecur.execute(
                     self.db._prep("SELECT description FROM descriptions WHERE record_id=? and language='fr' "),
                     (record["record_id"],))
-                record["frdr:description_fr"] = litecur.fetchall()
+                record["frdr:description_fr"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT tags.tag FROM tags JOIN records_x_tags on records_x_tags.tag_id = tags.tag_id
                     WHERE records_x_tags.record_id=? and tags.language = 'en' """), (record["record_id"],))
-                record["frdr:tags"] = litecur.fetchall()
+                record["frdr:tags"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT tags.tag FROM tags JOIN records_x_tags on records_x_tags.tag_id = tags.tag_id
                     WHERE records_x_tags.record_id=? and tags.language = 'fr' """), (record["record_id"],))
-                record["frdr:tags_fr"] = litecur.fetchall()
+                record["frdr:tags_fr"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT access.access FROM access JOIN records_x_access on records_x_access.access_id = access.access_id
                     WHERE records_x_access.record_id=?"""), (record["record_id"],))
-                record["frdr:access"] = litecur.fetchall()
+                record["frdr:access"] = self._rows_to_dict(litecur)
 
             domain_schemas = {}
             with con:
