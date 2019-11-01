@@ -43,7 +43,7 @@ class SocrataRepository(HarvestRepository):
     def format_socrata_to_oai(self, socrata_record, local_identifier):
         record = {}
 
-        record["title"] = socrata_record["name"]
+        record["title"] = socrata_record.get("name","").strip()
         record["description"] = socrata_record.get("description", "")
         record["tags"] = socrata_record.get("tags", "")
         record["identifier"] = local_identifier

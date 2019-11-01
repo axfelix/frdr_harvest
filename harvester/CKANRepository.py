@@ -78,6 +78,7 @@ class CKANRepository(HarvestRepository):
             record["title"] = ckan_record.get("title", "")
             if self.default_language == "fr":
                 record["title_fr"] = ckan_record.get("title", "")
+        record["title"] = record["title"].strip()
 
         if isinstance(ckan_record.get("notes_translated", ""), dict):
             record["description"] = ckan_record["notes_translated"].get("en", "")

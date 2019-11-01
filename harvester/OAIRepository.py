@@ -296,7 +296,9 @@ class OAIRepository(HarvestRepository):
         if "title" not in record.keys():
             return None
         if isinstance(record["title"], list):
-            record["title"] = record["title"][0]
+            record["title"] = record["title"][0].strip()
+        else:
+            record["title"] = record["title"].strip()
 
         if "contact" not in record.keys():
             record["contact"] = ""
