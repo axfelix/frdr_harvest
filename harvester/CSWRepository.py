@@ -60,7 +60,7 @@ class CSWRepository(HarvestRepository):
     def format_csw_to_oai(self, csw_record, local_identifier):
         record = {}
 
-        record["title"] = csw_record.title
+        record["title"] = csw_record.get("title","").strip()
         record["description"] = csw_record.abstract
         record["tags"] = csw_record.subjects
         record["identifier"] = local_identifier

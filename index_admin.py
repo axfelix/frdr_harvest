@@ -130,7 +130,7 @@ def main():
     stderr_handler = logging.StreamHandler()
     log_format = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
                   '-35s %(lineno) -5d: %(message)s')
-    logging.basicConfig(level=logging.INFO, format=log_format, handlers=[syslog_handler, stderr_handler])
+    logging.basicConfig(level=logging.ERROR, format=log_format, handlers=[syslog_handler, stderr_handler])
     LOGGER = logging.getLogger('__name__')
     CONFIG["db"] = get_config_ini("conf/harvester.conf")["db"]
     get_db().setLogger(LOGGER)
