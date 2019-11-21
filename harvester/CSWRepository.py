@@ -52,7 +52,7 @@ class CSWRepository(HarvestRepository):
                                                                                                self.formatter.humanize(
                                                                                                    tdelta),
                                                                                                item_count / tdelta))
-            if item_count == self.cswrepo.results['matches']:
+            if item_count >= self.cswrepo.results['matches']:
                 break
 
         self.logger.info("Found {} items in feed".format(item_count))
