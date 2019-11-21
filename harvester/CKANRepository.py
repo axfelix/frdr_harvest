@@ -62,7 +62,8 @@ class CKANRepository(HarvestRepository):
         else:
             record["creator"] = ckan_record['organization'].get('title', "")
 
-        record["creator"] = [x for x in record["creator"] if x != '']
+        if isinstance(record["creator"], list):
+            record["creator"] = [x for x in record["creator"] if x != '']
 
         record["identifier"] = local_identifier
 
