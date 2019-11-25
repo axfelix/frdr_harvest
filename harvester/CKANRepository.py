@@ -140,19 +140,20 @@ class CKANRepository(HarvestRepository):
         if (publication_year < 13 or publication_year > 23):
             record["pub_date"] = ""
 
-        if ('contacts' in ckan_record) and ckan_record['contacts']:
-            record["contact"] = ckan_record["contacts"][0].get('email', "")
-        elif ('author_email' in ckan_record) and ckan_record['author_email']:
-            record["contact"] = ckan_record.get("author_email", "")
-        elif ('contact_email' in ckan_record) and ckan_record['contact_email']:
-            record["contact"] = ckan_record.get("contact_email", "")
-        elif ('owner_email' in ckan_record) and ckan_record['owner_email']:
-            record["contact"] = ckan_record.get("owner_email", "")
-        elif ('maintainer_email' in ckan_record) and ckan_record['maintainer_email']:
-            record["contact"] = ckan_record.get("maintainer_email", "")
-        elif "contact" in self:
-            record["contact"] = self.contact
-
+        try:
+            if self.contact:
+                record["contact"] = self.contact
+        except:
+            if ('contacts' in ckan_record) and ckan_record['contacts']:
+                record["contact"] = ckan_record["contacts"][0].get('email', "")
+            elif ('author_email' in ckan_record) and ckan_record['author_email']:
+                record["contact"] = ckan_record.get("author_email", "")
+            elif ('contact_email' in ckan_record) and ckan_record['contact_email']:
+                record["contact"] = ckan_record.get("contact_email", "")
+            elif ('owner_email' in ckan_record) and ckan_record['owner_email']:
+                record["contact"] = ckan_record.get("owner_email", "")
+            elif ('maintainer_email' in ckan_record) and ckan_record['maintainer_email']:
+                record["contact"] = ckan_record.get("maintainer_email", "")
 
         try:
             record["series"] = ckan_record["data_series_name"]["en"]
