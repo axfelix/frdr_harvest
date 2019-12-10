@@ -161,14 +161,17 @@ class OAIRepository(HarvestRepository):
     def unpack_oai_metadata(self, record):
         record["pub_date"] = record.get("date")
 
+        record["tags"] = record.get("subject")
+        record.pop("subject")
+
         if self.metadataprefix.lower() == "ddi":
             # TODO: better DDI implementation that doesn't simply flatten everything, see: https://sickle.readthedocs.io/en/latest/customizing.html
             # Mapping as per http://www.ddialliance.org/resources/ddi-profiles/dc
             record["title"] = record.get("titl")
             record["creator"] = record.get("AuthEnty")
-            record["subject"] = record.get("keyword", [])
+            record["tags"] = record.get("keyword", [])
             if "topcClas" in record.keys() and len(record["topcClas"]) > 0:
-                record['subject'].extend(filter(None, record["topcClas"]))
+                record['tags'].extend(filter(None, record["topcClas"]))
             record["description"] = record.get("abstract")
             record["publisher"] = record.get("producer")
             record["contributor"] = record.get("othId")
@@ -186,7 +189,7 @@ class OAIRepository(HarvestRepository):
 
         if self.metadataprefix.lower() == "fgdc" or self.metadataprefix.lower() == "fgdc-std":
             record["creator"] = record.get("origin")
-            record["subject"] = record.get("themekey")
+            record["tags"] = record.get("themekey")
             record["description"] = record.get("abstract")
             record["publisher"] = record.get("cntorg")
             # Put these dates in preferred order
