@@ -162,7 +162,7 @@ class OAIRepository(HarvestRepository):
         record["pub_date"] = record.get("date")
 
         record["tags"] = record.get("subject")
-        record.pop("subject")
+        record.pop("subject", None)
 
         if self.metadataprefix.lower() == "ddi":
             # TODO: better DDI implementation that doesn't simply flatten everything, see: https://sickle.readthedocs.io/en/latest/customizing.html
