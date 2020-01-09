@@ -19,7 +19,7 @@ def rate_limited(max_per_second):
             lock.acquire()
             nonlocal last_time_called
             try:
-                elapsed = time.perf_counter() - last_time_called
+                elapsed = preferred_clock() - last_time_called
                 left_to_wait = min_interval - elapsed
 
                 if left_to_wait > 0:
