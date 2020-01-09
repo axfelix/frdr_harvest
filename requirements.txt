@@ -1,4 +1,5 @@
 ckanapi
+dicttoxml
 docopt
 Flask
 flask-restful
