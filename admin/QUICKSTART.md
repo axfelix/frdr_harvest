@@ -31,6 +31,7 @@ python3 ./globus_harvester.py --onlyharvest
 ```
 8. Run search web UI to access harvest results (localhost:8100):
 ``` shell
-python3 admin/admin.py
+cd admin
+python3 admin.py
 ```
 
