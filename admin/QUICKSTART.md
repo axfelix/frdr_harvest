@@ -29,7 +29,7 @@ pass = $PASSWORD
 ``` shell
 python3 ./globus_harvester.py --onlyharvest
 ```
-8. Run search web UI to access harvest results (localhost:8100):
+8. Run search web UI to access harvest results (localhost:8100/admin/):
 ``` shell
 cd admin
 python3 admin.py
