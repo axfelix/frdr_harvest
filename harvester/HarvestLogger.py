@@ -26,6 +26,8 @@ class HarvestLogger:
                 self.logger.setLevel(logging.INFO)
             if (params['level'].upper() == "ERROR"):
                 self.logger.setLevel(logging.ERROR)
+        if 'console' in params and (params['console'].upper() == "TRUE"):
+            self.logger.addHandler(logging.StreamHandler(sys.stdout))
 
         self.copyerrorstoemail = False
         self.previouserrorstate = False

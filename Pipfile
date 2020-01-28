@@ -1,0 +1,26 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+docopt = "*"
+urllib3 = "*"
+ckanapi = "*"
+dicttoxml = "*"
+flask = "*"
+flask-restful = "*"
+owslib = "*"
+python-daemon = "*"
+requests = "*"
+sickle = "*"
+sodapy = "*"
+flask-basicauth = "*"
+flask-admin = "*"
+flask-sqlalchemy = "*"
+psycopg2-binary = "*"
+
+[requires]
+python_version = "3.7"

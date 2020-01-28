@@ -9,3 +9,4 @@ python-daemon
 requests
 sickle
 sodapy
+urllib3
