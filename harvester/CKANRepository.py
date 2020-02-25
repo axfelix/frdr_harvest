@@ -31,11 +31,15 @@ class CKANRepository(HarvestRepository):
         self.repository_id = self.db.update_repo(**kwargs)
         #records = self.ckanrepo.action.package_list()
 
-        # Iterate through sets of 1000 records
         offset = 0
         records = self.ckanrepo.call_action('package_list?limit=1000&offset=' + str(offset))
+
+        # Iterate through sets of 1000 records until no records returned
         while len(records) % 1000 == 0:
             offset +=1000
+            response = self.ckanrepo.call_action('package_list?limit=1000&offset=' + str(offset))
+            if len(response) == 0:
+                break
             records = records + self.ckanrepo.call_action('package_list?limit=1000&offset=' + str(offset))
 
         item_count = 0
