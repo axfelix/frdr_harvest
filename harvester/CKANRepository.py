@@ -232,6 +232,9 @@ class CKANRepository(HarvestRepository):
             record["access"] = "Limited"
         elif ('private' in ckan_record) and ckan_record['private'] == False:
             record["access"] = "Public"
+            if self.name == 'BC Data Catalogue':
+                # BC Data Catalogue uses view_audience - 'private' is always False
+                record["access"] = ckan_record.get("view_audience")
         else:
             record["access"] = ckan_record.get("download_audience")
             record["access"] = ckan_record.get("view_audience")
