@@ -126,7 +126,7 @@ class OAIRepository(HarvestRepository):
                         if idt.lower().startswith("http"):
                             metadata['dc:source'] = idt
                         if idt.lower().startswith("doi:"):
-                            metadata['dc:source'] = "https://dx.doi.org/" + idt[4:]
+                            metadata['dc:source'] = "https://doi.org/" + idt[4:]
                         if idt.lower().startswith("hdl:"):
                             metadata['dc:source'] = "https://hdl.handle.net/" + idt[4:]
 
