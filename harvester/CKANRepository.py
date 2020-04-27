@@ -234,10 +234,14 @@ class CKANRepository(HarvestRepository):
 
         try:
             ckan_record = self.ckanrepo.action.package_show(id=record['local_identifier'])
-            oai_record = self.format_ckan_to_oai(ckan_record, record['local_identifier'])
-            if oai_record:
-                self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
-            return True
+            if ckan_record['type'] == 'dataset':
+                oai_record = self.format_ckan_to_oai(ckan_record, record['local_identifier'])
+                if oai_record:
+                    self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
+                return True
+            else:
+                self.db.delete_record(record)
+                return True
 
         except ckanapi.errors.NotAuthorized:
             # Not authorized may mean the record is embargoed, but ODC also uses this to indicate the record was deleted
