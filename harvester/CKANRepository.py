@@ -70,8 +70,10 @@ class CKANRepository(HarvestRepository):
         elif ('creator' in ckan_record) and ckan_record['creator']:
             if isinstance(ckan_record["creator"], list):
                 record["creator"] = ckan_record["creator"][0]
-        else:
+        elif ('organization' in ckan_record) and ckan_record['organization']:
             record["creator"] = ckan_record['organization'].get('title', "")
+        else:
+            record["creator"] = self.name
 
         if isinstance(record["creator"], list):
             record["creator"] = [x for x in record["creator"] if x != '']
@@ -119,11 +121,12 @@ class CKANRepository(HarvestRepository):
         else:
             record["subject"] = ckan_record.get('subject', "")
 
-        record["rights"] = [ckan_record['license_title']]
-        record["rights"].append(ckan_record.get("license_url", ""))
-        record["rights"].append(ckan_record.get("attribution", ""))
-        record["rights"] = "\n".join(record["rights"])
-        record["rights"] = record["rights"].strip()
+        if ('license_title' in ckan_record):
+            record["rights"] = [ckan_record['license_title']]
+            record["rights"].append(ckan_record.get("license_url", ""))
+            record["rights"].append(ckan_record.get("attribution", ""))
+            record["rights"] = "\n".join(record["rights"])
+            record["rights"] = record["rights"].strip()
 
         # Look for publication date in a few places
         # All of these assume the date will start with year first
@@ -169,6 +172,8 @@ class CKANRepository(HarvestRepository):
                 record["contact"] = ckan_record.get("owner_email", "")
             elif ('maintainer_email' in ckan_record) and ckan_record['maintainer_email']:
                 record["contact"] = ckan_record.get("maintainer_email", "")
+            else:
+                record["contact"] = ''
 
         try:
             record["series"] = ckan_record["data_series_name"]["en"]
@@ -247,10 +252,14 @@ class CKANRepository(HarvestRepository):
 
         try:
             ckan_record = self.ckanrepo.action.package_show(id=record['local_identifier'])
-            oai_record = self.format_ckan_to_oai(ckan_record, record['local_identifier'])
-            if oai_record:
-                self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
-            return True
+            if ckan_record['type'] == 'dataset':
+                oai_record = self.format_ckan_to_oai(ckan_record, record['local_identifier'])
+                if oai_record:
+                    self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
+                return True
+            else:
+                self.db.delete_record(record)
+                return True
 
         except ckanapi.errors.NotAuthorized:
             # Not authorized may mean the record is embargoed, but ODC also uses this to indicate the record was deleted
