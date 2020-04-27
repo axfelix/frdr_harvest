@@ -48,7 +48,7 @@ class Exporter(object):
         doi = re.search("(doi|DOI):\s?\S+", record["local_identifier"])
         if doi:
             doi = doi.group(0).rstrip('\.')
-            local_url = re.sub("(doi|DOI):\s?", "https://dx.doi.org/", doi)
+            local_url = re.sub("(doi|DOI):\s?", "https://doi.org/", doi)
             return local_url
 
         # If the item has a source URL, use it
