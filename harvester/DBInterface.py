@@ -161,7 +161,7 @@ class DBInterface:
                             self.enabled, self.abort_after_numerrors, self.max_records_updated_per_run,
                             self.update_log_after_numitems,
                             self.record_refresh_days, self.repo_refresh_days, self.homepage_url))
-                        repo_id = int(cur.fetchone()['repository_id'])
+                        self.repo_id = int(cur.fetchone()['repository_id'])
 
                     if self.dbtype == "sqlite":
                         cur.execute(self._prep("""INSERT INTO repositories 
