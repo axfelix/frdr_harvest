@@ -129,7 +129,7 @@ class CKANRepository(HarvestRepository):
         else:
             record["subject"] = ckan_record.get('subject', "")
 
-        if ('license_title' in ckan_record):
+        if ('license_title' in ckan_record) and ckan_record['license_title']:
             record["rights"] = [ckan_record['license_title']]
             record["rights"].append(ckan_record.get("license_url", ""))
             record["rights"].append(ckan_record.get("attribution", ""))
@@ -197,8 +197,9 @@ class CKANRepository(HarvestRepository):
         record["tags"] = []
         record["tags_fr"] = []
         if isinstance(ckan_record.get("keywords", ""), dict):
-            for tag in ckan_record["keywords"]["en"]:
-                record["tags"].append(tag)
+            if "en" in ckan_record["keywords"]:
+                for tag in ckan_record["keywords"]["en"]:
+                    record["tags"].append(tag)
             if "fr" in ckan_record["keywords"]:
                 for tag in ckan_record["keywords"]["fr"]:
                     record["tags_fr"].append(tag)
@@ -206,8 +207,9 @@ class CKANRepository(HarvestRepository):
                 for tag in ckan_record["keywords"]["fr-t-en"]:
                     record["tags_fr"].append(tag)
         elif isinstance(ckan_record.get("tags_translated", ""), dict):
-            for tag in ckan_record["tags_translated"]["en"]:
-                record["tags"].append(tag)
+            if "en" in ckan_record["tags_translated"]:
+                for tag in ckan_record["tags_translated"]["en"]:
+                    record["tags"].append(tag)
             if "fr" in ckan_record["tags_translated"]:
                 for tag in ckan_record["tags_translated"]["fr"]:
                     record["tags_fr"].append(tag)
