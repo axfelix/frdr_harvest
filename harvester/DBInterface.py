@@ -401,8 +401,6 @@ class DBInterface:
                     source_url = record["dc:source"][0]
                 else:
                     source_url = record["dc:source"]
-            elif 'source_url' in record:
-                source_url = record["source_url"]
 
             if record["record_id"] is None:
                 record["record_id"] = self.create_new_record(record, source_url, repo_id)
