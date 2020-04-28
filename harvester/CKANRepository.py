@@ -61,6 +61,11 @@ class CKANRepository(HarvestRepository):
     def format_ckan_to_oai(self, ckan_record, local_identifier):
         record = {}
 
+        if ('type' in ckan_record) and ckan_record['type']:
+            # Exclude non-dataset records from City of Surrey and Province of Alberta
+            if ckan_record['type'] in ['showcase', 'publications']:
+                return None
+
         if not 'date_published' in ckan_record and not 'dates' in ckan_record and not 'record_publish_date' in ckan_record and not 'metadata_created' in ckan_record and not 'date_issued' in ckan_record:
             return None
 
@@ -255,14 +260,10 @@ class CKANRepository(HarvestRepository):
 
         try:
             ckan_record = self.ckanrepo.action.package_show(id=record['local_identifier'])
-            if ckan_record['type'] == 'dataset':
-                oai_record = self.format_ckan_to_oai(ckan_record, record['local_identifier'])
-                if oai_record:
-                    self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
-                return True
-            else:
-                self.db.delete_record(record)
-                return True
+            oai_record = self.format_ckan_to_oai(ckan_record, record['local_identifier'])
+            if oai_record:
+                self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
+            return True
 
         except ckanapi.errors.NotAuthorized:
             # Not authorized may mean the record is embargoed, but ODC also uses this to indicate the record was deleted
