@@ -88,9 +88,10 @@ class CKANRepository(HarvestRepository):
 
         record["identifier"] = local_identifier
 
-        # Use permalink for BC Data Catalogue source_url
-        if self.name == 'BC Data Catalogue':
-            record["source_url"] = self.homepage_url + "dataset/" + ckan_record["id"]
+        # Use persistent identifier for source_url
+        # Longer term: store the CKAN identifier in records table (new column), use in Exporter to replace %id%
+        record["source_url"] = self.item_url_pattern.replace("%id%", ckan_record["id"])
+
 
         if isinstance(ckan_record.get("title_translated", ""), dict):
             record["title"] = ckan_record["title_translated"].get("en", "")
