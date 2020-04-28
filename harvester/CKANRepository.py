@@ -29,7 +29,21 @@ class CKANRepository(HarvestRepository):
             "repo_refresh_days": self.repo_refresh_days, "homepage_url": self.homepage_url
         }
         self.repository_id = self.db.update_repo(**kwargs)
+
         records = self.ckanrepo.action.package_list()
+
+        # If response is limited to 1000, get all records with pagination
+        if len(records) == 1000:
+            offset = 0
+            records = self.ckanrepo.call_action('package_list?limit=1000&offset=' + str(offset))
+
+            # Iterate through sets of 1000 records until no records returned
+            while len(records) % 1000 == 0:
+                offset +=1000
+                response = self.ckanrepo.call_action('package_list?limit=1000&offset=' + str(offset))
+                if len(response) == 0:
+                    break
+                records = records + response
 
         item_count = 0
         for ckan_identifier in records:
@@ -47,6 +61,11 @@ class CKANRepository(HarvestRepository):
     def format_ckan_to_oai(self, ckan_record, local_identifier):
         record = {}
 
+        if ('type' in ckan_record) and ckan_record['type']:
+            # Exclude non-dataset records from City of Surrey and Province of Alberta
+            if ckan_record['type'] in ['showcase', 'publications']:
+                return None
+
         if not 'date_published' in ckan_record and not 'dates' in ckan_record and not 'record_publish_date' in ckan_record and not 'metadata_created' in ckan_record and not 'date_issued' in ckan_record:
             return None
 
@@ -59,8 +78,10 @@ class CKANRepository(HarvestRepository):
         elif ('creator' in ckan_record) and ckan_record['creator']:
             if isinstance(ckan_record["creator"], list):
                 record["creator"] = ckan_record["creator"][0]
-        else:
+        elif ('organization' in ckan_record) and ckan_record['organization']:
             record["creator"] = ckan_record['organization'].get('title', "")
+        else:
+            record["creator"] = self.name
 
         if isinstance(record["creator"], list):
             record["creator"] = [x for x in record["creator"] if x != '']
@@ -104,11 +125,12 @@ class CKANRepository(HarvestRepository):
         else:
             record["subject"] = ckan_record.get('subject', "")
 
-        record["rights"] = [ckan_record['license_title']]
-        record["rights"].append(ckan_record.get("license_url", ""))
-        record["rights"].append(ckan_record.get("attribution", ""))
-        record["rights"] = "\n".join(record["rights"])
-        record["rights"] = record["rights"].strip()
+        if ('license_title' in ckan_record) and ckan_record['license_title']:
+            record["rights"] = [ckan_record['license_title']]
+            record["rights"].append(ckan_record.get("license_url", ""))
+            record["rights"].append(ckan_record.get("attribution", ""))
+            record["rights"] = "\n".join(record["rights"])
+            record["rights"] = record["rights"].strip()
 
         # Look for publication date in a few places
         # All of these assume the date will start with year first
@@ -154,6 +176,8 @@ class CKANRepository(HarvestRepository):
                 record["contact"] = ckan_record.get("owner_email", "")
             elif ('maintainer_email' in ckan_record) and ckan_record['maintainer_email']:
                 record["contact"] = ckan_record.get("maintainer_email", "")
+            else:
+                record["contact"] = ''
 
         try:
             record["series"] = ckan_record["data_series_name"]["en"]
@@ -169,8 +193,9 @@ class CKANRepository(HarvestRepository):
         record["tags"] = []
         record["tags_fr"] = []
         if isinstance(ckan_record.get("keywords", ""), dict):
-            for tag in ckan_record["keywords"]["en"]:
-                record["tags"].append(tag)
+            if "en" in ckan_record["keywords"]:
+                for tag in ckan_record["keywords"]["en"]:
+                    record["tags"].append(tag)
             if "fr" in ckan_record["keywords"]:
                 for tag in ckan_record["keywords"]["fr"]:
                     record["tags_fr"].append(tag)
@@ -178,8 +203,9 @@ class CKANRepository(HarvestRepository):
                 for tag in ckan_record["keywords"]["fr-t-en"]:
                     record["tags_fr"].append(tag)
         elif isinstance(ckan_record.get("tags_translated", ""), dict):
-            for tag in ckan_record["tags_translated"]["en"]:
-                record["tags"].append(tag)
+            if "en" in ckan_record["tags_translated"]:
+                for tag in ckan_record["tags_translated"]["en"]:
+                    record["tags"].append(tag)
             if "fr" in ckan_record["tags_translated"]:
                 for tag in ckan_record["tags_translated"]["fr"]:
                     record["tags_fr"].append(tag)
@@ -217,6 +243,9 @@ class CKANRepository(HarvestRepository):
             record["access"] = "Limited"
         elif ('private' in ckan_record) and ckan_record['private'] == False:
             record["access"] = "Public"
+            if self.name == 'BC Data Catalogue':
+                # BC Data Catalogue uses view_audience - 'private' is always False
+                record["access"] = ckan_record.get("view_audience")
         else:
             record["access"] = ckan_record.get("download_audience")
             record["access"] = ckan_record.get("view_audience")
