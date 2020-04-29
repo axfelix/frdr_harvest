@@ -14,7 +14,7 @@
 set -e
 
 DAEMON=restapi.py
-DAEMONPATH=/opt/rdm/globus_oai
+DAEMONPATH=/opt/rdm/frdr_harvest
 NAME=harvestapi
 DAEMONUSER=harvest
 PIDDIR=/tmp/

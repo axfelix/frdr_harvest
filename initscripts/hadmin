@@ -14,7 +14,7 @@
 set -e
 
 DAEMON=admin.py
-DAEMONPATH=/opt/rdm/globus_oai/admin
+DAEMONPATH=/opt/rdm/frdr_harvest/admin
 NAME=hadmin
 DAEMONUSER=harvest
 PIDDIR=/tmp/
