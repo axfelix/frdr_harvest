@@ -136,9 +136,9 @@ class DBInterface:
                 try:
                     self.logger.debug("This repo already exists in the database; updating")
                     cur.execute(self._prep("""UPDATE repositories 
-						set repository_url=?, repository_set=?, repository_name=?, repository_type=?, repository_thumbnail=?, last_crawl_timestamp=?, item_url_pattern=?,enabled=?,
-						abort_after_numerrors=?,max_records_updated_per_run=?,update_log_after_numitems=?,record_refresh_days=?,repo_refresh_days=?,homepage_url=?
-						WHERE repository_id=?"""), (
+                        set repository_url=?, repository_set=?, repository_name=?, repository_type=?, repository_thumbnail=?, last_crawl_timestamp=?, item_url_pattern=?,enabled=?,
+                        abort_after_numerrors=?,max_records_updated_per_run=?,update_log_after_numitems=?,record_refresh_days=?,repo_refresh_days=?,homepage_url=?
+                        WHERE repository_id=?"""), (
                         self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail, time.time(),
                         self.item_url_pattern,
                         self.enabled, self.abort_after_numerrors, self.max_records_updated_per_run,
@@ -154,9 +154,9 @@ class DBInterface:
                     self.logger.debug("This repo does not exist in the database; adding")
                     if self.dbtype == "postgres":
                         cur.execute(self._prep("""INSERT INTO repositories 
-							(repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
-							abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url) 
-							VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING repository_id"""), (
+                            (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
+                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url) 
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING repository_id"""), (
                             self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail,
                             time.time(), self.item_url_pattern,
                             self.enabled, self.abort_after_numerrors, self.max_records_updated_per_run,
@@ -166,9 +166,9 @@ class DBInterface:
 
                     if self.dbtype == "sqlite":
                         cur.execute(self._prep("""INSERT INTO repositories 
-							(repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
-							abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url) 
-							VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""), (
+                            (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
+                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url) 
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""), (
                             self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail,
                             time.time(), self.item_url_pattern,
                             self.enabled, self.abort_after_numerrors, self.max_records_updated_per_run,
@@ -700,9 +700,9 @@ class DBInterface:
             cur = self.getCursor(con)
             cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.contact, recs.series, recs.modified_timestamp, 
                 recs.local_identifier, recs.item_url, repos.repository_id, repos.repository_type
-				FROM records recs, repositories repos
-				where recs.repository_id = repos.repository_id and recs.modified_timestamp < ? and repos.repository_id = ? and recs.deleted = 0
-				LIMIT ?"""), (stale_timestamp, repo_id, max_records_updated_per_run))
+                FROM records recs, repositories repos
+                where recs.repository_id = repos.repository_id and recs.modified_timestamp < ? and repos.repository_id = ? and recs.deleted = 0
+                LIMIT ?"""), (stale_timestamp, repo_id, max_records_updated_per_run))
             if cur is not None:
                 records = cur.fetchall()
 
