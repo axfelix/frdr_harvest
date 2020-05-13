@@ -76,7 +76,7 @@ class Exporter(object):
             record["deleted"] = int(record["deleted"])
 
             if record["item_url"] == "":
-                record["item_url"] = self.db._construct_local_url(record)
+                record["item_url"] = self.db.construct_local_url(record)
 
             record["dc:source"] = record["item_url"]
             if record["dc:source"] is None:
