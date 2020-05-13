@@ -3,6 +3,7 @@ import time
 import sys
 import hashlib
 import json
+import re
 
 
 class DBInterface:
@@ -363,6 +364,61 @@ class DBInterface:
 
         return returnvalue
 
+    def construct_local_url(self, record):
+        oai_id = None
+        oai_search = None
+        # Check if the local_identifier has already been turned into a url
+        if "local_identifier" in record:
+            if record["local_identifier"].startswith(("http","HTTP")):
+                return record["local_identifier"]
+            # No link found, see if there is an OAI identifier
+            oai_search = re.search("oai:(.+):(.+)", record["local_identifier"])
+        else:
+            oai_search = re.search("oai:(.+):(.+)", record["identifier"])
+
+        if oai_search:
+            # Check for OAI format of identifier (oai:domain:id) and extract just the ID
+            oai_id = oai_search.group(2)
+            # Replace underscores in IDs with colons (SFU Radar)
+            oai_id = oai_id.replace("_", ":")
+
+        # If given a pattern then substitue in the item ID and return it
+        if "item_url_pattern" in record and record["item_url_pattern"]:
+            if oai_id:
+                local_url = re.sub("(\%id\%)", oai_id, record["item_url_pattern"])
+            else:
+                # No OAI ID found, but we still got passed a pattern, so use it with full identifier
+                if "local_identifier" in record and record["local_identifier"]:
+                    local_url = re.sub("(\%id\%)", record["local_identifier"], record["item_url_pattern"])
+                else:
+                    local_url = re.sub("(\%id\%)", record["identifier"], record["item_url_pattern"])
+            return local_url
+
+        # Check if the identifier is a DOI
+        if "local_identifier" in record and record["local_identifier"]:
+            doi = re.search("(doi|DOI):\s?\S+", record["local_identifier"])
+            if doi:
+                doi = doi.group(0).rstrip('\.')
+                local_url = re.sub("(doi|DOI):\s?", "https://doi.org/", doi)
+                return local_url
+
+        # Check if the source is already a link
+        if "source_url" in record:
+            if record["source_url"].startswith(("http","HTTP")):
+                return record["source_url"]
+        if "dc:source" in record:
+            if record["dc:source"].startswith(("http","HTTP")):
+                return record["dc:source"]
+
+        # URL is in the identifier
+        local_url = re.search("(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?",
+                              record["local_identifier"])
+        if local_url:
+            return local_url.group(0)
+
+        self.logger.error("construct_local_url() failed for item: {}".format(json.dumps(record)) )
+        return None
+
     def create_new_record(self, rec, source_url, repo_id):
         returnvalue = None
         con = self.getConnection()
@@ -371,26 +427,33 @@ class DBInterface:
             try:
                 if self.dbtype == "postgres":
                     cur.execute(self._prep(
-                        "INSERT INTO records (title, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, repository_id) VALUES(?,?,?,?,?,?,?,?,?) RETURNING record_id"),
+                        """INSERT INTO records (title, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
+                        VALUES(?,?,?,?,?,?,?,?,?,?) RETURNING record_id"""),
                         (rec["title"], rec["pub_date"], rec["contact"], rec["series"], time.time(), source_url, 0,
-                         rec["identifier"], repo_id))
+                         rec["identifier"], rec["item_url"], repo_id))
                     returnvalue = int(cur.fetchone()['record_id'])
                 if self.dbtype == "sqlite":
                     cur.execute(self._prep(
-                        "INSERT INTO records (title, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, repository_id) VALUES(?,?,?,?,?,?,?,?,?)"),
+                        """INSERT INTO records (title, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
+                        VALUES(?,?,?,?,?,?,?,?,?,?)"""),
                         (rec["title"], rec["pub_date"], rec["contact"], rec["series"], time.time(), source_url, 0,
-                         rec["identifier"], repo_id))
+                         rec["identifier"], rec["item_url"], repo_id))
                     returnvalue = int(cur.lastrowid)
             except self.dblayer.IntegrityError as e:
                 self.logger.error("Record insertion problem: {}".format(e))
 
         return returnvalue
 
-    def write_record(self, record, repo_id, metadata_prefix, domain_metadata):
+    def write_record(self, record, repo):
+        repo_id = repo.repository_id
+        metadata_prefix = repo.metadataprefix.lower()
+        domain_metadata = repo.domain_metadata
         if record == None:
             return None
         record["record_id"] = self.get_single_record_id("records", record["identifier"],
                                                         "and repository_id=" + str(repo_id))
+        record["item_url_pattern"] = repo.item_url_pattern
+        record["item_url"] = self.construct_local_url(record)
 
         con = self.getConnection()
         with con:
@@ -406,9 +469,10 @@ class DBInterface:
                 record["record_id"] = self.create_new_record(record, source_url, repo_id)
             else:
                 cur.execute(self._prep(
-                    "UPDATE records set title=?, pub_date=?, contact=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=? WHERE record_id = ?"),
+                    """UPDATE records set title=?, pub_date=?, contact=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=?, item_url=? 
+                    WHERE record_id = ?"""),
                     (record["title"], record["pub_date"], record["contact"], record["series"], time.time(),
-                     source_url, 0, record["identifier"], record["record_id"]))
+                     source_url, 0, record["identifier"], record["item_url"], record["record_id"]))
 
             if record["record_id"] is None:
                 return None
@@ -634,8 +698,8 @@ class DBInterface:
         records = []
         with con:
             cur = self.getCursor(con)
-            cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.contact, recs.series, recs.modified_timestamp, recs.local_identifier, 
-				repos.repository_id, repos.repository_type
+            cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.contact, recs.series, recs.modified_timestamp, 
+                recs.local_identifier, recs.item_url, repos.repository_id, repos.repository_type
 				FROM records recs, repositories repos
 				where recs.repository_id = repos.repository_id and recs.modified_timestamp < ? and repos.repository_id = ? and recs.deleted = 0
 				LIMIT ?"""), (stale_timestamp, repo_id, max_records_updated_per_run))
@@ -665,8 +729,8 @@ class DBInterface:
                 cur = self.getCursor(con)
                 try:
                     cur.execute(self._prep(
-                        "INSERT INTO records (title, pub_date, contact, series, modified_timestamp, local_identifier, repository_id) VALUES(?,?,?,?,?,?,?)"),
-                        ("", "", "", "", 0, local_identifier, repo_id))
+                        "INSERT INTO records (title, pub_date, contact, series, modified_timestamp, local_identifier, item_url, repository_id) VALUES(?,?,?,?,?,?,?,?)"),
+                        ("", "", "", "", 0, local_identifier, "", repo_id))
                 except self.dblayer.IntegrityError as e:
                     self.logger.error("Error creating record header: {}".format(e))
 

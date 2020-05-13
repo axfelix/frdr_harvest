@@ -86,7 +86,7 @@ class CSWRepository(HarvestRepository):
             oai_record["pub_date"] = re.sub("[T ][0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.?[0-9]*[Z]?$", "",
                                             oai_record["pub_date"])
             if oai_record:
-                self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
+                self.db.write_record(oai_record, self)
             return True
 
         else:

@@ -260,7 +260,7 @@ class CKANRepository(HarvestRepository):
             ckan_record = self.ckanrepo.action.package_show(id=record['local_identifier'])
             oai_record = self.format_ckan_to_oai(ckan_record, record['local_identifier'])
             if oai_record:
-                self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
+                self.db.write_record(oai_record, self)
             else:
                 if oai_record is False:
                     # This record is not a dataset, remove it from the results
