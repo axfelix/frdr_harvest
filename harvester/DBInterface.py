@@ -407,8 +407,12 @@ class DBInterface:
             if record["source_url"].startswith(("http","HTTP")):
                 return record["source_url"]
         if "dc:source" in record:
-            if record["dc:source"].startswith(("http","HTTP")):
-                return record["dc:source"]
+            if isinstance(record["dc:source"], list):
+                if record["dc:source"][0].startswith(("http","HTTP")):
+                        return record["dc:source"][0]
+            else:
+                if record["dc:source"].startswith(("http","HTTP")):
+                    return record["dc:source"]
 
         # URL is in the identifier
         local_url = re.search("(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?",
