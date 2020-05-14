@@ -54,8 +54,7 @@ class MarkLogicRepository(HarvestRepository):
                 for record in records["results"]:
                     oai_record = self.format_marklogic_to_oai(record)
                     if oai_record:
-                        self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(),
-                                             self.domain_metadata)
+                        self.db.write_record(oai_record, self)
                 offset += self.records_per_request
 
             return True

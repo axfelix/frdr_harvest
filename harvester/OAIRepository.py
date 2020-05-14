@@ -137,9 +137,9 @@ class OAIRepository(HarvestRepository):
                 # Use the header id for the database key (needed later for OAI GetRecord calls)
                 metadata['identifier'] = record.header.identifier
                 oai_record = self.unpack_oai_metadata(metadata)
-                domain_metadata = self.find_domain_metadata(metadata)
+                self.domain_metadata = self.find_domain_metadata(metadata)
 
-                self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), domain_metadata)
+                self.db.write_record(oai_record, self)
                 item_count = item_count + 1
                 if (item_count % self.update_log_after_numitems == 0):
                     tdelta = time.time() - self.tstart + 0.1
@@ -347,7 +347,7 @@ class OAIRepository(HarvestRepository):
 
     @rate_limited(5)
     def _update_record(self, record):
-        self.logger.debug("Updating OAI record {}".format(record['local_identifier']))
+        #self.logger.debug("Updating OAI record {}".format(record['local_identifier']))
 
         try:
             single_record = self.sickle.GetRecord(identifier=record["local_identifier"],
@@ -367,11 +367,11 @@ class OAIRepository(HarvestRepository):
 
             metadata['identifier'] = single_record.header.identifier
             oai_record = self.unpack_oai_metadata(metadata)
-            domain_metadata = self.find_domain_metadata(metadata)
+            self.domain_metadata = self.find_domain_metadata(metadata)
             if oai_record is None:
                 self.db.delete_record(record)
                 return False
-            self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), domain_metadata)
+            self.db.write_record(oai_record, self)
             return True
 
         except IdDoesNotExist:

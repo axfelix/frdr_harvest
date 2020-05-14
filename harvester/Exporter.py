@@ -6,7 +6,6 @@ import os
 import sys
 import html
 
-
 class Exporter(object):
     """ Read records from the database and export to given formats """
 
@@ -22,47 +21,6 @@ class Exporter(object):
             global DictRow
             from psycopg2.extras import DictCursor
             from psycopg2.extras import DictRow
-
-    def _construct_local_url(self, record):
-        # Check if the local_identifier has already been turned into a url
-        if "http" in record["local_identifier"].lower():
-            return record["local_identifier"]
-
-        # Check for OAI format of identifier (oai:domain:id)
-        oai_id = None
-        oai_search = re.search("oai:(.+):(.+)", record["local_identifier"])
-        if oai_search:
-            oai_id = oai_search.group(2)
-            # TODO: determine if this is needed for all repos, or just SFU?
-            oai_id = oai_id.replace("_", ":")
-
-        # If given a pattern then substitue in the item ID and return it
-        if "item_url_pattern" in record and record["item_url_pattern"]:
-            if oai_id:
-                local_url = re.sub("(\%id\%)", oai_id, record["item_url_pattern"])
-            else:
-                local_url = re.sub("(\%id\%)", record["local_identifier"], record["item_url_pattern"])
-            return local_url
-
-        # Check if the identifier is a DOI
-        doi = re.search("(doi|DOI):\s?\S+", record["local_identifier"])
-        if doi:
-            doi = doi.group(0).rstrip('\.')
-            local_url = re.sub("(doi|DOI):\s?", "https://doi.org/", doi)
-            return local_url
-
-        # If the item has a source URL, use it
-        if ('source_url' in record) and record['source_url']:
-            return record['source_url']
-
-        # URL is in the identifier
-        local_url = re.search("(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?",
-                              record["local_identifier"])
-        if local_url:
-            return local_url.group(0)
-
-        local_url = None
-        return local_url
 
     def _rows_to_dict(self, cursor):
         newdict = []
@@ -90,7 +48,8 @@ class Exporter(object):
         with records_con:
             records_cursor = records_con.cursor()
 
-        records_sql = """SELECT recs.record_id, recs.title, recs.pub_date, recs.contact, recs.series, recs.source_url, recs.deleted, recs.local_identifier, recs.modified_timestamp,
+        records_sql = """SELECT recs.record_id, recs.title, recs.pub_date, recs.contact, recs.series, recs.source_url, 
+            recs.deleted, recs.local_identifier, recs.item_url, recs.modified_timestamp,
             repos.repository_url, repos.repository_name, repos.repository_thumbnail, repos.item_url_pattern, repos.last_crawl_timestamp
             FROM records recs, repositories repos WHERE recs.repository_id = repos.repository_id"""
         if self.export_repository_id:
@@ -111,12 +70,15 @@ class Exporter(object):
 
             record = (dict(zip(
                 ['record_id', 'title', 'pub_date', 'contact', 'series', 'source_url', 'deleted', 'local_identifier',
-                 'modified_timestamp',
+                 'item_url', 'modified_timestamp',
                  'repository_url', 'repository_name', 'repository_thumbnail', 'item_url_pattern',
                  'last_crawl_timestamp'], row)))
             record["deleted"] = int(record["deleted"])
 
-            record["dc:source"] = self._construct_local_url(record)
+            if record["item_url"] == "":
+                record["item_url"] = self.db.construct_local_url(record)
+
+            record["dc:source"] = record["item_url"]
             if record["dc:source"] is None:
                 continue
                 

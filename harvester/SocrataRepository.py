@@ -62,7 +62,7 @@ class SocrataRepository(HarvestRepository):
             socrata_record = self.socratarepo.get_metadata(record['local_identifier'])
             oai_record = self.format_socrata_to_oai(socrata_record,record['local_identifier'])
             if oai_record:
-                self.db.write_record(oai_record, self.repository_id, self.metadataprefix.lower(), self.domain_metadata)
+                self.db.write_record(oai_record, self)
             return True
 
         except Exception as e:
