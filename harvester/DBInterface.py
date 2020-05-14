@@ -457,7 +457,10 @@ class DBInterface:
         record["record_id"] = self.get_single_record_id("records", record["identifier"],
                                                         "and repository_id=" + str(repo_id))
         record["item_url_pattern"] = repo.item_url_pattern
-        record["item_url"] = self.construct_local_url(record)
+        try:
+            record["item_url"] = record["item_url"]
+        except:
+            record["item_url"] = self.construct_local_url(record)
 
         con = self.getConnection()
         with con:
