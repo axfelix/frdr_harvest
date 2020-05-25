@@ -88,7 +88,8 @@ class CKANRepository(HarvestRepository):
 
         record["identifier"] = local_identifier
 
-        record["item_url"] = self.item_url_pattern.replace("%id%", ckan_record["id"])
+        if self.item_url_pattern:
+            record["item_url"] = self.item_url_pattern.replace("%id%", ckan_record["id"])
 
         if isinstance(ckan_record.get("title_translated", ""), dict):
             record["title"] = ckan_record["title_translated"].get("en", "")

@@ -76,7 +76,13 @@ class CSWRepository(HarvestRepository):
         if self.cswrepo is None:
             return
 
-        self.cswrepo.getrecordbyid(id=[record['local_identifier']])
+        try:
+            self.cswrepo.getrecordbyid(id=[record['local_identifier']])
+        except:
+            self.logger.error("Unable to update record: {}".format(record['local_identifier']))
+            self.db.delete_record(record)
+            return False
+
         if self.cswrepo.records:
             csw_record = self.cswrepo.records[record['local_identifier']]
             oai_record = self.format_csw_to_oai(csw_record, record['local_identifier'])
