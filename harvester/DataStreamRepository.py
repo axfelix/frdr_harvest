@@ -1,9 +1,9 @@
 from harvester.HarvestRepository import HarvestRepository
+from harvester.rate_limited import rate_limited
 import urllib
 import time
 import json
 import re
-import os.path
 import xml.etree.ElementTree as ET
 
 
@@ -11,7 +11,7 @@ class DataStreamRepository(HarvestRepository):
     """ DataStream Repository """
 
     def setRepoParams(self, repoParams):
-        self.metadataprefix = "marklogic"
+        self.metadataprefix = "datastream"
         super(DataStreamRepository, self).setRepoParams(repoParams)
         self.domain_metadata = []
 
@@ -30,34 +30,21 @@ class DataStreamRepository(HarvestRepository):
 
         try:
             response = urllib.request.urlopen('https://datastream.org/dataset/sitemap.xml')
-            #response = 'sitemap.xml'
             response_xml = ET.parse(response)
             root = response_xml.getroot()
             results = []
 
-            # count = 0
-            for child in root:
-                item_url = child[0].text
-                item_dcat_json_url = item_url + ".dcat.json"
-                item_response = urllib.request.urlopen(item_dcat_json_url)
-                item_record = item_response.read()
-                results.append(item_record)
-                # count = count+1
-                # if count > 10:
-                #     break
-
             item_count = 0
-            for item_record in results:
-                oai_record = self.format_datastream_to_oai(item_record)
-                if oai_record:
-                    self.db.write_record(oai_record, self)
-                    item_count = item_count + 1
-                    if (item_count % self.update_log_after_numitems == 0):
-                        tdelta = time.time() - self.tstart + 0.1
-                        self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,
-                                                                                                   self.formatter.humanize(
-                                                                                                       tdelta),
-                                                                                                   item_count / tdelta))
+            for child in root:
+                item_identifier = child[0].text.split("https://datastream.org/dataset/")[1]
+                result = self.db.write_header(item_identifier, self.repository_id)
+                item_count = item_count + 1
+                if (item_count % self.update_log_after_numitems == 0):
+                    tdelta = time.time() - self.tstart + 0.1
+                    self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,
+                                                                                               self.formatter.humanize(
+                                                                                                   tdelta),
+                                                                                               item_count / tdelta))
             self.logger.info("Found {} items in feed".format(item_count))
 
             return True
@@ -70,9 +57,9 @@ class DataStreamRepository(HarvestRepository):
 
         return False
 
-    def format_datastream_to_oai(self, datastream_record_bytes):
+    def format_datastream_to_oai(self, datastream_dcat_json):
 
-        datastream_record = json.loads(datastream_record_bytes)
+        datastream_record = datastream_dcat_json
 
         record = {}
 
@@ -118,6 +105,29 @@ class DataStreamRepository(HarvestRepository):
 
         return record
 
+    @rate_limited(5)
     def _update_record(self, record):
-        # TODO: Update this to write metadata; only write headers in _crawl
-        return True
+        try:
+            identifier = record['local_identifier']
+            item_dcat_json_url = "https://datastream.org/dataset/" + identifier + ".dcat.json"
+            item_response = urllib.request.urlopen(item_dcat_json_url)
+            item_response_content = item_response.read()
+            item_json = json.loads(item_response_content)
+
+            oai_record = self.format_datastream_to_oai(item_json)
+            if oai_record:
+                self.db.write_record(oai_record, self)
+            return True
+
+        except Exception as e:
+            self.logger.error("Updating record {} failed: {}".format(record['local_identifier'], e))
+            # Touch the record so we do not keep requesting it on every run
+            self.db.touch_record(record)
+            self.error_count = self.error_count + 1
+            if self.error_count < self.abort_after_numerrors:
+                return True
+
+        return False
+
+
+
