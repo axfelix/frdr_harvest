@@ -1,5 +1,5 @@
 from harvester.HarvestRepository import HarvestRepository
-import requests
+import urllib
 import time
 import json
 import re
@@ -15,14 +15,6 @@ class DataStreamRepository(HarvestRepository):
         super(DataStreamRepository, self).setRepoParams(repoParams)
         self.domain_metadata = []
 
-        # TODO: I think we can remove this
-        self.records_per_request = 50
-        self.params = {
-            "format": "json",
-            "start": 0,
-            "pageLength": self.records_per_request
-        }
-
     def _crawl(self):
         kwargs = {
             "repo_id": self.repository_id, "repo_url": self.url, "repo_set": self.set, "repo_name": self.name,
@@ -37,24 +29,36 @@ class DataStreamRepository(HarvestRepository):
         self.repository_id = self.db.update_repo(**kwargs)
 
         try:
-            # TODO: Update with requests.get('https://datastream.org/dataset/sitemap.xml'). This gives me a 404, but curl works.
-            response = 'sitemap.xml'
+            response = urllib.request.urlopen('https://datastream.org/dataset/sitemap.xml')
+            #response = 'sitemap.xml'
             response_xml = ET.parse(response)
             root = response_xml.getroot()
             results = []
 
+            # count = 0
             for child in root:
                 item_url = child[0].text
-                item_dcat_json = item_url + ".dcat.json"
-                record = item_dcat_json
-                #record = requests.get(item_dcat_json)
-                results.append(record)
-                # TODO: For each item, get the schema.org (in <script type=application/ld+json>). Still having 404 issues.
+                item_dcat_json_url = item_url + ".dcat.json"
+                item_response = urllib.request.urlopen(item_dcat_json_url)
+                item_record = item_response.read()
+                results.append(item_record)
+                # count = count+1
+                # if count > 10:
+                #     break
 
-            for record in results:
-                oai_record = self.format_datastream_to_oai((record))
+            item_count = 0
+            for item_record in results:
+                oai_record = self.format_datastream_to_oai(item_record)
                 if oai_record:
                     self.db.write_record(oai_record, self)
+                    item_count = item_count + 1
+                    if (item_count % self.update_log_after_numitems == 0):
+                        tdelta = time.time() - self.tstart + 0.1
+                        self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,
+                                                                                                   self.formatter.humanize(
+                                                                                                       tdelta),
+                                                                                                   item_count / tdelta))
+            self.logger.info("Found {} items in feed".format(item_count))
 
             return True
 
@@ -66,56 +70,54 @@ class DataStreamRepository(HarvestRepository):
 
         return False
 
-    def format_datastream_to_oai(self, datastream_record):
+    def format_datastream_to_oai(self, datastream_record_bytes):
 
-        # TODO: Cut this; used for example only while requests isn't working
-        with open("0b928801-48be-4451-8399-62538adb1515.dcat.json") as datastream_file:
-            datastream_record = json.load(datastream_file)
+        datastream_record = json.loads(datastream_record_bytes)
 
-            record = {}
+        record = {}
 
-            record["contact"] = self.contact
-            record["series"] = ""
+        record["contact"] = self.contact
+        record["series"] = ""
 
-            if ("name" in datastream_record) and datastream_record["name"]:
-                record["title"] = datastream_record["name"]
+        if ("name" in datastream_record) and datastream_record["name"]:
+            record["title"] = datastream_record["name"]
 
-            if ("description" in datastream_record) and datastream_record["description"]:
-                record["description"] = datastream_record["description"]
+        if ("description" in datastream_record) and datastream_record["description"]:
+            record["description"] = datastream_record["description"]
 
-            if ("author" in datastream_record) and datastream_record["author"]:
-                if ("name" in datastream_record["author"]) and datastream_record["author"]["name"]:
-                        record["creator"] = datastream_record["author"]["name"]
+        if ("author" in datastream_record) and datastream_record["author"]:
+            if ("name" in datastream_record["author"]) and datastream_record["author"]["name"]:
+                    record["creator"] = datastream_record["author"]["name"]
 
-            if ("keywords" in datastream_record) and datastream_record["keywords"]:
-                if isinstance(datastream_record["keywords"], str):
-                    record["tags"] = datastream_record["keywords"].split(",")
+        if ("keywords" in datastream_record) and datastream_record["keywords"]:
+            if isinstance(datastream_record["keywords"], str):
+                record["tags"] = datastream_record["keywords"].split(",")
 
-            if ("publisher" in datastream_record) and datastream_record["publisher"]:
-                if ("name" in datastream_record["publisher"]) and datastream_record["publisher"]["name"]:
-                    record["publisher"] = datastream_record["publisher"]["name"]
+        if ("publisher" in datastream_record) and datastream_record["publisher"]:
+            if ("name" in datastream_record["publisher"]) and datastream_record["publisher"]["name"]:
+                record["publisher"] = datastream_record["publisher"]["name"]
 
-            if ("datePublished" in datastream_record) and datastream_record["datePublished"]:
-                record["pub_date"] = datastream_record["datePublished"][:10] # TODO: Better date parsing
+        if ("datePublished" in datastream_record) and datastream_record["datePublished"]:
+            record["pub_date"] = datastream_record["datePublished"][:10] # TODO: Better date parsing
 
-            if ("identifier" in datastream_record) and datastream_record["identifier"]:
-                if ("url" in datastream_record["identifier"]) and datastream_record["identifier"]["url"]:
-                    record["item_url"] = datastream_record['identifier']["url"]
+        if ("identifier" in datastream_record) and datastream_record["identifier"]:
+            if ("url" in datastream_record["identifier"]) and datastream_record["identifier"]["url"]:
+                record["item_url"] = datastream_record['identifier']["url"]
 
-            if "isAccessibleForFree" in datastream_record:
-                if datastream_record["isAccessibleForFree"]:
-                    record["access"] = "Public"
-                else:
-                    record["access"] = "Limited"
+        if "isAccessibleForFree" in datastream_record:
+            if datastream_record["isAccessibleForFree"]:
+                record["access"] = "Public"
+            else:
+                record["access"] = "Limited"
 
-            if ("@id" in datastream_record) and datastream_record["@id"]:
-                record["identifier"] = datastream_record["@id"]
+        if ("@id" in datastream_record) and datastream_record["@id"]:
+            record["identifier"] = datastream_record["@id"]
 
-            # TODO: Update later when updating for Geodisy
-            #record["geospatial"] = datastream_record["spatialCoverage"]["geo"]["box"]
+        # TODO: Update later when updating for Geodisy
+        #record["geospatial"] = datastream_record["spatialCoverage"]["geo"]["box"]
 
-            return record
+        return record
 
     def _update_record(self, record):
-        # There is no update for individual records, they are updated on full crawl
+        # TODO: Update this to write metadata; only write headers in _crawl
         return True
