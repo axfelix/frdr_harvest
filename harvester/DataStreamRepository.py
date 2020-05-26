@@ -1,6 +1,8 @@
 from harvester.HarvestRepository import HarvestRepository
 from harvester.rate_limited import rate_limited
 import urllib
+from dateutil import parser
+from datetime import datetime
 import time
 import json
 import re
@@ -85,7 +87,7 @@ class DataStreamRepository(HarvestRepository):
                 record["publisher"] = datastream_record["publisher"]["name"]
 
         if ("datePublished" in datastream_record) and datastream_record["datePublished"]:
-            record["pub_date"] = datastream_record["datePublished"][:10] # TODO: Better date parsing
+            record["pub_date"] = parser.parse(datastream_record["datePublished"]).strftime('%Y-%m-%d')
 
         if ("identifier" in datastream_record) and datastream_record["identifier"]:
             if ("url" in datastream_record["identifier"]) and datastream_record["identifier"]["url"]:
