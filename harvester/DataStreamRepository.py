@@ -2,10 +2,8 @@ from harvester.HarvestRepository import HarvestRepository
 from harvester.rate_limited import rate_limited
 import urllib
 from dateutil import parser
-from datetime import datetime
 import time
 import json
-import re
 import xml.etree.ElementTree as ET
 
 
