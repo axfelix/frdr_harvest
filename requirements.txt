@@ -10,4 +10,4 @@ requests
 sickle
 sodapy
 urllib3
-dateutil
+python-dateutil
