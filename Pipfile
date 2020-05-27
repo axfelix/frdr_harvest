@@ -21,6 +21,7 @@ flask-basicauth = "*"
 flask-admin = "*"
 flask-sqlalchemy = "*"
 psycopg2-binary = "*"
+python-dateutil = "*"
 
 [requires]
 python_version = "3.7"
