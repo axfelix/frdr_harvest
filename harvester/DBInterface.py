@@ -190,7 +190,7 @@ class DBInterface:
         for record in records:
             returnvalue = int(record['repository_id'])
         # If not found, look for insecure version of the url, it may have just changed to https on this pass
-        if returnvalue == 0 and repo_url.startswith('https:'):
+        if returnvalue == 0 and repo_url and repo_url.startswith('https:'):
             repo_url = repo_url.replace("https:", "http:")
             records = self.get_multiple_records("repositories", "repository_id", "repository_url", repo_url, extrawhere)
             for record in records:
@@ -369,7 +369,7 @@ class DBInterface:
         oai_search = None
         # Check if the local_identifier has already been turned into a url
         if "local_identifier" in record:
-            if record["local_identifier"].startswith(("http","HTTP")):
+            if record["local_identifier"] and record["local_identifier"].startswith(("http","HTTP")):
                 return record["local_identifier"]
             # No link found, see if there is an OAI identifier
             oai_search = re.search("oai:(.+):(.+)", record["local_identifier"])
@@ -404,14 +404,14 @@ class DBInterface:
 
         # Check if the source is already a link
         if "source_url" in record:
-            if record["source_url"].startswith(("http","HTTP")):
+            if record["source_url"] and record["source_url"].startswith(("http","HTTP")):
                 return record["source_url"]
         if "dc:source" in record:
             if isinstance(record["dc:source"], list):
-                if record["dc:source"][0].startswith(("http","HTTP")):
+                if record["dc:source"][0] and record["dc:source"][0].startswith(("http","HTTP")):
                         return record["dc:source"][0]
             else:
-                if record["dc:source"].startswith(("http","HTTP")):
+                if record["dc:source"] and record["dc:source"].startswith(("http","HTTP")):
                     return record["dc:source"]
 
         # URL is in the identifier
