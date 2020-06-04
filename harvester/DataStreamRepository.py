@@ -111,7 +111,7 @@ class DataStreamRepository(HarvestRepository):
             identifier = record['local_identifier']
             item_dcat_json_url = "https://datastream.org/dataset/" + identifier + ".dcat.json"
             item_response = urllib.request.urlopen(item_dcat_json_url)
-            item_response_content = item_response.read()
+            item_response_content = item_response.read().decode('utf-8')
             item_json = json.loads(item_response_content)
 
             oai_record = self.format_datastream_to_oai(item_json)
