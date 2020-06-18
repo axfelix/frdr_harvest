@@ -431,16 +431,16 @@ class DBInterface:
             try:
                 if self.dbtype == "postgres":
                     cur.execute(self._prep(
-                        """INSERT INTO records (title, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
+                        """INSERT INTO records (title, title_fr, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
                         VALUES(?,?,?,?,?,?,?,?,?,?) RETURNING record_id"""),
-                        (rec["title"], rec["pub_date"], rec["contact"], rec["series"], time.time(), source_url, 0,
+                        (rec["title"], rec["title_fr"], rec["pub_date"], rec["contact"], rec["series"], time.time(), source_url, 0,
                          rec["identifier"], rec["item_url"], repo_id))
                     returnvalue = int(cur.fetchone()['record_id'])
                 if self.dbtype == "sqlite":
                     cur.execute(self._prep(
-                        """INSERT INTO records (title, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
+                        """INSERT INTO records (title, title_fr, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
                         VALUES(?,?,?,?,?,?,?,?,?,?)"""),
-                        (rec["title"], rec["pub_date"], rec["contact"], rec["series"], time.time(), source_url, 0,
+                        (rec["title"], rec["title_fr"], rec["pub_date"], rec["contact"], rec["series"], time.time(), source_url, 0,
                          rec["identifier"], rec["item_url"], repo_id))
                     returnvalue = int(cur.lastrowid)
             except self.dblayer.IntegrityError as e:
@@ -474,9 +474,9 @@ class DBInterface:
                 record["record_id"] = self.create_new_record(record, source_url, repo_id)
             else:
                 cur.execute(self._prep(
-                    """UPDATE records set title=?, pub_date=?, contact=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=?, item_url=? 
+                    """UPDATE records set title=?, title_fr=?, pub_date=?, contact=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=?, item_url=? 
                     WHERE record_id = ?"""),
-                    (record["title"], record["pub_date"], record["contact"], record["series"], time.time(),
+                    (record["title"], record["title_fr"], record["pub_date"], record["contact"], record["series"], time.time(),
                      source_url, 0, record["identifier"], record["item_url"], record["record_id"]))
 
             if record["record_id"] is None:
@@ -734,8 +734,8 @@ class DBInterface:
                 cur = self.getCursor(con)
                 try:
                     cur.execute(self._prep(
-                        "INSERT INTO records (title, pub_date, contact, series, modified_timestamp, local_identifier, item_url, repository_id) VALUES(?,?,?,?,?,?,?,?)"),
-                        ("", "", "", "", 0, local_identifier, "", repo_id))
+                        "INSERT INTO records (title, title_fr, pub_date, contact, series, modified_timestamp, local_identifier, item_url, repository_id) VALUES(?,?,?,?,?,?,?,?,?)"),
+                        ("", "", "", "", "", 0, local_identifier, "", repo_id))
                 except self.dblayer.IntegrityError as e:
                     self.logger.error("Error creating record header: {}".format(e))
 

@@ -102,10 +102,23 @@ class CKANRepository(HarvestRepository):
             if "fr-t-en" in ckan_record["title"]:
                 record["title_fr"] = ckan_record["title"].get("fr-t-en", "")
         else:
-            record["title"] = ckan_record.get("title", "")
+            if self.default_language == "en":
+                record["title"] = ckan_record.get("title", "")
             if self.default_language == "fr":
                 record["title_fr"] = ckan_record.get("title", "")
+
+        # Create empty title and title_fr if not present
+        if "title" not in record:
+            record["title"] = ""
+        if "title_fr" not in record:
+            record["title_fr"] = ""
+
         record["title"] = record["title"].strip()
+        record["title_fr"] = record["title_fr"].strip()
+
+        # Do not include records without at least one title
+        if record["title"] == "" and record["title_fr"] == "":
+            return False
 
         if isinstance(ckan_record.get("notes_translated", ""), dict):
             record["description"] = ckan_record["notes_translated"].get("en", "")
