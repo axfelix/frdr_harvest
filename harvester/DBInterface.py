@@ -521,9 +521,25 @@ class DBInterface:
                                                                   record["record_id"])
                 existing_subject_ids = [e["subject_id"] for e in existing_subject_recs]
                 for subject in record["subject"]:
-                    subject_id = self.get_single_record_id("subjects", subject)
+                    subject_id = self.get_single_record_id("subjects", subject, "and language='en'")
                     if subject_id is None:
-                        subject_id = self.insert_related_record("subjects", subject)
+                        extras = {"language": "en"}
+                        subject_id = self.insert_related_record("subjects", subject, **extras)
+                    if subject_id is not None:
+                        if subject_id not in existing_subject_ids:
+                            self.insert_cross_record("records_x_subjects", "subjects", subject_id, record["record_id"])
+
+            if "subject_fr" in record:
+                if not isinstance(record["subject_fr"], list):
+                    record["subject_fr"] = [record["subject_fr"]]
+                existing_subject_recs = self.get_multiple_records("records_x_subjects", "subject_id", "record_id",
+                                                                  record["record_id"])
+                existing_subject_ids = [e["subject_id"] for e in existing_subject_recs]
+                for subject in record["subject_fr"]:
+                    subject_id = self.get_single_record_id("subjects", subject, "and language='fr'")
+                    if subject_id is None:
+                        extras = {"language": "fr"}
+                        subject_id = self.insert_related_record("subjects", subject, **extras)
                     if subject_id is not None:
                         if subject_id not in existing_subject_ids:
                             self.insert_cross_record("records_x_subjects", "subjects", subject_id, record["record_id"])
