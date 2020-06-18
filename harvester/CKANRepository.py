@@ -136,15 +136,15 @@ class CKANRepository(HarvestRepository):
             if self.default_language == "fr":
                 record["description_fr"] = ckan_record.get("notes", "")
 
-        if self.default_language == "en":
-            if ('sector' in ckan_record):
+        if ('sector' in ckan_record):
+            if self.default_language == "en":
                 record["subject"] = ckan_record.get('sector', "")
-            else:
-                record["subject"] = ckan_record.get('subject', "")
-        if self.default_language == "fr":
-            if ('sector' in ckan_record):
+            if self.default_language == "fr":
                 record["subject_fr"] = ckan_record.get('sector', "")
-            else:
+        elif ('subject' in ckan_record):
+            if self.default_language == "en":
+                record["subject"] = ckan_record.get('subject', "")
+            if self.default_language == "fr":
                 record["subject_fr"] = ckan_record.get('subject', "")
 
         if ('license_title' in ckan_record) and ckan_record['license_title']:
