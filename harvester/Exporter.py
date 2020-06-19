@@ -224,18 +224,19 @@ class Exporter(object):
             record.pop("series", None)
             record.pop("source_url", None)
             record.pop("title", None)
+            record.pop("title_fr", None)
 
-            record["@context"] = {
-                "dc": "http://dublincore.org/documents/dcmi-terms",
-                "frdr": "https://frdr.ca/schema/1.0",
-                "datacite": "https://schema.labs.datacite.org/meta/kernel-4.0/metadata.xsd"
-            }
-            for custom_schema in domain_schemas:
-                short_label = domain_schemas[custom_schema]
-                record["@context"].update({short_label: custom_schema})
-            record["datacite:resourceTypeGeneral"] = "dataset"
-            gmeta_data = {"@datatype": "GMetaEntry", "@version": "2016-11-09", "subject": record["dc:source"],
-                          "id": record["dc:source"], "visible_to": ["public"], "mimetype": "application/json",
+            # record["@context"] = {
+            #     "dc": "http://dublincore.org/documents/dcmi-terms",
+            #     "frdr": "https://frdr.ca/schema/1.0",
+            #     "datacite": "https://schema.labs.datacite.org/meta/kernel-4.0/metadata.xsd"
+            # }
+            # for custom_schema in domain_schemas:
+            #     short_label = domain_schemas[custom_schema]
+            #     record["@context"].update({short_label: custom_schema})
+            record["datacite_resourceTypeGeneral"] = "dataset"
+            gmeta_data = {"@datatype": "GMetaEntry", "@version": "2016-11-09", "subject": record["dc_source"],
+                          "id": record["dc_source"], "visible_to": ["public"], "mimetype": "application/json",
                           "content": record}
             self.output_buffer.append(gmeta_data)
 
