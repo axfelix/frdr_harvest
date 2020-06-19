@@ -311,10 +311,10 @@ class Exporter(object):
         xml_tree = etree.parse("schema/stub.xml", parser=parser)
         root_tag = xml_tree.getroot()
 
-        context_block = gmeta_dict[0]["content"]["@context"]
-        context_xml = etree.fromstring(dicttoxml.dicttoxml(context_block, attr_type=False, custom_root='schema'),
-                                       parser=parser)
-        root_tag.insert(0, context_xml)
+        # context_block = gmeta_dict[0]["content"]["@context"]
+        # context_xml = etree.fromstring(dicttoxml.dicttoxml(context_block, attr_type=False, custom_root='schema'),
+        #                                parser=parser)
+        # root_tag.insert(0, context_xml)
 
         control_block = {"timestamp": int(round(time.mktime(timestamp))),
                          "datestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", timestamp)}
