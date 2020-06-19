@@ -51,6 +51,28 @@ class SocrataRepository(HarvestRepository):
         record["pub_date"] = datetime.fromtimestamp(socrata_record["publicationDate"]).strftime('%Y-%m-%d')
         record["contact"] = self.contact
         record["series"] = socrata_record.get("category", "")
+        record["title_fr"] = ""
+
+        # Continue to default to English for our current Socrata repositories.
+        # For Nova Scoatia, "fra" language refers to the dataset, not the metadata.
+        
+        # language = self.default_language
+        # if "metadata" in socrata_record:
+        #     if "custom_fields" in socrata_record["metadata"]:
+        #         if "Detailed Metadata" in socrata_record["metadata"]["custom_fields"]:
+        #             if "Language" in socrata_record["metadata"]["custom_fields"]["Detailed Metadata"]:
+        #                 # Nova Scotia
+        #                 language = socrata_record["metadata"]["custom_fields"]["Detailed Metadata"]["Language"]
+        #         elif "Dataset Information" in socrata_record["metadata"]["custom_fields"]:
+        #             if "Language" in socrata_record["metadata"]["custom_fields"]["Dataset Information"]:
+        #                 # Prince Edward Island
+        #                 language = socrata_record["metadata"]["custom_fields"]["Dataset Information"]["Language"]
+        # language = language.lower()
+        #
+        # if language in ["fr", "fre", "fra", "french"]:
+        #     language = "fr"
+        # else:
+        #     language = "en"
 
         return record
 
