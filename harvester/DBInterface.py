@@ -432,14 +432,14 @@ class DBInterface:
                 if self.dbtype == "postgres":
                     cur.execute(self._prep(
                         """INSERT INTO records (title, title_fr, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
-                        VALUES(?,?,?,?,?,?,?,?,?,?) RETURNING record_id"""),
+                        VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING record_id"""),
                         (rec["title"], rec["title_fr"], rec["pub_date"], rec["contact"], rec["series"], time.time(), source_url, 0,
                          rec["identifier"], rec["item_url"], repo_id))
                     returnvalue = int(cur.fetchone()['record_id'])
                 if self.dbtype == "sqlite":
                     cur.execute(self._prep(
                         """INSERT INTO records (title, title_fr, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
-                        VALUES(?,?,?,?,?,?,?,?,?,?)"""),
+                        VALUES(?,?,?,?,?,?,?,?,?,?,?)"""),
                         (rec["title"], rec["title_fr"], rec["pub_date"], rec["contact"], rec["series"], time.time(), source_url, 0,
                          rec["identifier"], rec["item_url"], repo_id))
                     returnvalue = int(cur.lastrowid)
