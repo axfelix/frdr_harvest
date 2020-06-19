@@ -65,6 +65,7 @@ class DataStreamRepository(HarvestRepository):
 
         record["contact"] = self.contact
         record["series"] = ""
+        record["title_fr"] = ""
 
         if ("name" in datastream_record) and datastream_record["name"]:
             record["title"] = datastream_record["name"]
