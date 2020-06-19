@@ -85,6 +85,7 @@ class OAIRepository(HarvestRepository):
 
     def setRepoParams(self, repoParams):
         self.metadataprefix = "oai_dc"
+        self.default_language = "en"
         super(OAIRepository, self).setRepoParams(repoParams)
         self.sickle = Sickle(self.url, iterator=FRDRItemIterator)
 
@@ -160,9 +161,6 @@ class OAIRepository(HarvestRepository):
 
     def unpack_oai_metadata(self, record):
         record["pub_date"] = record.get("date")
-
-        record["tags"] = record.get("subject")
-        record.pop("subject", None)
 
         if self.metadataprefix.lower() == "ddi":
             # TODO: better DDI implementation that doesn't simply flatten everything, see: https://sickle.readthedocs.io/en/latest/customizing.html
@@ -298,10 +296,33 @@ class OAIRepository(HarvestRepository):
 
         if "title" not in record.keys():
             return None
-        if isinstance(record["title"], list):
-            record["title"] = record["title"][0].strip()
+
+        language = self.default_language
+        if "language" in record.keys():
+            if isinstance(record["language"], list):
+                record["language"] = record["language"][0].strip()
+                record["language"] = record["language"].lower()
+            if record["language"] in ["fr", "fre", "fra", "french"]:
+                language = "fr"
+
+        if language == "fr":
+            if isinstance(record["title"], list):
+                record["title_fr"] = record["title_fr"][0].strip()
+            else:
+                record["title_fr"] = record["title_fr"].strip()
+            # Remove "title" from record since this is the English field
+            record["title"] = ""
+
+            record["tags_fr"] = record.get("subject")
+            record.pop("subject", None)
         else:
-            record["title"] = record["title"].strip()
+            if isinstance(record["title"], list):
+                record["title"] = record["title"][0].strip()
+            else:
+                record["title"] = record["title"].strip()
+            record["title_fr"] = ""
+            record["tags"] = record.get("subject")
+            record.pop("subject", None)
 
         if "contact" not in record.keys():
             record["contact"] = ""
