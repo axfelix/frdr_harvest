@@ -118,7 +118,7 @@ class CKANRepository(HarvestRepository):
 
         # Do not include records without at least one title
         if record["title"] == "" and record["title_fr"] == "":
-            return False
+            return None
 
         if isinstance(ckan_record.get("notes_translated", ""), dict):
             record["description"] = ckan_record["notes_translated"].get("en", "")
@@ -139,12 +139,12 @@ class CKANRepository(HarvestRepository):
         if ('sector' in ckan_record):
             if self.default_language == "en":
                 record["subject"] = ckan_record.get('sector', "")
-            if self.default_language == "fr":
+            elif self.default_language == "fr":
                 record["subject_fr"] = ckan_record.get('sector', "")
         elif ('subject' in ckan_record):
             if self.default_language == "en":
                 record["subject"] = ckan_record.get('subject', "")
-            if self.default_language == "fr":
+            elif self.default_language == "fr":
                 record["subject_fr"] = ckan_record.get('subject', "")
 
         if ('license_title' in ckan_record) and ckan_record['license_title']:
