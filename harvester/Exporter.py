@@ -90,7 +90,8 @@ class Exporter(object):
             if only_new_records == True and float(lastrun_timestamp) > record["last_crawl_timestamp"]:
                 continue
 
-            if (len(record['title']) == 0 and len(record["title_fr"]) == 0):
+            if ((record["title"] is None or len(record["title"]) == 0) and 
+                (record["title_fr"] is None or len(record["title_fr"]) == 0)):
                 continue
 
             con = self.db.getConnection()
