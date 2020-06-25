@@ -215,8 +215,8 @@ class Exporter(object):
             record["dc_date"] = record["pub_date"]
             record["frdr_contact"] = record["contact"]
             record["frdr_series"] = record["series"]
-            record["frdr_origin.id"] = record["repository_name"]
-            record["frdr_origin.icon"] = record["repository_thumbnail"]
+            record["frdr_origin_id"] = record["repository_name"]
+            record["frdr_origin_icon"] = record["repository_thumbnail"]
 
             # remove unneeded columns from output
             record.pop("contact", None)
