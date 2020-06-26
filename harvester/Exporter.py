@@ -48,7 +48,7 @@ class Exporter(object):
         with records_con:
             records_cursor = records_con.cursor()
 
-        records_sql = """SELECT recs.record_id, recs.title, recs.title_fr, recs.pub_date, recs.contact, recs.series, recs.source_url, 
+        records_sql = """SELECT recs.record_id, recs.title, recs.title_fr, recs.pub_date, recs.contact, recs.series, 
             recs.deleted, recs.local_identifier, recs.item_url, recs.modified_timestamp,
             repos.repository_url, repos.repository_name, repos.repository_thumbnail, repos.item_url_pattern, repos.last_crawl_timestamp
             FROM records recs, repositories repos WHERE recs.repository_id = repos.repository_id"""
@@ -70,7 +70,7 @@ class Exporter(object):
 
             # TODO: Add bilingual titles
             record = (dict(zip(
-                ['record_id', 'title', 'title_fr', 'pub_date', 'contact', 'series', 'source_url', 'deleted', 'local_identifier',
+                ['record_id', 'title', 'title_fr', 'pub_date', 'contact', 'series', 'deleted', 'local_identifier',
                  'item_url', 'modified_timestamp',
                  'repository_url', 'repository_name', 'repository_thumbnail', 'item_url_pattern',
                  'last_crawl_timestamp'], row)))
@@ -78,13 +78,9 @@ class Exporter(object):
 
             if record["item_url"] == "":
                 record["item_url"] = self.db.construct_local_url(record)
-
-            record["dc_source"] = record["item_url"]
-            if record["dc_source"] is None:
-                continue
                 
             if record["deleted"] == 1:
-                deleted.append(record["dc_source"])
+                deleted.append(record["item_url"])
                 continue
 
             if only_new_records == True and float(lastrun_timestamp) > record["last_crawl_timestamp"]:
@@ -231,7 +227,6 @@ class Exporter(object):
             record.pop("repository_thumbnail", None)
             record.pop("repository_url", None)
             record.pop("series", None)
-            record.pop("source_url", None)
             record.pop("title", None)
             record.pop("title_fr", None)
 
