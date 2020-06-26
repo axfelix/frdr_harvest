@@ -2,3 +2,4 @@ logs/
 lockfile
 *.pyc
 venv/
+.idea/
