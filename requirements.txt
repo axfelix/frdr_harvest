@@ -4,7 +4,7 @@ docopt
 Flask
 flask-restful
 owslib
-psycopg2
+psycopg2-binary
 python-daemon
 requests
 sickle
