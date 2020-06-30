@@ -240,7 +240,7 @@ class Exporter(object):
             #     record["@context"].update({short_label: custom_schema})
             record["datacite_resourceTypeGeneral"] = "dataset"
             gmeta_data = {"@datatype": "GMetaEntry", "@version": "2016-11-09",
-                          "id": record["item_url"], "visible_to": ["public"], "mimetype": "application/json",
+                          "subject": record["item_url"], "visible_to": ["public"], "mimetype": "application/json",
                           "content": record}
             self.output_buffer.append(gmeta_data)
 
