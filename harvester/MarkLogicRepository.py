@@ -84,7 +84,6 @@ class MarkLogicRepository(HarvestRepository):
             if "date" in entry and str(entry["date"]).strip() != "":
                 record["pub_date"] = str(entry["date"]).strip()
         record["identifier"] = marklogic_record["uri"].rsplit('/', 1)[1]
-        record["contact"] = self.contact
         record["publisher"] = self.publisher
         record["series"] = ""
         record["title_fr"] = ""
