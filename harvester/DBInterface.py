@@ -750,8 +750,8 @@ class DBInterface:
                 cur = self.getCursor(con)
                 try:
                     cur.execute(self._prep(
-                        "INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, local_identifier, item_url, repository_id) VALUES(?,?,?,?,?,?,?,?,?)"),
-                        ("", "", "", "", "", 0, local_identifier, "", repo_id))
+                        "INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, local_identifier, item_url, repository_id) VALUES(?,?,?,?,?,?,?,?)"),
+                        ("", "", "", "", 0, local_identifier, "", repo_id))
                 except self.dblayer.IntegrityError as e:
                     self.logger.error("Error creating record header: {}".format(e))
 
