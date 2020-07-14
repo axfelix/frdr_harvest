@@ -148,12 +148,12 @@ class Exporter(object):
                 # TODO: Add bilingual subjects
                 litecur.execute(self.db._prep("""SELECT subjects.subject FROM subjects JOIN records_x_subjects on records_x_subjects.subject_id = subjects.subject_id
                     WHERE records_x_subjects.record_id=? and subjects.language='en'"""), (record["record_id"],))
-                record["dc_subject_en"] = self._rows_to_dict(litecur)
+                record["frdr_category_en"] = self._rows_to_dict(litecur)
 
 
                 litecur.execute(self.db._prep("""SELECT subjects.subject FROM subjects JOIN records_x_subjects on records_x_subjects.subject_id = subjects.subject_id
                     WHERE records_x_subjects.record_id=? and subjects.language='fr'"""), (record["record_id"],))
-                record["dc_subject_fr"] = self._rows_to_dict(litecur)
+                record["frdr_category_fr"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT publishers.publisher FROM publishers JOIN records_x_publishers on records_x_publishers.publisher_id = publishers.publisher_id
                     WHERE records_x_publishers.record_id=?"""), (record["record_id"],))
@@ -175,11 +175,11 @@ class Exporter(object):
 
                 litecur.execute(self.db._prep("""SELECT tags.tag FROM tags JOIN records_x_tags on records_x_tags.tag_id = tags.tag_id
                     WHERE records_x_tags.record_id=? and tags.language = 'en' """), (record["record_id"],))
-                record["frdr_tags_en"] = self._rows_to_dict(litecur)
+                record["frdr_keyword_en"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT tags.tag FROM tags JOIN records_x_tags on records_x_tags.tag_id = tags.tag_id
                     WHERE records_x_tags.record_id=? and tags.language = 'fr' """), (record["record_id"],))
-                record["frdr_tags_fr"] = self._rows_to_dict(litecur)
+                record["frdr_keyword_fr"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT access.access FROM access JOIN records_x_access on records_x_access.access_id = access.access_id
                     WHERE records_x_access.record_id=?"""), (record["record_id"],))
