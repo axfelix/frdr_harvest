@@ -74,7 +74,6 @@ class CSWRepository(HarvestRepository):
         record["description"] = csw_record.abstract
         record["identifier"] = local_identifier
         record["creator"] = self.name
-        record["contact"] = self.contact
         record["series"] = ""
 
         return record

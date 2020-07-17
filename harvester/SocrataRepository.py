@@ -49,9 +49,7 @@ class SocrataRepository(HarvestRepository):
         record["identifier"] = local_identifier
         record["creator"] = socrata_record.get("attribution", self.name)
         record["pub_date"] = datetime.fromtimestamp(socrata_record["publicationDate"]).strftime('%Y-%m-%d')
-        record["contact"] = self.contact
-        record["subject"] = socrata_record.get("category", "")
-        record["series"] = ""
+        record["series"] = socrata_record.get("category", "")
         record["title_fr"] = ""
 
         # Continue to default to English for our current Socrata repositories.

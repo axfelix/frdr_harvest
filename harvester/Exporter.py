@@ -48,7 +48,7 @@ class Exporter(object):
         with records_con:
             records_cursor = records_con.cursor()
 
-        records_sql = """SELECT recs.record_id, recs.title, recs.title_fr, recs.pub_date, recs.contact, recs.series, 
+        records_sql = """SELECT recs.record_id, recs.title, recs.title_fr, recs.pub_date, recs.series, recs.source_url,
             recs.deleted, recs.local_identifier, recs.item_url, recs.modified_timestamp,
             repos.repository_url, repos.repository_name, repos.repository_thumbnail, repos.item_url_pattern, repos.last_crawl_timestamp
             FROM records recs, repositories repos WHERE recs.repository_id = repos.repository_id"""
@@ -70,7 +70,8 @@ class Exporter(object):
 
             # TODO: Add bilingual titles
             record = (dict(zip(
-                ['record_id', 'title', 'title_fr', 'pub_date', 'contact', 'series', 'deleted', 'local_identifier',
+
+                ['record_id', 'title', 'title_fr', 'pub_date', 'series', 'source_url', 'deleted', 'local_identifier',
                  'item_url', 'modified_timestamp',
                  'repository_url', 'repository_name', 'repository_thumbnail', 'item_url_pattern',
                  'last_crawl_timestamp'], row)))
@@ -209,7 +210,6 @@ class Exporter(object):
             record["dc_title_en"] = record["title"]
             record["dc_title_fr"] = record["title_fr"]
             record["dc_date"] = record["pub_date"]
-            record["frdr_contact"] = record["contact"]
             record["frdr_series"] = record["series"]
             record["frdr_origin_id"] = record["repository_name"]
             record["frdr_origin_icon"] = record["repository_thumbnail"]

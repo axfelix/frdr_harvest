@@ -324,19 +324,9 @@ class OAIRepository(HarvestRepository):
             record["tags"] = record.get("subject")
             record.pop("subject", None)
 
-        if "contact" not in record.keys():
-            record["contact"] = ""
-            if "publisher" in record.keys():
-                if isinstance(record["publisher"], list):
-                    record["publisher"] = record["publisher"][0]
-                if record["publisher"] is not None:
-                    contact_address = re.search(r"[\w\.-]+@([\w-]+\.)+[\w-]{2,4}", record["publisher"])
-                    try:
-                        record["contact"] = contact_address.group(0)
-                    except:
-                        pass
-        if isinstance(record["contact"], list):
-            record["contact"] = record["contact"][0]
+        if "publisher" in record.keys():
+            if isinstance(record["publisher"], list):
+                record["publisher"] = record["publisher"][0]
 
         if "series" not in record.keys():
             record["series"] = ""

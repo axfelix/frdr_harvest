@@ -63,7 +63,6 @@ class DataStreamRepository(HarvestRepository):
 
         record = {}
 
-        record["contact"] = self.contact
         record["series"] = ""
         record["title_fr"] = ""
 
