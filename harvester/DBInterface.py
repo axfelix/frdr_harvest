@@ -670,6 +670,9 @@ class DBInterface:
                                                                     record["record_id"])
                 if not existing_geospatial_ids:
                     coordinates = record["geospatial"]["coordinates"][0]
+                    if isinstance(coordinates, float):
+                        if len(record["geospatial"]["coordinates"]) == 2:
+                            coordinates = [record["geospatial"]["coordinates"]]
                     if len(coordinates) == 5:
                         # Check if this is a sneaky bounding box
                         lats = []
