@@ -83,8 +83,46 @@ class CKANRepository(HarvestRepository):
         else:
             record["creator"] = self.name
 
+        # CIOOS only
+        if record["creator"] == '':
+            record["creator"] = ['']
+            if ('cited-responsible-party' in ckan_record) and ckan_record['cited-responsible-party']:
+                for creator in json.loads(ckan_record['cited-responsible-party']):
+                    if ("organisation-name" in creator) and creator["organisation-name"]:
+                        if creator["organisation-name"] not in record["creator"]:
+                            record["creator"].append(creator["organisation-name"])
+                    if ("individual-name" in creator) and creator["individual-name"]:
+                        if creator["individual-name"] not in record["creator"]:
+                            record["creator"].append(creator["individual-name"])
+
         if isinstance(record["creator"], list):
-            record["creator"] = [x for x in record["creator"] if x != '']
+            record["creator"] = [x.strip() for x in record["creator"] if x != '']
+
+
+        # CIOOS only
+        if ('metadata-point-of-contact' in ckan_record) and ckan_record['metadata-point-of-contact']:
+            record["contributor"] = []
+            point_of_contact = json.loads(ckan_record['metadata-point-of-contact'])
+            if ("organisation-name" in point_of_contact) and point_of_contact["organisation-name"]:
+                if point_of_contact["organisation-name"] not in record["creator"]:
+                    record["contributor"].append(point_of_contact["organisation-name"])
+            if ("individual-name" in point_of_contact) and point_of_contact["individual-name"]:
+                if point_of_contact["individual-name"] not in record["creator"]:
+                    record["contributor"].append(point_of_contact["individual-name"])
+            if isinstance(record["contributor"], list):
+                record["contributor"] = [x.strip() for x in record["contributor"] if x != '']
+
+        # CIOOS only
+        if ('organization' in ckan_record) and ckan_record['organization']:
+            if ('title_translated' in ckan_record['organization']) and ckan_record['organization']['title_translated']:
+                record["publisher"] = ckan_record['organization']['title_translated'].get("en", "") \
+                                      + " / " + ckan_record['organization']['title_translated'].get("fr", "")
+                if len(record["publisher"]) == 3:
+                    record["publisher"] = ""
+                elif record["publisher"][:3] == (" / "):
+                    record["publisher"] = record["publisher"][3:]
+                elif record["publisher"][-3:] == (" / "):
+                    record["publisher"] = record["publisher"][:-3]
 
         record["identifier"] = local_identifier
 
