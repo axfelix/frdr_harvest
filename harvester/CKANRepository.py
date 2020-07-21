@@ -265,7 +265,10 @@ class CKANRepository(HarvestRepository):
         if ('geometry' in ckan_record) and ckan_record['geometry']:
             record["geospatial"] = ckan_record['geometry']
         elif ('spatial' in ckan_record) and ckan_record['spatial']:
-            record["geospatial"] = json.loads(ckan_record["spatial"])
+            if isinstance(ckan_record["spatial"], str):
+                record["geospatial"] = json.loads(ckan_record["spatial"])
+            elif isinstance(ckan_record["spatial"], dict):
+                record["geospatial"] =  ckan_record["spatial"]
         elif('spatialcoverage1' in ckan_record) and ckan_record['spatialcoverage1']:
                 record["geospatial"] = ckan_record['spatialcoverage1'].split(",")
                 # Check to make sure we have the right number of pieces because sometimes
