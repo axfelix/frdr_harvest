@@ -42,6 +42,11 @@ class HarvestRepository(object):
         for key, value in repoParams.items():
             setattr(self, key, value)
 
+        repo_oai_name = repoParams["homepage_url"].replace("https://", "").replace("www.", "").replace("http://", "")
+        if repo_oai_name[-1] == "/":
+            repo_oai_name = repo_oai_name[:-1]
+        setattr(self, "repo_oai_name", repo_oai_name)
+
     def setLogger(self, l):
         self.logger = l
 

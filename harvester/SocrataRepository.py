@@ -25,7 +25,8 @@ class SocrataRepository(HarvestRepository):
             "enabled": self.enabled, "repo_thumbnail": self.thumbnail, "item_url_pattern": self.item_url_pattern,
             "abort_after_numerrors": self.abort_after_numerrors, "max_records_updated_per_run": self.max_records_updated_per_run,
             "update_log_after_numitems": self.update_log_after_numitems, "record_refresh_days": self.record_refresh_days,
-            "repo_refresh_days": self.repo_refresh_days, "homepage_url": self.homepage_url
+            "repo_refresh_days": self.repo_refresh_days, "homepage_url": self.homepage_url,
+            "repo_oai_name": self.repo_oai_name
         }
         self.repository_id = self.db.update_repo(**kwargs)
         records = self.socratarepo.datasets()

@@ -137,13 +137,13 @@ class DBInterface:
                     self.logger.debug("This repo already exists in the database; updating")
                     cur.execute(self._prep("""UPDATE repositories 
                         set repository_url=?, repository_set=?, repository_name=?, repository_type=?, repository_thumbnail=?, last_crawl_timestamp=?, item_url_pattern=?,enabled=?,
-                        abort_after_numerrors=?,max_records_updated_per_run=?,update_log_after_numitems=?,record_refresh_days=?,repo_refresh_days=?,homepage_url=?
+                        abort_after_numerrors=?,max_records_updated_per_run=?,update_log_after_numitems=?,record_refresh_days=?,repo_refresh_days=?,homepage_url=?,repo_oai_name=?
                         WHERE repository_id=?"""), (
                         self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail, time.time(),
                         self.item_url_pattern,
                         self.enabled, self.abort_after_numerrors, self.max_records_updated_per_run,
                         self.update_log_after_numitems,
-                        self.record_refresh_days, self.repo_refresh_days, self.homepage_url, self.repo_id))
+                        self.record_refresh_days, self.repo_refresh_days, self.homepage_url, self.repo_oai_name, self.repo_id))
                 except self.dblayer.IntegrityError as e:
                     # record already present in repo
                     self.logger.error("Integrity error in update {}".format(e))
@@ -155,25 +155,25 @@ class DBInterface:
                     if self.dbtype == "postgres":
                         cur.execute(self._prep("""INSERT INTO repositories 
                             (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
-                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url) 
-                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING repository_id"""), (
+                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url,repo_oai_name) 
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING repository_id"""), (
                             self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail,
                             time.time(), self.item_url_pattern,
                             self.enabled, self.abort_after_numerrors, self.max_records_updated_per_run,
                             self.update_log_after_numitems,
-                            self.record_refresh_days, self.repo_refresh_days, self.homepage_url))
+                            self.record_refresh_days, self.repo_refresh_days, self.homepage_url, self.repo_oai_name))
                         self.repo_id = int(cur.fetchone()['repository_id'])
 
                     if self.dbtype == "sqlite":
                         cur.execute(self._prep("""INSERT INTO repositories 
                             (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
-                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url) 
-                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""), (
+                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url,repo_oai_name) 
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""), (
                             self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail,
                             time.time(), self.item_url_pattern,
                             self.enabled, self.abort_after_numerrors, self.max_records_updated_per_run,
                             self.update_log_after_numitems,
-                            self.record_refresh_days, self.repo_refresh_days, self.homepage_url))
+                            self.record_refresh_days, self.repo_refresh_days, self.homepage_url, self.repo_oai_name))
                         self.repo_id = int(cur.lastrowid)
 
                 except self.dblayer.IntegrityError as e:
