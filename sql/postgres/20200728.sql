@@ -1,0 +1,3 @@
+UPDATE repositories SET repo_oai_name = REPLACE(REPLACE(SUBSTRING(homepage_url,9),'/','-'),'www.','') where homepage_url like 'https%' and (repo_oai_name = '' or repo_oai_name is null);
+UPDATE repositories SET repo_oai_name = REPLACE(REPLACE(SUBSTRING(homepage_url,8),'/','-'),'www.','') where homepage_url like 'http%' and (repo_oai_name = '' or repo_oai_name is null);
+UPDATE repositories SET repo_oai_name = LEFT(repo_oai_name,-1) where repo_oai_name like '%-';

@@ -85,6 +85,7 @@ class OAIRepository(HarvestRepository):
 
     def setRepoParams(self, repoParams):
         self.metadataprefix = "oai_dc"
+        self.default_language = "en"
         super(OAIRepository, self).setRepoParams(repoParams)
         self.sickle = Sickle(self.url, iterator=FRDRItemIterator)
 
@@ -107,7 +108,8 @@ class OAIRepository(HarvestRepository):
             "max_records_updated_per_run": self.max_records_updated_per_run,
             "update_log_after_numitems": self.update_log_after_numitems,
             "record_refresh_days": self.record_refresh_days,
-            "repo_refresh_days": self.repo_refresh_days, "homepage_url": self.homepage_url
+            "repo_refresh_days": self.repo_refresh_days, "homepage_url": self.homepage_url,
+            "repo_oai_name": self.repo_oai_name
         }
         self.repository_id = self.db.update_repo(**kwargs)
         item_count = 0
@@ -160,9 +162,6 @@ class OAIRepository(HarvestRepository):
 
     def unpack_oai_metadata(self, record):
         record["pub_date"] = record.get("date")
-
-        record["tags"] = record.get("subject")
-        record.pop("subject", None)
 
         if self.metadataprefix.lower() == "ddi":
             # TODO: better DDI implementation that doesn't simply flatten everything, see: https://sickle.readthedocs.io/en/latest/customizing.html
@@ -298,24 +297,37 @@ class OAIRepository(HarvestRepository):
 
         if "title" not in record.keys():
             return None
-        if isinstance(record["title"], list):
-            record["title"] = record["title"][0].strip()
-        else:
-            record["title"] = record["title"].strip()
 
-        if "contact" not in record.keys():
-            record["contact"] = ""
-            if "publisher" in record.keys():
-                if isinstance(record["publisher"], list):
-                    record["publisher"] = record["publisher"][0]
-                if record["publisher"] is not None:
-                    contact_address = re.search(r"[\w\.-]+@([\w-]+\.)+[\w-]{2,4}", record["publisher"])
-                    try:
-                        record["contact"] = contact_address.group(0)
-                    except:
-                        pass
-        if isinstance(record["contact"], list):
-            record["contact"] = record["contact"][0]
+        language = self.default_language
+        if "language" in record.keys():
+            if isinstance(record["language"], list):
+                record["language"] = record["language"][0].strip()
+                record["language"] = record["language"].lower()
+            if record["language"] in ["fr", "fre", "fra", "french"]:
+                language = "fr"
+
+        if language == "fr":
+            if isinstance(record["title"], list):
+                record["title_fr"] = record["title_fr"][0].strip()
+            else:
+                record["title_fr"] = record["title_fr"].strip()
+            # Remove "title" from record since this is the English field
+            record["title"] = ""
+
+            record["tags_fr"] = record.get("subject")
+            record.pop("subject", None)
+        else:
+            if isinstance(record["title"], list):
+                record["title"] = record["title"][0].strip()
+            else:
+                record["title"] = record["title"].strip()
+            record["title_fr"] = ""
+            record["tags"] = record.get("subject")
+            record.pop("subject", None)
+
+        if "publisher" in record.keys():
+            if isinstance(record["publisher"], list):
+                record["publisher"] = record["publisher"][0]
 
         if "series" not in record.keys():
             record["series"] = ""

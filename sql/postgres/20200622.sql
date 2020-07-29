@@ -1,0 +1,1 @@
+alter table records drop column contact;
