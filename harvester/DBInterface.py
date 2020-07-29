@@ -137,13 +137,13 @@ class DBInterface:
                     self.logger.debug("This repo already exists in the database; updating")
                     cur.execute(self._prep("""UPDATE repositories 
                         set repository_url=?, repository_set=?, repository_name=?, repository_type=?, repository_thumbnail=?, last_crawl_timestamp=?, item_url_pattern=?,enabled=?,
-                        abort_after_numerrors=?,max_records_updated_per_run=?,update_log_after_numitems=?,record_refresh_days=?,repo_refresh_days=?,homepage_url=?
+                        abort_after_numerrors=?,max_records_updated_per_run=?,update_log_after_numitems=?,record_refresh_days=?,repo_refresh_days=?,homepage_url=?,repo_oai_name=?
                         WHERE repository_id=?"""), (
                         self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail, time.time(),
                         self.item_url_pattern,
                         self.enabled, self.abort_after_numerrors, self.max_records_updated_per_run,
                         self.update_log_after_numitems,
-                        self.record_refresh_days, self.repo_refresh_days, self.homepage_url, self.repo_id))
+                        self.record_refresh_days, self.repo_refresh_days, self.homepage_url, self.repo_oai_name, self.repo_id))
                 except self.dblayer.IntegrityError as e:
                     # record already present in repo
                     self.logger.error("Integrity error in update {}".format(e))
@@ -155,25 +155,25 @@ class DBInterface:
                     if self.dbtype == "postgres":
                         cur.execute(self._prep("""INSERT INTO repositories 
                             (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
-                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url) 
-                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING repository_id"""), (
+                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url,repo_oai_name) 
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING repository_id"""), (
                             self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail,
                             time.time(), self.item_url_pattern,
                             self.enabled, self.abort_after_numerrors, self.max_records_updated_per_run,
                             self.update_log_after_numitems,
-                            self.record_refresh_days, self.repo_refresh_days, self.homepage_url))
+                            self.record_refresh_days, self.repo_refresh_days, self.homepage_url, self.repo_oai_name))
                         self.repo_id = int(cur.fetchone()['repository_id'])
 
                     if self.dbtype == "sqlite":
                         cur.execute(self._prep("""INSERT INTO repositories 
                             (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
-                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url) 
-                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""), (
+                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url,repo_oai_name) 
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""), (
                             self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail,
                             time.time(), self.item_url_pattern,
                             self.enabled, self.abort_after_numerrors, self.max_records_updated_per_run,
                             self.update_log_after_numitems,
-                            self.record_refresh_days, self.repo_refresh_days, self.homepage_url))
+                            self.record_refresh_days, self.repo_refresh_days, self.homepage_url, self.repo_oai_name))
                         self.repo_id = int(cur.lastrowid)
 
                 except self.dblayer.IntegrityError as e:
@@ -431,16 +431,16 @@ class DBInterface:
             try:
                 if self.dbtype == "postgres":
                     cur.execute(self._prep(
-                        """INSERT INTO records (title, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
+                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
                         VALUES(?,?,?,?,?,?,?,?,?,?) RETURNING record_id"""),
-                        (rec["title"], rec["pub_date"], rec["contact"], rec["series"], time.time(), source_url, 0,
+                        (rec["title"], rec["title_fr"], rec["pub_date"],  rec["series"], time.time(), source_url, 0,
                          rec["identifier"], rec["item_url"], repo_id))
                     returnvalue = int(cur.fetchone()['record_id'])
                 if self.dbtype == "sqlite":
                     cur.execute(self._prep(
-                        """INSERT INTO records (title, pub_date, contact, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
+                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
                         VALUES(?,?,?,?,?,?,?,?,?,?)"""),
-                        (rec["title"], rec["pub_date"], rec["contact"], rec["series"], time.time(), source_url, 0,
+                        (rec["title"], rec["title_fr"], rec["pub_date"], rec["series"], time.time(), source_url, 0,
                          rec["identifier"], rec["item_url"], repo_id))
                     returnvalue = int(cur.lastrowid)
             except self.dblayer.IntegrityError as e:
@@ -474,9 +474,9 @@ class DBInterface:
                 record["record_id"] = self.create_new_record(record, source_url, repo_id)
             else:
                 cur.execute(self._prep(
-                    """UPDATE records set title=?, pub_date=?, contact=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=?, item_url=? 
+                    """UPDATE records set title=?, title_fr=?, pub_date=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=?, item_url=? 
                     WHERE record_id = ?"""),
-                    (record["title"], record["pub_date"], record["contact"], record["series"], time.time(),
+                    (record["title"], record["title_fr"], record["pub_date"], record["series"], time.time(),
                      source_url, 0, record["identifier"], record["item_url"], record["record_id"]))
 
             if record["record_id"] is None:
@@ -521,9 +521,25 @@ class DBInterface:
                                                                   record["record_id"])
                 existing_subject_ids = [e["subject_id"] for e in existing_subject_recs]
                 for subject in record["subject"]:
-                    subject_id = self.get_single_record_id("subjects", subject)
+                    subject_id = self.get_single_record_id("subjects", subject, "and language='en'")
                     if subject_id is None:
-                        subject_id = self.insert_related_record("subjects", subject)
+                        extras = {"language": "en"}
+                        subject_id = self.insert_related_record("subjects", subject, **extras)
+                    if subject_id is not None:
+                        if subject_id not in existing_subject_ids:
+                            self.insert_cross_record("records_x_subjects", "subjects", subject_id, record["record_id"])
+
+            if "subject_fr" in record:
+                if not isinstance(record["subject_fr"], list):
+                    record["subject_fr"] = [record["subject_fr"]]
+                existing_subject_recs = self.get_multiple_records("records_x_subjects", "subject_id", "record_id",
+                                                                  record["record_id"])
+                existing_subject_ids = [e["subject_id"] for e in existing_subject_recs]
+                for subject in record["subject_fr"]:
+                    subject_id = self.get_single_record_id("subjects", subject, "and language='fr'")
+                    if subject_id is None:
+                        extras = {"language": "fr"}
+                        subject_id = self.insert_related_record("subjects", subject, **extras)
                     if subject_id is not None:
                         if subject_id not in existing_subject_ids:
                             self.insert_cross_record("records_x_subjects", "subjects", subject_id, record["record_id"])
@@ -654,6 +670,9 @@ class DBInterface:
                                                                     record["record_id"])
                 if not existing_geospatial_ids:
                     coordinates = record["geospatial"]["coordinates"][0]
+                    if isinstance(coordinates, float):
+                        if len(record["geospatial"]["coordinates"]) == 2:
+                            coordinates = [record["geospatial"]["coordinates"]]
                     if len(coordinates) == 5:
                         # Check if this is a sneaky bounding box
                         lats = []
@@ -703,7 +722,7 @@ class DBInterface:
         records = []
         with con:
             cur = self.getCursor(con)
-            cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.contact, recs.series, recs.modified_timestamp, 
+            cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.series, recs.modified_timestamp, 
                 recs.local_identifier, recs.item_url, repos.repository_id, repos.repository_type
                 FROM records recs, repositories repos
                 where recs.repository_id = repos.repository_id and recs.modified_timestamp < ? and repos.repository_id = ? and recs.deleted = 0
@@ -734,7 +753,7 @@ class DBInterface:
                 cur = self.getCursor(con)
                 try:
                     cur.execute(self._prep(
-                        "INSERT INTO records (title, pub_date, contact, series, modified_timestamp, local_identifier, item_url, repository_id) VALUES(?,?,?,?,?,?,?,?)"),
+                        "INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, local_identifier, item_url, repository_id) VALUES(?,?,?,?,?,?,?,?)"),
                         ("", "", "", "", 0, local_identifier, "", repo_id))
                 except self.dblayer.IntegrityError as e:
                     self.logger.error("Error creating record header: {}".format(e))

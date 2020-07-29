@@ -36,7 +36,8 @@ class MarkLogicRepository(HarvestRepository):
             "max_records_updated_per_run": self.max_records_updated_per_run,
             "update_log_after_numitems": self.update_log_after_numitems,
             "record_refresh_days": self.record_refresh_days,
-            "repo_refresh_days": self.repo_refresh_days, "homepage_url": self.homepage_url
+            "repo_refresh_days": self.repo_refresh_days, "homepage_url": self.homepage_url,
+            "repo_oai_name": self.repo_oai_name
         }
         self.repository_id = self.db.update_repo(**kwargs)
 
@@ -84,9 +85,9 @@ class MarkLogicRepository(HarvestRepository):
             if "date" in entry and str(entry["date"]).strip() != "":
                 record["pub_date"] = str(entry["date"]).strip()
         record["identifier"] = marklogic_record["uri"].rsplit('/', 1)[1]
-        record["contact"] = self.contact
         record["publisher"] = self.publisher
         record["series"] = ""
+        record["title_fr"] = ""
 
         record["creator"] = list(set(record["creator"]))
         record["affiliation"] = list(set(record["affiliation"]))

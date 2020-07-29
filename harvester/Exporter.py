@@ -48,7 +48,7 @@ class Exporter(object):
         with records_con:
             records_cursor = records_con.cursor()
 
-        records_sql = """SELECT recs.record_id, recs.title, recs.pub_date, recs.contact, recs.series, recs.source_url, 
+        records_sql = """SELECT recs.record_id, recs.title, recs.title_fr, recs.pub_date, recs.series, recs.source_url,
             recs.deleted, recs.local_identifier, recs.item_url, recs.modified_timestamp,
             repos.repository_url, repos.repository_name, repos.repository_thumbnail, repos.item_url_pattern, repos.last_crawl_timestamp
             FROM records recs, repositories repos WHERE recs.repository_id = repos.repository_id"""
@@ -68,8 +68,10 @@ class Exporter(object):
             if self.buffer_size > buffer_limit:
                 self._write_batch(export_filepath, temp_filepath, start_time)
 
+            # TODO: Add bilingual titles
             record = (dict(zip(
-                ['record_id', 'title', 'pub_date', 'contact', 'series', 'source_url', 'deleted', 'local_identifier',
+
+                ['record_id', 'title', 'title_fr', 'pub_date', 'series', 'source_url', 'deleted', 'local_identifier',
                  'item_url', 'modified_timestamp',
                  'repository_url', 'repository_name', 'repository_thumbnail', 'item_url_pattern',
                  'last_crawl_timestamp'], row)))
@@ -77,19 +79,16 @@ class Exporter(object):
 
             if record["item_url"] == "":
                 record["item_url"] = self.db.construct_local_url(record)
-
-            record["dc:source"] = record["item_url"]
-            if record["dc:source"] is None:
-                continue
                 
             if record["deleted"] == 1:
-                deleted.append(record["dc:source"])
+                deleted.append(record["item_url"])
                 continue
 
             if only_new_records == True and float(lastrun_timestamp) > record["last_crawl_timestamp"]:
                 continue
 
-            if (len(record['title']) == 0):
+            if ((record["title"] is None or len(record["title"]) == 0) and 
+                (record["title_fr"] is None or len(record["title_fr"]) == 0)):
                 continue
 
             con = self.db.getConnection()
@@ -104,7 +103,7 @@ class Exporter(object):
                 litecur.execute(self.db._prep("SELECT coordinate_type, lat, lon FROM geospatial WHERE record_id=?"),
                                 (record["record_id"],))
                 geodata = litecur.fetchall()
-                record["frdr:geospatial"] = []
+                record["frdr_geospatial"] = []
                 polycoordinates = []
 
                 try:
@@ -112,18 +111,18 @@ class Exporter(object):
                         if coordinate[0] == "Polygon":
                             polycoordinates.append([float(coordinate[1]), float(coordinate[2])])
                         else:
-                            record["frdr:geospatial"].append({"frdr:geospatial_type": "Feature",
-                                                              "frdr:geospatial_geometry": {
-                                                                  "frdr:geometry_type": coordinate[0],
-                                                                  "frdr:geometry_coordinates": [float(coordinate[1]),
+                            record["frdr_geospatial"].append({"frdr_geospatial_type": "Feature",
+                                                              "frdr_geospatial_geometry": {
+                                                                  "frdr_geometry_type": coordinate[0],
+                                                                  "frdr_geometry_coordinates": [float(coordinate[1]),
                                                                                                 float(coordinate[2])]}})
                 except:
                     pass
 
                 if polycoordinates:
-                    record["frdr:geospatial"].append({"frdr:geospatial_type": "Feature",
-                                                      "frdr:geospatial_geometry": {"frdr:geometry_type": "Polygon",
-                                                                                   "frdr:geometry_coordinates": polycoordinates}})
+                    record["frdr_geospatial"].append({"frdr_geospatial_type": "Feature",
+                                                      "frdr_geospatial_geometry": {"frdr_geometry_type": "Polygon",
+                                                                                   "frdr_geometry_coordinates": polycoordinates}})
 
             with con:
                 if self.db.getType() == "sqlite":
@@ -136,50 +135,56 @@ class Exporter(object):
                 litecur.execute(self.db._prep("""SELECT creators.creator FROM creators JOIN records_x_creators on records_x_creators.creator_id = creators.creator_id
                     WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=0 order by records_x_creators_id asc"""),
                                 (record["record_id"],))
-                record["dc:contributor.author"] = self._rows_to_dict(litecur)
+                record["dc_contributor_author"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT affiliations.affiliation FROM affiliations JOIN records_x_affiliations on records_x_affiliations.affiliation_id = affiliations.affiliation_id
                     WHERE records_x_affiliations.record_id=?"""), (record["record_id"],))
-                record["datacite:creatorAffiliation"] = self._rows_to_dict(litecur)
+                record["datacite_creatorAffiliation"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT creators.creator FROM creators JOIN records_x_creators on records_x_creators.creator_id = creators.creator_id
                     WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=1 order by records_x_creators_id asc"""),
                                 (record["record_id"],))
-                record["dc:contributor"] = self._rows_to_dict(litecur)
+                record["dc_contributor"] = self._rows_to_dict(litecur)
+
+                # TODO: Add bilingual subjects
+                litecur.execute(self.db._prep("""SELECT subjects.subject FROM subjects JOIN records_x_subjects on records_x_subjects.subject_id = subjects.subject_id
+                    WHERE records_x_subjects.record_id=? and subjects.language='en'"""), (record["record_id"],))
+                record["frdr_category_en"] = self._rows_to_dict(litecur)
+
 
                 litecur.execute(self.db._prep("""SELECT subjects.subject FROM subjects JOIN records_x_subjects on records_x_subjects.subject_id = subjects.subject_id
-                    WHERE records_x_subjects.record_id=?"""), (record["record_id"],))
-                record["dc:subject"] = self._rows_to_dict(litecur)
+                    WHERE records_x_subjects.record_id=? and subjects.language='fr'"""), (record["record_id"],))
+                record["frdr_category_fr"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT publishers.publisher FROM publishers JOIN records_x_publishers on records_x_publishers.publisher_id = publishers.publisher_id
                     WHERE records_x_publishers.record_id=?"""), (record["record_id"],))
-                record["dc:publisher"] = self._rows_to_dict(litecur)
+                record["dc_publisher"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT rights.rights FROM rights JOIN records_x_rights on records_x_rights.rights_id = rights.rights_id
                                                        WHERE records_x_rights.record_id=?"""), (record["record_id"],))
-                record["dc:rights"] = self._rows_to_dict(litecur)
+                record["dc_rights"] = self._rows_to_dict(litecur)
 
                 litecur.execute(
                     self.db._prep("SELECT description FROM descriptions WHERE record_id=? and language='en' "),
                     (record["record_id"],))
-                record["dc:description"] = self._rows_to_dict(litecur)
+                record["dc_description_en"] = self._rows_to_dict(litecur)
 
                 litecur.execute(
                     self.db._prep("SELECT description FROM descriptions WHERE record_id=? and language='fr' "),
                     (record["record_id"],))
-                record["frdr:description_fr"] = self._rows_to_dict(litecur)
+                record["dc_description_fr"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT tags.tag FROM tags JOIN records_x_tags on records_x_tags.tag_id = tags.tag_id
                     WHERE records_x_tags.record_id=? and tags.language = 'en' """), (record["record_id"],))
-                record["frdr:tags"] = self._rows_to_dict(litecur)
+                record["frdr_keyword_en"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT tags.tag FROM tags JOIN records_x_tags on records_x_tags.tag_id = tags.tag_id
                     WHERE records_x_tags.record_id=? and tags.language = 'fr' """), (record["record_id"],))
-                record["frdr:tags_fr"] = self._rows_to_dict(litecur)
+                record["frdr_keyword_fr"] = self._rows_to_dict(litecur)
 
                 litecur.execute(self.db._prep("""SELECT access.access FROM access JOIN records_x_access on records_x_access.access_id = access.access_id
                     WHERE records_x_access.record_id=?"""), (record["record_id"],))
-                record["frdr:access"] = self._rows_to_dict(litecur)
+                record["frdr_access"] = self._rows_to_dict(litecur)
 
             domain_schemas = {}
             with con:
@@ -202,12 +207,12 @@ class Exporter(object):
                     record[custom_label] = str(row[2])
 
             # Convert friendly column names into dc element names
-            record["dc:title"] = record["title"]
-            record["dc:date"] = record["pub_date"]
-            record["frdr:contact"] = record["contact"]
-            record["frdr:series"] = record["series"]
-            record["frdr:origin.id"] = record["repository_name"]
-            record["frdr:origin.icon"] = record["repository_thumbnail"]
+            record["dc_title_en"] = record["title"]
+            record["dc_title_fr"] = record["title_fr"]
+            record["dc_date"] = record["pub_date"]
+            record["frdr_series"] = record["series"]
+            record["frdr_origin_id"] = record["repository_name"]
+            record["frdr_origin_icon"] = record["repository_thumbnail"]
 
             # remove unneeded columns from output
             record.pop("contact", None)
@@ -222,20 +227,20 @@ class Exporter(object):
             record.pop("repository_thumbnail", None)
             record.pop("repository_url", None)
             record.pop("series", None)
-            record.pop("source_url", None)
             record.pop("title", None)
+            record.pop("title_fr", None)
 
-            record["@context"] = {
-                "dc": "http://dublincore.org/documents/dcmi-terms",
-                "frdr": "https://frdr.ca/schema/1.0",
-                "datacite": "https://schema.labs.datacite.org/meta/kernel-4.0/metadata.xsd"
-            }
-            for custom_schema in domain_schemas:
-                short_label = domain_schemas[custom_schema]
-                record["@context"].update({short_label: custom_schema})
-            record["datacite:resourceTypeGeneral"] = "dataset"
-            gmeta_data = {"@datatype": "GMetaEntry", "@version": "2016-11-09", "subject": record["dc:source"],
-                          "id": record["dc:source"], "visible_to": ["public"], "mimetype": "application/json",
+            # record["@context"] = {
+            #     "dc": "http://dublincore.org/documents/dcmi-terms",
+            #     "frdr": "https://frdr.ca/schema/1.0",
+            #     "datacite": "https://schema.labs.datacite.org/meta/kernel-4.0/metadata.xsd"
+            # }
+            # for custom_schema in domain_schemas:
+            #     short_label = domain_schemas[custom_schema]
+            #     record["@context"].update({short_label: custom_schema})
+            record["datacite_resourceTypeGeneral"] = "dataset"
+            gmeta_data = {"@datatype": "GMetaEntry", "@version": "2016-11-09",
+                          "subject": record["item_url"], "visible_to": ["public"], "mimetype": "application/json",
                           "content": record}
             self.output_buffer.append(gmeta_data)
 
@@ -262,7 +267,7 @@ class Exporter(object):
             for k, v in obj.items():
                 if k in dropkeys:
                     continue
-                strip_dc = re.sub("dc:", "", k)
+                strip_dc = re.sub("dc_", "", k)
                 if strip_dc in renamekeys:
                     datacite_key = renamekeys[strip_dc]
                 else:
@@ -296,16 +301,16 @@ class Exporter(object):
         import dicttoxml
         from lxml import etree
         keys_to_drop = ["@context", "subject"]
-        rename_keys = {"rights": "rightsList", "contributor.author": "creators", "subject": "subjects", "frdr:geospatial": "geolocation", "datacite:resourceTypeGeneral": "resourceType"}
+        rename_keys = {"rights": "rightsList", "contributor.author": "creators", "subject": "subjects", "frdr_geospatial": "geolocation", "datacite_resourceTypeGeneral": "resourceType"}
 
         parser = etree.XMLParser(remove_blank_text=True, recover=True)
         xml_tree = etree.parse("schema/stub.xml", parser=parser)
         root_tag = xml_tree.getroot()
 
-        context_block = gmeta_dict[0]["content"]["@context"]
-        context_xml = etree.fromstring(dicttoxml.dicttoxml(context_block, attr_type=False, custom_root='schema'),
-                                       parser=parser)
-        root_tag.insert(0, context_xml)
+        # context_block = gmeta_dict[0]["content"]["@context"]
+        # context_xml = etree.fromstring(dicttoxml.dicttoxml(context_block, attr_type=False, custom_root='schema'),
+        #                                parser=parser)
+        # root_tag.insert(0, context_xml)
 
         control_block = {"timestamp": int(round(time.mktime(timestamp))),
                          "datestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", timestamp)}

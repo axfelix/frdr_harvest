@@ -26,7 +26,8 @@ class CKANRepository(HarvestRepository):
             "max_records_updated_per_run": self.max_records_updated_per_run,
             "update_log_after_numitems": self.update_log_after_numitems,
             "record_refresh_days": self.record_refresh_days,
-            "repo_refresh_days": self.repo_refresh_days, "homepage_url": self.homepage_url
+            "repo_refresh_days": self.repo_refresh_days, "homepage_url": self.homepage_url,
+            "repo_oai_name": self.repo_oai_name
         }
         self.repository_id = self.db.update_repo(**kwargs)
 
@@ -83,8 +84,46 @@ class CKANRepository(HarvestRepository):
         else:
             record["creator"] = self.name
 
+        # CIOOS only
+        if record["creator"] == '':
+            record["creator"] = ['']
+            if ('cited-responsible-party' in ckan_record) and ckan_record['cited-responsible-party']:
+                for creator in json.loads(ckan_record['cited-responsible-party']):
+                    if ("organisation-name" in creator) and creator["organisation-name"]:
+                        if creator["organisation-name"] not in record["creator"]:
+                            record["creator"].append(creator["organisation-name"])
+                    if ("individual-name" in creator) and creator["individual-name"]:
+                        if creator["individual-name"] not in record["creator"]:
+                            record["creator"].append(creator["individual-name"])
+
         if isinstance(record["creator"], list):
-            record["creator"] = [x for x in record["creator"] if x != '']
+            record["creator"] = [x.strip() for x in record["creator"] if x != '']
+
+
+        # CIOOS only
+        if ('metadata-point-of-contact' in ckan_record) and ckan_record['metadata-point-of-contact']:
+            record["contributor"] = []
+            point_of_contact = json.loads(ckan_record['metadata-point-of-contact'])
+            if ("organisation-name" in point_of_contact) and point_of_contact["organisation-name"]:
+                if point_of_contact["organisation-name"] not in record["creator"]:
+                    record["contributor"].append(point_of_contact["organisation-name"])
+            if ("individual-name" in point_of_contact) and point_of_contact["individual-name"]:
+                if point_of_contact["individual-name"] not in record["creator"]:
+                    record["contributor"].append(point_of_contact["individual-name"])
+            if isinstance(record["contributor"], list):
+                record["contributor"] = [x.strip() for x in record["contributor"] if x != '']
+
+        # CIOOS only
+        if ('organization' in ckan_record) and ckan_record['organization']:
+            if ('title_translated' in ckan_record['organization']) and ckan_record['organization']['title_translated']:
+                record["publisher"] = ckan_record['organization']['title_translated'].get("en", "") \
+                                      + " / " + ckan_record['organization']['title_translated'].get("fr", "")
+                if len(record["publisher"]) == 3:
+                    record["publisher"] = ""
+                elif record["publisher"][:3] == (" / "):
+                    record["publisher"] = record["publisher"][3:]
+                elif record["publisher"][-3:] == (" / "):
+                    record["publisher"] = record["publisher"][:-3]
 
         record["identifier"] = local_identifier
 
@@ -102,10 +141,23 @@ class CKANRepository(HarvestRepository):
             if "fr-t-en" in ckan_record["title"]:
                 record["title_fr"] = ckan_record["title"].get("fr-t-en", "")
         else:
-            record["title"] = ckan_record.get("title", "")
+            if self.default_language == "en":
+                record["title"] = ckan_record.get("title", "")
             if self.default_language == "fr":
                 record["title_fr"] = ckan_record.get("title", "")
+
+        # Create empty title and title_fr if not present
+        if "title" not in record:
+            record["title"] = ""
+        if "title_fr" not in record:
+            record["title_fr"] = ""
+
         record["title"] = record["title"].strip()
+        record["title_fr"] = record["title_fr"].strip()
+
+        # Do not include records without at least one title
+        if record["title"] == "" and record["title_fr"] == "":
+            return None
 
         if isinstance(ckan_record.get("notes_translated", ""), dict):
             record["description"] = ckan_record["notes_translated"].get("en", "")
@@ -124,9 +176,15 @@ class CKANRepository(HarvestRepository):
                 record["description_fr"] = ckan_record.get("notes", "")
 
         if ('sector' in ckan_record):
-            record["subject"] = ckan_record.get('sector', "")
-        else:
-            record["subject"] = ckan_record.get('subject', "")
+            if self.default_language == "en":
+                record["subject"] = ckan_record.get('sector', "")
+            elif self.default_language == "fr":
+                record["subject_fr"] = ckan_record.get('sector', "")
+        elif ('subject' in ckan_record):
+            if self.default_language == "en":
+                record["subject"] = ckan_record.get('subject', "")
+            elif self.default_language == "fr":
+                record["subject_fr"] = ckan_record.get('subject', "")
 
         if ('license_title' in ckan_record) and ckan_record['license_title']:
             record["rights"] = [ckan_record['license_title']]
@@ -164,23 +222,6 @@ class CKANRepository(HarvestRepository):
         publication_year = int(record["pub_date"][:2])
         if (publication_year < 13 or publication_year > 23):
             record["pub_date"] = ""
-
-        try:
-            if self.contact:
-                record["contact"] = self.contact
-        except:
-            if ('contacts' in ckan_record) and ckan_record['contacts']:
-                record["contact"] = ckan_record["contacts"][0].get('email', "")
-            elif ('author_email' in ckan_record) and ckan_record['author_email']:
-                record["contact"] = ckan_record.get("author_email", "")
-            elif ('contact_email' in ckan_record) and ckan_record['contact_email']:
-                record["contact"] = ckan_record.get("contact_email", "")
-            elif ('owner_email' in ckan_record) and ckan_record['owner_email']:
-                record["contact"] = ckan_record.get("owner_email", "")
-            elif ('maintainer_email' in ckan_record) and ckan_record['maintainer_email']:
-                record["contact"] = ckan_record.get("maintainer_email", "")
-            else:
-                record["contact"] = ''
 
         try:
             record["series"] = ckan_record["data_series_name"]["en"]
@@ -225,7 +266,10 @@ class CKANRepository(HarvestRepository):
         if ('geometry' in ckan_record) and ckan_record['geometry']:
             record["geospatial"] = ckan_record['geometry']
         elif ('spatial' in ckan_record) and ckan_record['spatial']:
-            record["geospatial"] = json.loads(ckan_record["spatial"])
+            if isinstance(ckan_record["spatial"], str):
+                record["geospatial"] = json.loads(ckan_record["spatial"])
+            elif isinstance(ckan_record["spatial"], dict):
+                record["geospatial"] =  ckan_record["spatial"]
         elif('spatialcoverage1' in ckan_record) and ckan_record['spatialcoverage1']:
                 record["geospatial"] = ckan_record['spatialcoverage1'].split(",")
                 # Check to make sure we have the right number of pieces because sometimes
