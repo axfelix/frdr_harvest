@@ -58,7 +58,7 @@ class Exporter(object):
             records_args = records_args + (int(self.export_repository_id),)
 
         if only_new_records:
-            records_sql += " AND recs.last_crawl_timestamp >= ?"
+            records_sql += " AND recs.modified_timestamp >= ?"
             records_args = records_args + (lastrun_timestamp,)
 
         if len(records_args):
