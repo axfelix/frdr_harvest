@@ -51,9 +51,18 @@ class Exporter(object):
             recs.deleted, recs.local_identifier, recs.item_url, recs.modified_timestamp,
             repos.repository_url, repos.repository_name, repos.repository_thumbnail, repos.item_url_pattern, repos.last_crawl_timestamp
             FROM records recs, repositories repos WHERE recs.repository_id = repos.repository_id"""
+        records_args = ()
+
         if self.export_repository_id:
             records_sql += " AND repos.repository_id = ?"
-            records_cursor.execute(self.db._prep(records_sql), (int(self.export_repository_id),) )
+            records_args = records_args + (int(self.export_repository_id),)
+
+        if only_new_records:
+            records_sql += " AND recs.last_crawl_timestamp >= ?"
+            records_args = records_args + (lastrun_timestamp,)
+
+        if len(records_args):
+            records_cursor.execute(self.db._prep(records_sql), records_args)
         else:
             records_cursor.execute(self.db._prep(records_sql))
 
@@ -81,9 +90,6 @@ class Exporter(object):
                 
             if record["deleted"] == 1:
                 deleted.append(record["item_url"])
-                continue
-
-            if only_new_records == True and int(lastrun_timestamp) > int(record["last_crawl_timestamp"]):
                 continue
 
             if ((record["title"] is None or len(record["title"]) == 0) and 
