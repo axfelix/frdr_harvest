@@ -77,8 +77,8 @@ class CKANRepository(HarvestRepository):
         elif ('maintainer' in ckan_record) and ckan_record['maintainer']:
             record["creator"] = ckan_record['maintainer']
         elif ('creator' in ckan_record) and ckan_record['creator']:
-            if isinstance(ckan_record["creator"], list):
-                record["creator"] = ckan_record["creator"][0]
+            record["creator"] = ckan_record["creator"]
+
         elif ('organization' in ckan_record) and ckan_record['organization']:
             record["creator"] = ckan_record['organization'].get('title', "")
         else:
