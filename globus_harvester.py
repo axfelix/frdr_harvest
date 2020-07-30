@@ -1,12 +1,13 @@
 """Globus Harvester.
 
 Usage:
-  globus_harvester.py [--onlyharvest | --onlyexport | --init] [--only-new-records] [--export-filepath=<file>] [--export-format=<format>] [--repository-id=<id>]
+  globus_harvester.py [--onlyharvest | --onlyexport | --init] [--only-new-records] [--dump-on-failure] [--export-filepath=<file>] [--export-format=<format>] [--repository-id=<id>]
 
 Options:
   --onlyharvest             Just harvest new items, do not export anything.
   --onlyexport              Just export existing items, do not harvest anything.
   --only-new-records        Only export records changed since last crawl.
+  --dump-on-failure         If a record ever fails validation, print the whole record.
   --export-filepath=<file>  The path to export the data to.
   --export-format=<format>  The export format (currently gmeta or xml).
   --repository-id=<id>      Only export this repository, based on the database table ID
@@ -71,6 +72,10 @@ if __name__ == "__main__":
 
     config = get_config_ini()
     final_config = {}
+    if arguments["--dump-on-failure"] == True:
+        final_config['dump_on_failure'] = True
+    else:
+        final_config['dump_on_failure'] = False
     final_config['update_log_after_numitems'] = int(config['harvest'].get('update_log_after_numitems', 1000))
     final_config['abort_after_numerrors'] = int(config['harvest'].get('abort_after_numerrors', 5))
     final_config['record_refresh_days'] = int(config['harvest'].get('record_refresh_days', 30))
