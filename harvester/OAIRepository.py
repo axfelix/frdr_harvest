@@ -394,6 +394,11 @@ class OAIRepository(HarvestRepository):
         except Exception as e:
             self.logger.error("Updating item failed (repo_id:{}, oai_id:{}): {}".format(self.repository_id,
                                                                                         record['local_identifier'], e))
+            if self.dump_on_failure == True:
+                try:
+                    print(single_record.metadata)
+                except:
+                    pass
             # Touch the record so we do not keep requesting it on every run
             self.db.touch_record(record)
             self.error_count = self.error_count + 1

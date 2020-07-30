@@ -100,7 +100,14 @@ class CSWRepository(HarvestRepository):
             oai_record["pub_date"] = re.sub("[T ][0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.?[0-9]*[Z]?$", "",
                                             oai_record["pub_date"])
             if oai_record:
-                self.db.write_record(oai_record, self)
+                try:
+                    self.db.write_record(oai_record, self)
+                except:
+                    if self.dump_on_failure == True:
+                        try:
+                            print(csw_record)
+                        except:
+                            pass
             return True
 
         else:
