@@ -308,9 +308,9 @@ class OAIRepository(HarvestRepository):
 
         if language == "fr":
             if isinstance(record["title"], list):
-                record["title_fr"] = record["title_fr"][0].strip()
+                record["title_fr"] = record["title"][0].strip()
             else:
-                record["title_fr"] = record["title_fr"].strip()
+                record["title_fr"] = record["title"].strip()
             # Remove "title" from record since this is the English field
             record["title"] = ""
 
