@@ -115,9 +115,8 @@ class DataStreamRepository(HarvestRepository):
                 item_response = urllib.request.urlopen(item_dcat_json_url)
             except Exception as e:
                 # Exception means this URL was not found
-                record["item_url"] = "https://datastream.org/dataset/" + identifier
                 self.db.delete_record(record)
-                return record
+                return True
             item_response_content = item_response.read().decode('utf-8')
             item_json = json.loads(item_response_content)
 
