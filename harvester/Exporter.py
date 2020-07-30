@@ -39,8 +39,7 @@ class Exporter(object):
         deleted = []
 
         try:
-            with open("data/last_run_timestamp", "r") as lastrun:
-                lastrun_timestamp = lastrun.read()
+            lastrun_timestamp = self.db.get_setting("last_run_timestamp")
         except:
             lastrun_timestamp = 0
 
@@ -84,7 +83,7 @@ class Exporter(object):
                 deleted.append(record["item_url"])
                 continue
 
-            if only_new_records == True and float(lastrun_timestamp) > record["last_crawl_timestamp"]:
+            if only_new_records == True and int(lastrun_timestamp) > int(record["last_crawl_timestamp"]):
                 continue
 
             if ((record["title"] is None or len(record["title"]) == 0) and 
@@ -404,7 +403,7 @@ class Exporter(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
         output = None
-        start_time = time.gmtime()
+        start_time = int(time.time())
 
         if self.export_format not in ["gmeta", "xml"]:
             self.logger.error("Unknown export format: {}".format(self.export_format))

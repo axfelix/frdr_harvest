@@ -56,7 +56,7 @@ def get_config_ini(config_file="conf/harvester.conf"):
 if __name__ == "__main__":
 
     instance_lock = Lock()
-    tstart = time.time()
+    tstart = int(time.time())
 
     arguments = docopt(__doc__)
     run_export = True
@@ -135,8 +135,7 @@ if __name__ == "__main__":
         exporter.export_to_file(**kwargs)
 
     formatter = TimeFormatter()
+    dbh.set_setting("last_run_timestamp", tstart)
     main_log.info("Done after {}".format(formatter.humanize(time.time() - tstart)))
 
-    with open("data/last_run_timestamp", "w") as lastrun:
-        lastrun.write(str(time.time()))
     instance_lock.unlock()

@@ -40,7 +40,7 @@ class DBInterface:
                 "create table if not exists settings (setting_id INTEGER PRIMARY KEY NOT NULL, setting_name TEXT, setting_value TEXT)")
 
             # Determine if the database schema needs to be updated
-            dbversion = self.get_db_version()
+            dbversion = self.get_setting("dbversion")
             files = os.listdir("sql/" + str(self.dbtype) + "/")
             files.sort()
             for filename in files:
@@ -54,7 +54,7 @@ class DBInterface:
                             cur.execute(scriptcontents)
                         else:
                             cur.executescript(scriptcontents)
-                        self.set_db_version(scriptversion)
+                        self.set_setting("dbversion", scriptversion)
                         dbversion = scriptversion
                         print("Updated database to version: {:d}".format(scriptversion))  # No logger yet
 
@@ -97,33 +97,33 @@ class DBInterface:
             return statement.replace('?', '%s')
         return statement
 
-    def get_db_version(self):
-        dbversion = 0
+    def get_setting(self, setting_name):
+        # Get an internal setting - always returning an int value
+        setting_value = 0
         con = self.getConnection()
         res = None
         with con:
             cur = self.getCursor(con)
             cur.execute(
                 self._prep("select setting_value from settings where setting_name = ? order by setting_value desc"),
-                ("dbversion",))
+                (setting_name,))
             if cur is not None:
                 res = cur.fetchone()
             if res is not None:
-                dbversion = int(res['setting_value'])
+                setting_value = int(res['setting_value'])
+        return setting_value
 
-        return dbversion
-
-    def set_db_version(self, v):
-        curent_version = self.get_db_version()
+    def set_setting(self, setting_name, new_value):
+        curent_value = self.get_setting(setting_name)
         con = self.getConnection()
         with con:
             cur = self.getCursor(con)
-            if curent_version == 0:
+            if curent_value == 0:
                 cur.execute(self._prep("insert into settings(setting_value, setting_name) values (?,?)"),
-                            (v, "dbversion"))
+                            (new_value, setting_name))
             else:
                 cur.execute(self._prep("update settings set setting_value = ? where setting_name = ?"),
-                            (v, "dbversion"))
+                            (new_value, setting_name))
 
     def update_repo(self, **kwargs):
         for key, value in kwargs.items():
