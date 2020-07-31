@@ -111,7 +111,12 @@ class DataStreamRepository(HarvestRepository):
         try:
             identifier = record['local_identifier']
             item_dcat_json_url = "https://datastream.org/dataset/" + identifier + ".dcat.json"
-            item_response = urllib.request.urlopen(item_dcat_json_url)
+            try:
+                item_response = urllib.request.urlopen(item_dcat_json_url)
+            except Exception as e:
+                # Exception means this URL was not found
+                self.db.delete_record(record)
+                return True
             item_response_content = item_response.read().decode('utf-8')
             item_json = json.loads(item_response_content)
 
