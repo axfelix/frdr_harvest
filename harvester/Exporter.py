@@ -409,7 +409,7 @@ class Exporter(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
         output = None
-        start_time = int(time.time())
+        start_time = time.gmtime()
 
         if self.export_format not in ["gmeta", "xml"]:
             self.logger.error("Unknown export format: {}".format(self.export_format))
