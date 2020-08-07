@@ -53,6 +53,15 @@ The list of repositories to be crawled is in conf/repos.json, in a structure lik
             "enabled": true
         },
         {
+            "name": "Some DataStream Repository",
+            "url": "https://somedatastreamrepository.org/dataset/sitemap.xml",
+            "homepage_url": "https://somedatastreamrepository.org/"
+            "item_url_pattern": "https://somedatastreamrepository.org/dataset/%id%",
+            "contact": "contact@person.ca",
+            "type": "datastream",
+            "enabled": true
+        },
+        {
             "name": "Some OpenDataSoft Repository",
             "url": "https://someopendatasoftrepository.ca/api/datasets/1.0/search",
             "homepage_url": "someopendatasoftrepository.ca",
