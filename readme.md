@@ -10,45 +10,51 @@ The list of repositories to be crawled is in conf/repos.json, in a structure lik
         {
             "name": "Some OAI Repository",
             "url": "http://someoairepository.edu/oai2",
+            "homepage_url": ""http://someoairepository.edu",
             "set": "",
             "thumbnail": "http://someoairepository.edu/logo.png",
             "type": "oai",
             "update_log_after_numitems": 50,
-            "enabled": false
+            "enabled": true
         },
         {
             "name": "Some CKAN Repository",
             "url": "http://someckanrepository.edu/data",
+            "homepage_url": "http://someckanrepository.edu",
             "set": "",
             "thumbnail": "http://someckanrepository.edu/logo.png",
             "type": "ckan",
             "repo_refresh_days": 7,
             "update_log_after_numitems": 2000,
-            "enabled": false
+            "item_url_pattern": "https://someckanrepository.edu/dataset/%id%",
+            "enabled": true
         },
         {
             "name": "Some MarkLogic Repository",
-            "url": "https://search2.odesi.ca/search",
-            "item_url_pattern": "https://search2.odesi.ca/#/details?uri=%2Fodesi%2F%id%",
+            "url": "https://somemarklogicrepository.ca/search",
+            "homepage_url": "https://search2.somemarklogicrepository.ca/",
+            "item_url_pattern": "https://search2.somemarklogicrepository.ca/#/details?uri=%2Fodesi%2F%id%",
+            "thumbnail": "http://somemarklogicrepository.ca/logo.png",
             "collection": "cora",
             "options": "odesi-opts2",
-            "contact": "contact@person.ca",
             "type": "marklogic",
             "enabled": true
         },
         {
             "name": "Some Socrata Repository",
             "url": "data.somesocratarepository.ca",
+            "homepage_url": "https://somesocratarepository.ca",
+            "set": "",
+            "thumbnail": "http://somesocratarepository.ca/logo.png",
             "item_url_pattern": "https://data.somesocratarepository.ca/d/%id%",
-            "contact": "contact@person.ca",
             "type": "socrata",
             "enabled": true
         },
         {
             "name": "Some CSW Repository",
             "url": "https://somecswrepository.edu/geonetwork/srv/eng/csw",
+            "homepage_url": "https://somecswrepository.edu",
             "item_url_pattern": "https://somecswrepository.edu/geonetwork/srv/eng/catalog.search#/metadata/%id%",
-            "contact": "contact@person.ca",
             "type": "csw",
             "enabled": true
         },
@@ -57,7 +63,6 @@ The list of repositories to be crawled is in conf/repos.json, in a structure lik
             "url": "https://somedatastreamrepository.org/dataset/sitemap.xml",
             "homepage_url": "https://somedatastreamrepository.org/"
             "item_url_pattern": "https://somedatastreamrepository.org/dataset/%id%",
-            "contact": "contact@person.ca",
             "type": "datastream",
             "enabled": true
         },
