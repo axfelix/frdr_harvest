@@ -10,7 +10,7 @@ The list of repositories to be crawled is in conf/repos.json, in a structure lik
         {
             "name": "Some OAI Repository",
             "url": "http://someoairepository.edu/oai2",
-            "homepage_url": ""http://someoairepository.edu",
+            "homepage_url": "http://someoairepository.edu",
             "set": "",
             "thumbnail": "http://someoairepository.edu/logo.png",
             "type": "oai",
