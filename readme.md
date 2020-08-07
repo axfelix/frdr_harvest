@@ -51,6 +51,14 @@ The list of repositories to be crawled is in conf/repos.json, in a structure lik
             "contact": "contact@person.ca",
             "type": "csw",
             "enabled": true
+        },
+        {
+            "name": "Some OpenDataSoft Repository",
+            "url": "https://someopendatasoftrepository.ca/api/datasets/1.0/search",
+            "homepage_url": "someopendatasoftrepository.ca",
+            "type": "opendatasoft",
+            "item_url_pattern": "https://someopendatasoftrepository.ca/explore/dataset/%id%",
+            "enabled": true
         }
     ]
 }
