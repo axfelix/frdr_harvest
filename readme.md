@@ -61,7 +61,7 @@ The list of repositories to be crawled is in conf/repos.json, in a structure lik
         {
             "name": "Some DataStream Repository",
             "url": "https://somedatastreamrepository.org/dataset/sitemap.xml",
-            "homepage_url": "https://somedatastreamrepository.org/"
+            "homepage_url": "https://somedatastreamrepository.org/",
             "item_url_pattern": "https://somedatastreamrepository.org/dataset/%id%",
             "type": "datastream",
             "enabled": true
