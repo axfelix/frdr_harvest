@@ -344,7 +344,7 @@ class Exporter(object):
     def _write_batch(self, export_filepath, temp_filepath, start_time):
         self.logger.debug("Writing batch {} to output file".format(self.batch_number))
         if self.export_format == "gmeta":
-            output = json.dumps({"@datatype": "GIngest", "@version": "2016-11-09", "source_id": "ComputeCanada",
+            output = json.dumps({"@datatype": "GIngest", "@version": "2016-11-09",
                                  "ingest_type": "GMetaList",
                                  "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09",
                                                  "gmeta": self.output_buffer}})
