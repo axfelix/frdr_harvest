@@ -221,8 +221,8 @@ class OAIRepository(HarvestRepository):
                 record["geospatial"] = {"type": "Polygon", "coordinates": [
                     [boxcoordinates[x:x + 2] for x in range(0, len(boxcoordinates), 2)]]}
             # Look for datacite.creatorAffiliation
-            if "creatorAffiliation" in record:
-                record["affiliation"] = record.get("creatorAffiliation")
+            if "http://datacite.org/schema/kernel-4#creatorAffiliation" in record:
+                record["affiliation"] = record.get("http://datacite.org/schema/kernel-4#creatorAffiliation")
 
         if 'identifier' not in record.keys():
             return None
@@ -351,10 +351,16 @@ class OAIRepository(HarvestRepository):
         return record
 
     def find_domain_metadata(self, record):
+        excludedElements = ['http://datacite.org/schema/kernel-4#resourcetype',
+                    'http://datacite.org/schema/kernel-4#creatorAffiliation',
+                    'http://datacite.org/schema/kernel-4#publicationyear',
+                    'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointName',
+                    'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath']
         newRecord = {}
         for elementName in list(record.keys()):
             if '#' in elementName:
-                newRecord[elementName] = record.pop(elementName, None)
+                if not [ele for ele in excludedElements if(ele in elementName)]:
+                    newRecord[elementName] = record.pop(elementName, None)
         return newRecord
 
     @rate_limited(5)
