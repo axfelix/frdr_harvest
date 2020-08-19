@@ -71,7 +71,7 @@ class ArcGISRepository(HarvestRepository):
         # TODO: Merge English and French records for Ottawa
         if "https://ottawa.ca/fr/" in record["rights"]:
             record["title"]  = ""
-            record["title_fr"] = record["rights"]
+            record["title_fr"] = arcgis_record["attributes"]["name"]
             record["tags_fr"] = arcgis_record["attributes"]["tags"]
             record["description_fr"] = arcgis_record["attributes"]["description"]
         else:
