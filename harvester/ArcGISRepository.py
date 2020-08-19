@@ -63,10 +63,11 @@ class ArcGISRepository(HarvestRepository):
         if arcgis_record["attributes"]["dataType"] == "Document":
             return False
         # TODO: Merge English and French records for Ottawa
-        if "https://ottawa.ca/fr/" in arcgis_record["attributes"]["licenseInfo"]:
+        record["rights"] = arcgis_record["attributes"]["licenseInfo"]
+        if "https://ottawa.ca/fr/" in record["rights"]:
             record["title"]  = ""
-            record["title_fr"] = arcgis_record["attributes"]["name"]
-        elif "https://ottawa.ca/" in arcgis_record["attributes"]["licenseInfo"]:
+            record["title_fr"] = record["rights"]
+        elif "https://ottawa.ca/" in record["rights"]:
             record["title"] = arcgis_record["attributes"]["name"]
             record["title_fr"] = ""
         else:
