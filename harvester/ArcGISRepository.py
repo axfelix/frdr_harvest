@@ -60,27 +60,33 @@ class ArcGISRepository(HarvestRepository):
 
     def format_arcgis_to_oai(self, arcgis_record):
         record = {}
+
+        # Exclude non-dataset records
         if arcgis_record["attributes"]["dataType"] == "Document":
             return False
-        # TODO: Merge English and French records for Ottawa
+
         record["rights"] = arcgis_record["attributes"]["licenseInfo"]
+
+        # Use licenseInfo URL as proxy for language of dataset for Ottawa
+        # TODO: Merge English and French records for Ottawa
         if "https://ottawa.ca/fr/" in record["rights"]:
             record["title"]  = ""
             record["title_fr"] = record["rights"]
-        elif "https://ottawa.ca/" in record["rights"]:
-            record["title"] = arcgis_record["attributes"]["name"]
-            record["title_fr"] = ""
+            record["tags_fr"] = arcgis_record["attributes"]["tags"]
+            record["description_fr"] = arcgis_record["attributes"]["description"]
         else:
+            # For all other repositories, default to English
             record["title"] = arcgis_record["attributes"]["name"]
             record["title_fr"] = ""
+            record["tags"] = arcgis_record["attributes"]["tags"]
+            record["description"] = arcgis_record["attributes"]["description"]
+
         record["identifier"] = arcgis_record["id"]
         record["title"] = arcgis_record["attributes"]["name"]
         record["creator"] = arcgis_record["attributes"]["source"]
-        record["description"] = arcgis_record["attributes"]["description"]
         record["pub_date"] = parser.parse(arcgis_record["attributes"]["createdAt"]).strftime('%Y-%m-%d')
-        record["tags"] = arcgis_record["attributes"]["tags"]
-        record["local_identifier"] = arcgis_record["attributes"]["slug"]
 
+        record["local_identifier"] = arcgis_record["attributes"]["slug"]
         # Use URL constructed from slug, not arcgis_record["attributes"]["landingPage"]
         # Records without a URL pointing to the local repository are excluded
         try:
