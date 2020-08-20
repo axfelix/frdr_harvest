@@ -50,8 +50,9 @@ class SocrataRepository(HarvestRepository):
         record["identifier"] = local_identifier
         record["creator"] = socrata_record.get("attribution", self.name)
         record["pub_date"] = datetime.fromtimestamp(socrata_record["publicationDate"]).strftime('%Y-%m-%d')
-        record["series"] = socrata_record.get("category", "")
+        record["subject"] = socrata_record.get("category", "")
         record["title_fr"] = ""
+        record["series"] = ""
 
         # Continue to default to English for our current Socrata repositories.
         # For Nova Scoatia, "fra" language refers to the dataset, not the metadata.
