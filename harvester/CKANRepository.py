@@ -180,6 +180,7 @@ class CKANRepository(HarvestRepository):
             record["description_fr"] = ckan_record.get("notes_fra", "")
             if self.default_language == "fr":
                 record["description_fr"] = ckan_record.get("notes", "")
+                record["description"] = ""
 
         if ('sector' in ckan_record):
             if self.default_language == "en":
