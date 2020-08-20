@@ -73,7 +73,13 @@ class CKANRepository(HarvestRepository):
         if ('contacts' in ckan_record) and ckan_record['contacts']:
             record["creator"] = [person.get('name', "") for person in ckan_record['contacts']]
         elif ('author' in ckan_record) and ckan_record['author']:
-            record["creator"] = ckan_record['author']
+            try:
+                authors = json.loads(ckan_record["author"])
+                record["creator"] = []
+                for author in authors:
+                    record["creator"].append(author["author_name"])
+            except:
+                record["creator"] = ckan_record['author']
         elif ('maintainer' in ckan_record) and ckan_record['maintainer']:
             record["creator"] = ckan_record['maintainer']
         elif ('creator' in ckan_record) and ckan_record['creator']:
