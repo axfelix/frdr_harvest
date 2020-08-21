@@ -63,8 +63,8 @@ class CKANRepository(HarvestRepository):
         record = {}
 
         if ('type' in ckan_record) and ckan_record['type']:
-            # Exclude non-dataset records from City of Surrey and Province of Alberta
-            if ckan_record['type'] in ['showcase', 'publications']:
+            # Exclude showcases and other non-dataset records (publications from Alberta, info from Open Data Canada)
+            if ckan_record['type'] in ['showcase', 'publications', 'info']:
                 return False
 
         if not 'date_published' in ckan_record and not 'dates' in ckan_record and not 'record_publish_date' in ckan_record and not 'metadata_created' in ckan_record and not 'date_issued' in ckan_record:
