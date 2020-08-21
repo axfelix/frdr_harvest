@@ -310,16 +310,24 @@ class CKANRepository(HarvestRepository):
                     record["geospatial"] = json.loads(dictionary['value'])
 
         # Access Constraints, if available
-        if ('private' in ckan_record) and ckan_record['private'] == True:
-            record["access"] = "Limited"
-        elif ('private' in ckan_record) and ckan_record['private'] == False:
-            record["access"] = "Public"
-            if self.name == 'BC Data Catalogue':
-                # BC Data Catalogue uses view_audience - 'private' is always False
-                record["access"] = ckan_record.get("view_audience")
-        else:
-            record["access"] = ckan_record.get("download_audience")
-            record["access"] = ckan_record.get("view_audience")
+        if ('private' in ckan_record):
+            if ckan_record['private']:
+                record["access"] = "Limited"
+            else:
+                record["access"] = "Public"
+                if self.name == 'BC Data Catalogue':
+                    # 'private' is always False; view_audience is "public" for public
+                    record["access"] = ckan_record.get("view_audience")
+                elif self.name == "Data Ontario":
+                    # 'private' is always False; access_level is "open" for public
+                    record["access"] = ckan_record.get("access_level", "")
+                    if record["access"] == "open":
+                        record["access"] = "Public"
+                elif self.name == "Province of Alberta":
+                    # 'private' is always False; sensitivity is "unrestricted" for public
+                    record["access"] = ckan_record.get("sensitivity", "")
+                    if record["access"] == "unrestricted" or record["access"] == "":
+                        record["access"] = "Public"
 
         return record
 
