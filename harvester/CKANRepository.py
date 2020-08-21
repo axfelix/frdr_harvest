@@ -183,15 +183,32 @@ class CKANRepository(HarvestRepository):
                 record["description"] = ""
 
         if ('sector' in ckan_record):
+            # BC Data Catalogue
             if self.default_language == "en":
                 record["subject"] = ckan_record.get('sector', "")
             elif self.default_language == "fr":
                 record["subject_fr"] = ckan_record.get('sector', "")
         elif ('subject' in ckan_record):
+            # Open Data Canada
             if self.default_language == "en":
                 record["subject"] = ckan_record.get('subject', "")
             elif self.default_language == "fr":
                 record["subject_fr"] = ckan_record.get('subject', "")
+        elif "groups" in ckan_record and ckan_record["groups"]:
+            # Surrey, CanWin Data Hub, Donnees Quebec (plus Regina, Guelph, Montreal, Niagara)
+            record["subject"] = []
+            record["subject_fr"] = []
+            for group in ckan_record["groups"]:
+                if self.default_language == "en":
+                    record["subject"].append(group.get("display_name", ""))
+                elif self.default_language == "fr":
+                    record["subject_fr"].append(group.get("display_name", ""))
+        elif "topic" in ckan_record and ckan_record["topic"]:
+            # Alberta
+            if self.default_language == "en":
+                record["subject"] = ckan_record["topic"]
+            elif self.default_language == "fr":
+                record["subject_fr"] = ckan_record["topic"]
 
         if ('license_title' in ckan_record) and ckan_record['license_title']:
             record["rights"] = [ckan_record['license_title']]
