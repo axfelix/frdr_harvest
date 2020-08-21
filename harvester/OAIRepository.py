@@ -314,16 +314,19 @@ class OAIRepository(HarvestRepository):
             # Remove "title" from record since this is the English field
             record["title"] = ""
 
-            record["tags_fr"] = record.get("subject")
-            record.pop("subject", None)
+            if "tags_fr" not in record.keys():
+                record["tags_fr"] = record.get("subject")
+                record.pop("subject", None)
         else:
             if isinstance(record["title"], list):
                 record["title"] = record["title"][0].strip()
             else:
                 record["title"] = record["title"].strip()
             record["title_fr"] = ""
-            record["tags"] = record.get("subject")
-            record.pop("subject", None)
+
+            if "tags" not in record.keys():
+                record["tags"] = record.get("subject")
+                record.pop("subject", None)
 
         if "publisher" in record.keys():
             if isinstance(record["publisher"], list):
