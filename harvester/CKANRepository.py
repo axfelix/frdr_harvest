@@ -104,6 +104,9 @@ class CKANRepository(HarvestRepository):
         if isinstance(record["creator"], list):
             record["creator"] = [x.strip() for x in record["creator"] if x != '']
 
+        if ('owner_division' in ckan_record) and ckan_record['owner_division']:
+            # Toronto
+            record["publisher"] = ckan_record['owner_division']
 
         # CIOOS only
         if ('metadata-point-of-contact' in ckan_record) and ckan_record['metadata-point-of-contact']:
@@ -208,6 +211,15 @@ class CKANRepository(HarvestRepository):
                 record["subject"] = ckan_record["topic"]
             elif self.default_language == "fr":
                 record["subject_fr"] = ckan_record["topic"]
+        elif "topics" in ckan_record and ckan_record["topics"]:
+            # Toronto
+            record["subject"] = ckan_record["topics"].split(",")
+            if "civic_issues" in ckan_record and ckan_record["civic_issues"]:
+                record["subject"].extend(ckan_record["civic_issues"].split(","))
+        elif "civic_issues" in ckan_record and ckan_record["civic_issues"]:
+            # Toronto, records without "topics"
+            record["subject"] = ckan_record["civic_issues"].split(",")
+
 
         if ('license_title' in ckan_record) and ckan_record['license_title']:
             record["rights"] = [ckan_record['license_title']]
