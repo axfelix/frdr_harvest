@@ -280,11 +280,12 @@ class CKANRepository(HarvestRepository):
                 for tag in ckan_record["tags_translated"]["fr-t-en"]:
                     record["tags_fr"].append(tag)
         else:
-            for tag in ckan_record["tags"]:
-                if self.default_language == "fr":
-                    record["tags_fr"].append(tag["display_name"])
-                else:
-                    record["tags"].append(tag["display_name"])
+            if ('tags' in ckan_record) and ckan_record['tags']:
+                for tag in ckan_record["tags"]:
+                    if self.default_language == "fr":
+                        record["tags_fr"].append(tag["display_name"])
+                    else:
+                        record["tags"].append(tag["display_name"])
 
         if ('geometry' in ckan_record) and ckan_record['geometry']:
             record["geospatial"] = ckan_record['geometry']
