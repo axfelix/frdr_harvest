@@ -100,7 +100,7 @@ class ArcGISRepository(HarvestRepository):
         except:
             pass
 
-        # record["geospatial"] = arcgis_record["extent"] # TODO: Update for new schema
+        # record["geospatial"] = arcgis_record["attributes"]["extent"] # TODO: Update for new schema
 
         record["series"] = ""
         record["access"] = "Public"
