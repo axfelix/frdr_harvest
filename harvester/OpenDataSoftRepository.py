@@ -108,7 +108,7 @@ class OpenDataSoftRepository(HarvestRepository):
         try:
             record_url = self.url.replace("search", "") + record['local_identifier']
             try:
-                item_response = requests.get(record_url) # TODO get record
+                item_response = requests.get(record_url)
                 opendatasoft_record = json.loads(item_response.text)
             except:
                 # Exception means this URL was not found
