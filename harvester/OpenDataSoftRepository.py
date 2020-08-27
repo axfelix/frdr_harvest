@@ -4,6 +4,7 @@ import time
 import json
 import re
 import os.path
+from dateutil import parser
 
 
 class OpenDataSoftRepository(HarvestRepository):
@@ -70,23 +71,23 @@ class OpenDataSoftRepository(HarvestRepository):
         record = {}
         record["identifier"] = opendatasoft_record["datasetid"]
         record["creator"] = opendatasoft_record["metas"]["data-owner"]
-        record["pub_date"] = opendatasoft_record["metas"]["modified"]
+        record["pub_date"] = parser.parse(opendatasoft_record["metas"]["modified"]).strftime('%Y-%m-%d')
         record["title"] = opendatasoft_record["metas"]["title"]
-        record["description"] = opendatasoft_record["metas"]["description"]
-        record["publisher"] = opendatasoft_record["metas"]["publisher"]
+        record["description"] = opendatasoft_record["metas"].get("description", "")
+        record["publisher"] = opendatasoft_record["metas"].get("publisher", "")
+        record["tags"] = opendatasoft_record["metas"].get("keyword", "")
 
+        record["tags"] = []
         if "keyword" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["keyword"]:
-            record["tags"] = opendatasoft_record["metas"]["keyword"]
+            record["tags"].extend(opendatasoft_record["metas"]["keyword"])
+        if "search-term" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["search-term"]:
+            for tag in opendatasoft_record["metas"]["search-term"].split(","):
+                if tag not in record["tags"] and tag != "<div></div>":
+                    record["tags"].append(tag)
 
-        if "theme" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["theme"]:
-            record["subject"] = opendatasoft_record["metas"]["theme"]
-
-        if "license" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["license"]:
-            record["rights"] = opendatasoft_record["metas"]["license"]
-
-        if "data-team" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["data-team"]:
-            record["affiliation"] = opendatasoft_record["metas"]["data-team"]
-
+        record["subject"] = opendatasoft_record["metas"].get("theme", "")
+        record["rights"] = opendatasoft_record["metas"].get("license", "")
+        record["affiliation"] = opendatasoft_record["metas"].get("data-team", "")
         record["series"] = ""
         record["title_fr"] = ""
 
