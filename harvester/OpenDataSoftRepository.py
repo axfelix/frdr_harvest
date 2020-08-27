@@ -43,6 +43,7 @@ class OpenDataSoftRepository(HarvestRepository):
 
         try:
             offset = 0
+            item_count = 0
             while True:
                 self.params["start"] = offset
                 payload = {"rows": self.records_per_request, "start": self.params["start"]}
@@ -52,10 +53,15 @@ class OpenDataSoftRepository(HarvestRepository):
                 if not records["datasets"]:
                     break
                 for record in records["datasets"]:
-                    oai_record = self.format_opendatasoft_to_oai(record)
-                    if oai_record:
-                        self.db.write_record(oai_record, self)
+                    item_identifier = record["datasetid"]
+                    result = self.db.write_header(item_identifier, self.repository_id)
+                    item_count = item_count + 1
+                    if (item_count % self.update_log_after_numitems == 0):
+                        tdelta = time.time() - self.tstart + 0.1
+                        self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,
+                                                                            item_count / tdelta))
                 offset += self.records_per_request
+            self.logger.info("Found {} items in feed".format(item_count))
 
             return True
 
@@ -99,5 +105,31 @@ class OpenDataSoftRepository(HarvestRepository):
         return record
 
     def _update_record(self, record):
-        # There is no update for individual records, they are updated on full crawl
-        return True
+        try:
+            record_url = self.url.replace("search", "") + record['local_identifier']
+            try:
+                item_response = requests.get(record_url) # TODO get record
+                opendatasoft_record = json.loads(item_response.text)
+            except:
+                # Exception means this URL was not found
+                self.db.delete_record(record)
+                return True
+            oai_record = self.format_opendatasoft_to_oai(opendatasoft_record)
+            if oai_record:
+                self.db.write_record(oai_record, self)
+            return True
+        except Exception as e:
+            self.logger.error("Updating record {} failed: {}".format(record['local_identifier'], e))
+            if self.dump_on_failure == True:
+                try:
+                    print(opendatasoft_record)
+                except:
+                    pass
+            # Touch the record so we do not keep requesting it on every run
+            self.db.touch_record(record)
+            self.error_count = self.error_count + 1
+            if self.error_count < self.abort_after_numerrors:
+                return True
+
+        return False
+
