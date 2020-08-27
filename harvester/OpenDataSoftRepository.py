@@ -76,12 +76,15 @@ class OpenDataSoftRepository(HarvestRepository):
     def format_opendatasoft_to_oai(self, opendatasoft_record):
         record = {}
         record["identifier"] = opendatasoft_record["datasetid"]
-        record["creator"] = opendatasoft_record["metas"]["data-owner"]
         record["pub_date"] = parser.parse(opendatasoft_record["metas"]["modified"]).strftime('%Y-%m-%d')
         record["title"] = opendatasoft_record["metas"]["title"]
         record["description"] = opendatasoft_record["metas"].get("description", "")
         record["publisher"] = opendatasoft_record["metas"].get("publisher", "")
-        record["tags"] = opendatasoft_record["metas"].get("keyword", "")
+
+        if "data-owner" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["data-owner"]:
+            record["creator"] = opendatasoft_record["metas"]["data-owner"]
+        else:
+            record["creator"] = self.name
 
         record["tags"] = []
         if "keyword" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["keyword"]:
@@ -98,7 +101,11 @@ class OpenDataSoftRepository(HarvestRepository):
         record["rights"] = "\n".join(record["rights"])
         record["rights"] = record["rights"].strip()
 
-        record["affiliation"] = opendatasoft_record["metas"].get("data-team", "")
+        if "data-team" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["data-team"]:
+            record["affiliation"] = opendatasoft_record["metas"]["data-team"]
+
+        # Use opendatasoft_record["metas"]["geographic_area"] for Kingston - MultiPolygons, generate bounding box
+
         record["series"] = ""
         record["title_fr"] = ""
 
