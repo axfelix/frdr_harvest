@@ -68,29 +68,25 @@ class OpenDataSoftRepository(HarvestRepository):
 
     def format_opendatasoft_to_oai(self, opendatasoft_record):
         record = {}
-        print(opendatasoft_record)
         record["identifier"] = opendatasoft_record["datasetid"]
         record["creator"] = opendatasoft_record["metas"]["data-owner"]
         record["pub_date"] = opendatasoft_record["metas"]["modified"]
-        try:
-            record["tags"] = opendatasoft_record["metas"]["keyword"]
-        except:
-            record["tags"] = []
-        try:
-            record["subject"] = opendatasoft_record["metas"]["theme"]
-        except:
-            pass
         record["title"] = opendatasoft_record["metas"]["title"]
-        try:
-            record["rights"] = opendatasoft_record["metas"]["license"]
-        except:
-            pass
         record["description"] = opendatasoft_record["metas"]["description"]
         record["publisher"] = opendatasoft_record["metas"]["publisher"]
-        try:
+
+        if "keyword" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["keyword"]:
+            record["tags"] = opendatasoft_record["metas"]["keyword"]
+
+        if "theme" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["theme"]:
+            record["subject"] = opendatasoft_record["metas"]["theme"]
+
+        if "license" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["license"]:
+            record["rights"] = opendatasoft_record["metas"]["license"]
+
+        if "data-team" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["data-team"]:
             record["affiliation"] = opendatasoft_record["metas"]["data-team"]
-        except:
-            pass
+
         record["series"] = ""
         record["title_fr"] = ""
 
