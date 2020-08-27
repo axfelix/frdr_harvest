@@ -83,7 +83,7 @@ class OpenDataSoftRepository(HarvestRepository):
         if "search-term" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["search-term"]:
             for tag in opendatasoft_record["metas"]["search-term"].split(","):
                 if tag not in record["tags"] and tag != "<div></div>":
-                    record["tags"].append(tag)
+                    record["tags"].append(tag.strip())
 
         record["subject"] = opendatasoft_record["metas"].get("theme", "")
         record["rights"] = opendatasoft_record["metas"].get("license", "")
