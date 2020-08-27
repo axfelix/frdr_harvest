@@ -86,7 +86,12 @@ class OpenDataSoftRepository(HarvestRepository):
                     record["tags"].append(tag.strip())
 
         record["subject"] = opendatasoft_record["metas"].get("theme", "")
-        record["rights"] = opendatasoft_record["metas"].get("license", "")
+
+        record["rights"] = [opendatasoft_record["metas"].get("license", "")]
+        record["rights"].append(opendatasoft_record["metas"].get("license_url", ""))
+        record["rights"] = "\n".join(record["rights"])
+        record["rights"] = record["rights"].strip()
+
         record["affiliation"] = opendatasoft_record["metas"].get("data-team", "")
         record["series"] = ""
         record["title_fr"] = ""
