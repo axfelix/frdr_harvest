@@ -4,6 +4,7 @@ import time
 import json
 import re
 import os.path
+from dateutil import parser
 
 
 class OpenDataSoftRepository(HarvestRepository):
@@ -42,6 +43,7 @@ class OpenDataSoftRepository(HarvestRepository):
 
         try:
             offset = 0
+            item_count = 0
             while True:
                 self.params["start"] = offset
                 payload = {"rows": self.records_per_request, "start": self.params["start"]}
@@ -51,10 +53,15 @@ class OpenDataSoftRepository(HarvestRepository):
                 if not records["datasets"]:
                     break
                 for record in records["datasets"]:
-                    oai_record = self.format_opendatasoft_to_oai(record)
-                    if oai_record:
-                        self.db.write_record(oai_record, self)
+                    item_identifier = record["datasetid"]
+                    result = self.db.write_header(item_identifier, self.repository_id)
+                    item_count = item_count + 1
+                    if (item_count % self.update_log_after_numitems == 0):
+                        tdelta = time.time() - self.tstart + 0.1
+                        self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,
+                                                                            item_count / tdelta))
                 offset += self.records_per_request
+            self.logger.info("Found {} items in feed".format(item_count))
 
             return True
 
@@ -68,34 +75,68 @@ class OpenDataSoftRepository(HarvestRepository):
 
     def format_opendatasoft_to_oai(self, opendatasoft_record):
         record = {}
-        print(opendatasoft_record)
         record["identifier"] = opendatasoft_record["datasetid"]
-        record["creator"] = opendatasoft_record["metas"]["data-owner"]
-        record["pub_date"] = opendatasoft_record["metas"]["modified"]
-        try:
-            record["tags"] = opendatasoft_record["metas"]["keyword"]
-        except:
-            record["tags"] = []
-        try:
-            record["subject"] = opendatasoft_record["metas"]["theme"]
-        except:
-            pass
+        record["pub_date"] = parser.parse(opendatasoft_record["metas"]["modified"]).strftime('%Y-%m-%d')
         record["title"] = opendatasoft_record["metas"]["title"]
-        try:
-            record["rights"] = opendatasoft_record["metas"]["license"]
-        except:
-            pass
-        record["description"] = opendatasoft_record["metas"]["description"]
-        record["publisher"] = opendatasoft_record["metas"]["publisher"]
-        try:
+        record["description"] = opendatasoft_record["metas"].get("description", "")
+        record["publisher"] = opendatasoft_record["metas"].get("publisher", "")
+
+        if "data-owner" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["data-owner"]:
+            record["creator"] = opendatasoft_record["metas"]["data-owner"]
+        else:
+            record["creator"] = self.name
+
+        record["tags"] = []
+        if "keyword" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["keyword"]:
+            record["tags"].extend(opendatasoft_record["metas"]["keyword"])
+        if "search-term" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["search-term"]:
+            for tag in opendatasoft_record["metas"]["search-term"].split(","):
+                if tag not in record["tags"] and tag != "<div></div>":
+                    record["tags"].append(tag.strip())
+
+        record["subject"] = opendatasoft_record["metas"].get("theme", "")
+
+        record["rights"] = [opendatasoft_record["metas"].get("license", "")]
+        record["rights"].append(opendatasoft_record["metas"].get("license_url", ""))
+        record["rights"] = "\n".join(record["rights"])
+        record["rights"] = record["rights"].strip()
+
+        if "data-team" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["data-team"]:
             record["affiliation"] = opendatasoft_record["metas"]["data-team"]
-        except:
-            pass
+
+        # Use opendatasoft_record["metas"]["geographic_area"] for Kingston - MultiPolygons, generate bounding box
+
         record["series"] = ""
         record["title_fr"] = ""
 
         return record
 
     def _update_record(self, record):
-        # There is no update for individual records, they are updated on full crawl
-        return True
+        try:
+            record_url = self.url.replace("search", "") + record['local_identifier']
+            try:
+                item_response = requests.get(record_url)
+                opendatasoft_record = json.loads(item_response.text)
+            except:
+                # Exception means this URL was not found
+                self.db.delete_record(record)
+                return True
+            oai_record = self.format_opendatasoft_to_oai(opendatasoft_record)
+            if oai_record:
+                self.db.write_record(oai_record, self)
+            return True
+        except Exception as e:
+            self.logger.error("Updating record {} failed: {}".format(record['local_identifier'], e))
+            if self.dump_on_failure == True:
+                try:
+                    print(opendatasoft_record)
+                except:
+                    pass
+            # Touch the record so we do not keep requesting it on every run
+            self.db.touch_record(record)
+            self.error_count = self.error_count + 1
+            if self.error_count < self.abort_after_numerrors:
+                return True
+
+        return False
+
