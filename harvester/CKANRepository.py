@@ -63,8 +63,8 @@ class CKANRepository(HarvestRepository):
         record = {}
 
         if ('type' in ckan_record) and ckan_record['type']:
-            # Exclude non-dataset records from City of Surrey and Province of Alberta
-            if ckan_record['type'] in ['showcase', 'publications']:
+            # Exclude showcases and other non-dataset records (publications from Alberta, info from Open Data Canada)
+            if ckan_record['type'] in ['showcase', 'publications', 'info']:
                 return False
 
         if not 'date_published' in ckan_record and not 'dates' in ckan_record and not 'record_publish_date' in ckan_record and not 'metadata_created' in ckan_record and not 'date_issued' in ckan_record:
@@ -73,12 +73,17 @@ class CKANRepository(HarvestRepository):
         if ('contacts' in ckan_record) and ckan_record['contacts']:
             record["creator"] = [person.get('name', "") for person in ckan_record['contacts']]
         elif ('author' in ckan_record) and ckan_record['author']:
-            record["creator"] = ckan_record['author']
+            try:
+                authors = json.loads(ckan_record["author"])
+                record["creator"] = []
+                for author in authors:
+                    record["creator"].append(author["author_name"])
+            except:
+                record["creator"] = ckan_record['author']
         elif ('maintainer' in ckan_record) and ckan_record['maintainer']:
             record["creator"] = ckan_record['maintainer']
         elif ('creator' in ckan_record) and ckan_record['creator']:
             record["creator"] = ckan_record["creator"]
-
         elif ('organization' in ckan_record) and ckan_record['organization']:
             record["creator"] = ckan_record['organization'].get('title', "")
         else:
@@ -98,7 +103,11 @@ class CKANRepository(HarvestRepository):
 
         if isinstance(record["creator"], list):
             record["creator"] = [x.strip() for x in record["creator"] if x != '']
+            record["creator"] = [x.encode('utf-8').decode('unicode-escape').strip() for x in record["creator"] if "\\u" in x]
 
+        if ('owner_division' in ckan_record) and ckan_record['owner_division']:
+            # Toronto
+            record["publisher"] = ckan_record['owner_division']
 
         # CIOOS only
         if ('metadata-point-of-contact' in ckan_record) and ckan_record['metadata-point-of-contact']:
@@ -174,17 +183,50 @@ class CKANRepository(HarvestRepository):
             record["description_fr"] = ckan_record.get("notes_fra", "")
             if self.default_language == "fr":
                 record["description_fr"] = ckan_record.get("notes", "")
+                record["description"] = ""
+
+        if "\\u" in record["description"]:
+            record["description"] = record["description"].encode('utf-8').decode('unicode-escape').strip()
+        if "\\u" in record["description_fr"]:
+            record["description_fr"] = record["description_fr"].encode('utf-8').decode('unicode-escape').strip()
+
 
         if ('sector' in ckan_record):
+            # BC Data Catalogue
             if self.default_language == "en":
                 record["subject"] = ckan_record.get('sector', "")
             elif self.default_language == "fr":
                 record["subject_fr"] = ckan_record.get('sector', "")
         elif ('subject' in ckan_record):
+            # Open Data Canada
             if self.default_language == "en":
                 record["subject"] = ckan_record.get('subject', "")
             elif self.default_language == "fr":
                 record["subject_fr"] = ckan_record.get('subject', "")
+        elif "groups" in ckan_record and ckan_record["groups"]:
+            # Surrey, CanWin Data Hub, Donnees Quebec (plus Regina, Guelph, Montreal, Niagara)
+            record["subject"] = []
+            record["subject_fr"] = []
+            for group in ckan_record["groups"]:
+                if self.default_language == "en":
+                    record["subject"].append(group.get("display_name", ""))
+                elif self.default_language == "fr":
+                    record["subject_fr"].append(group.get("display_name", ""))
+        elif "topic" in ckan_record and ckan_record["topic"]:
+            # Alberta
+            if self.default_language == "en":
+                record["subject"] = ckan_record["topic"]
+            elif self.default_language == "fr":
+                record["subject_fr"] = ckan_record["topic"]
+        elif "topics" in ckan_record and ckan_record["topics"]:
+            # Toronto
+            record["subject"] = ckan_record["topics"].split(",")
+            if "civic_issues" in ckan_record and ckan_record["civic_issues"]:
+                record["subject"].extend(ckan_record["civic_issues"].split(","))
+        elif "civic_issues" in ckan_record and ckan_record["civic_issues"]:
+            # Toronto, records without "topics"
+            record["subject"] = ckan_record["civic_issues"].split(",")
+
 
         if ('license_title' in ckan_record) and ckan_record['license_title']:
             record["rights"] = [ckan_record['license_title']]
@@ -257,11 +299,12 @@ class CKANRepository(HarvestRepository):
                 for tag in ckan_record["tags_translated"]["fr-t-en"]:
                     record["tags_fr"].append(tag)
         else:
-            for tag in ckan_record["tags"]:
-                if self.default_language == "fr":
-                    record["tags_fr"].append(tag["display_name"])
-                else:
-                    record["tags"].append(tag["display_name"])
+            if ('tags' in ckan_record) and ckan_record['tags']:
+                for tag in ckan_record["tags"]:
+                    if self.default_language == "fr":
+                        record["tags_fr"].append(tag["display_name"])
+                    else:
+                        record["tags"].append(tag["display_name"])
 
         if ('geometry' in ckan_record) and ckan_record['geometry']:
             record["geospatial"] = ckan_record['geometry']
@@ -286,16 +329,24 @@ class CKANRepository(HarvestRepository):
                     record["geospatial"] = json.loads(dictionary['value'])
 
         # Access Constraints, if available
-        if ('private' in ckan_record) and ckan_record['private'] == True:
-            record["access"] = "Limited"
-        elif ('private' in ckan_record) and ckan_record['private'] == False:
-            record["access"] = "Public"
-            if self.name == 'BC Data Catalogue':
-                # BC Data Catalogue uses view_audience - 'private' is always False
-                record["access"] = ckan_record.get("view_audience")
-        else:
-            record["access"] = ckan_record.get("download_audience")
-            record["access"] = ckan_record.get("view_audience")
+        if ('private' in ckan_record):
+            if ckan_record['private']:
+                record["access"] = "Limited"
+            else:
+                record["access"] = "Public"
+                if self.name == 'BC Data Catalogue':
+                    # 'private' is always False; view_audience is "public" for public
+                    record["access"] = ckan_record.get("view_audience")
+                elif self.name == "Data Ontario":
+                    # 'private' is always False; access_level is "open" for public
+                    record["access"] = ckan_record.get("access_level", "")
+                    if record["access"] == "open":
+                        record["access"] = "Public"
+                elif self.name == "Province of Alberta":
+                    # 'private' is always False; sensitivity is "unrestricted" for public
+                    record["access"] = ckan_record.get("sensitivity", "")
+                    if record["access"] == "unrestricted" or record["access"] == "":
+                        record["access"] = "Public"
 
         return record
 
