@@ -103,6 +103,7 @@ class CKANRepository(HarvestRepository):
 
         if isinstance(record["creator"], list):
             record["creator"] = [x.strip() for x in record["creator"] if x != '']
+            record["creator"] = [x.encode('utf-8').decode('unicode-escape').strip() for x in record["creator"] if "\\u" in x]
 
         if ('owner_division' in ckan_record) and ckan_record['owner_division']:
             # Toronto
@@ -183,6 +184,12 @@ class CKANRepository(HarvestRepository):
             if self.default_language == "fr":
                 record["description_fr"] = ckan_record.get("notes", "")
                 record["description"] = ""
+
+        if "\\u" in record["description"]:
+            record["description"] = record["description"].encode('utf-8').decode('unicode-escape').strip()
+        if "\\u" in record["description_fr"]:
+            record["description_fr"] = record["description_fr"].encode('utf-8').decode('unicode-escape').strip()
+
 
         if ('sector' in ckan_record):
             # BC Data Catalogue
