@@ -138,8 +138,37 @@ class DataverseRepository(HarvestRepository):
         else:
             record["title_fr"] = ""
 
+        # Geospatial block
+        if "geospatial" in dataverse_record["latestVersion"]["metadataBlocks"]:
+            if "fields" in dataverse_record["latestVersion"]["metadataBlocks"]["geospatial"]:
+                for geospatial_field in dataverse_record["latestVersion"]["metadataBlocks"]["geospatial"]["fields"]:
+                    if geospatial_field["typeName"] == "geographicCoverage":
+                        geolocationPlaces = []
+                        for geographicCoverage in geospatial_field["value"]:
+                            geolocationPlace = {}
+                            if "country" in geographicCoverage:
+                                geolocationPlace["country"] = geographicCoverage["country"]["value"]
+                            if "state" in geographicCoverage:
+                                geolocationPlace["state"] = geographicCoverage["state"]["value"]
+                            if "city" in geographicCoverage:
+                                geolocationPlace["city"] = geographicCoverage["city"]["value"]
+                            if "otherGeographicCoverage" in geographicCoverage:
+                                geolocationPlace["other"] = geographicCoverage["otherGeographicCoverage"]["value"]
+                            geolocationPlaces.append(geolocationPlace)
+                    elif geospatial_field["typeName"] == "geographicBoundingBox":
+                        geolocationBoxes = []
+                        for geographicBoundingBox in geospatial_field["value"]:
+                            geolocationBox = {}
+                            if "westLongitude" in geographicBoundingBox:
+                                geolocationBox["westLongitude"] = geographicBoundingBox["westLongitude"]["value"]
+                            if "eastLongitude" in geographicBoundingBox:
+                                geolocationBox["eastLongitude"] = geographicBoundingBox["eastLongitude"]["value"]
+                            if "northLongitude" in geographicBoundingBox:
+                                geolocationBox["northLatitude"] = geographicBoundingBox["northLongitude"]["value"]
+                            if "southLongitude" in geographicBoundingBox:
+                                geolocationBox["southLatitude"] = geographicBoundingBox["southLongitude"]["value"]
+                            geolocationBoxes.append(geolocationBox)
 
-        # TODO: Add geospatial block
 
         return record
 
