@@ -73,6 +73,13 @@ The list of repositories to be crawled is in conf/repos.json, in a structure lik
             "type": "opendatasoft",
             "item_url_pattern": "https://someopendatasoftrepository.ca/explore/dataset/%id%",
             "enabled": true
+        },
+        {
+            "name": "Some Dataverse Repository",
+            "url": "https://somedataverserepository.ca/api/dataverses/%id%/contents",
+            "homepage_url": "somedataverserepository.ca",
+            "type": "dataverse",
+            "enabled": true
         }
     ]
 }
