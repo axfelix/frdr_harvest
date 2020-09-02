@@ -109,7 +109,10 @@ class DataverseRepository(HarvestRepository):
                 record["subject"] = citation_field["value"]
             elif citation_field["typeName"] == "keyword":
                 for keyword in citation_field["value"]:
-                    record["tags"].append(keyword["keywordValue"]["value"])
+                    if "keywordValue" in keyword:
+                        record["tags"].append(keyword["keywordValue"]["value"])
+                    elif "keywordVocabulary" in keyword:
+                        record["tags"].append(keyword["keywordVocabulary"]["value"])
             elif citation_field["typeName"] == "topicClassification":
                 for keyword in citation_field["value"]:
                     record["tags"].append(keyword["topicClassValue"]["value"])
