@@ -120,6 +120,12 @@ class DataverseRepository(HarvestRepository):
                         default_language = "French"
             elif citation_field["typeName"] == "notesText":
                 record["description"].append(citation_field["value"])
+            elif citation_field["typeName"] == "contributor":
+                record["contributor"] = []
+                for contributor in citation_field["value"]:
+                    record["contributor"].append(contributor["contributorName"]["value"])
+            elif citation_field["typeName"] == "series":
+                print(citation_field["value"])
 
         if default_language == "French":
             # Swap title, description, tags
