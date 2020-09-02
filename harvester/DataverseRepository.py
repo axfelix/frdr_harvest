@@ -33,7 +33,7 @@ class DataverseRepository(HarvestRepository):
 
         try:
             dataverse_id = ":root"
-            publisher_name = "Scholars Portal Dataverse"
+            publisher_name = self.name
             item_count = self.get_datasets_from_dataverse_id(dataverse_id, publisher_name, 0)
             self.logger.info("Found {} items in feed".format(item_count))
             return True
@@ -72,15 +72,23 @@ class DataverseRepository(HarvestRepository):
         record["item_url"] = dataverse_record["persistentUrl"]
 
         identifier_split = dataverse_record["combined_identifier"].split(" // ")
-        if len(identifier_split) == 2:
-            record["publisher"] = identifier_split[0]
-            record["series"] = ""
-        elif len(identifier_split) == 3:
-            record["publisher"] = identifier_split[1]
-            record["series"] = ""
+
+        if self.name == "Scholars Portal Dataverse":
+            if len(identifier_split) == 2:
+                record["publisher"] = identifier_split[0] # Scholars Portal Dataverse; no institutional dataverse
+                record["series"] = "" # No sub-dataverses
+            elif len(identifier_split) == 3:
+                record["publisher"] = identifier_split[1] # Instituional dataverse
+                record["series"] = "" # No sub-dataverses
+            else:
+                record["publisher"] = identifier_split[1] # Institutional dataverse
+                record["series"] = " // ".join(identifier_split[2:len(identifier_split) - 1]) # Sub-dataverses
         else:
-            record["publisher"] = identifier_split[1]
-            record["series"] = " // ".join(identifier_split[2:len(identifier_split) - 1])
+            if len(identifier_split) == 2:
+                record["series"] = "" # No sub-dataverses
+            else:
+                record["series"] = " // ".join(identifier_split[1:len(identifier_split) - 1]) # Sub-dataverses
+
 
         if "latestVersion" not in dataverse_record:
             # Dataset is deaccessioned
