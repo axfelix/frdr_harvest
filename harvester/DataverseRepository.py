@@ -141,6 +141,13 @@ class DataverseRepository(HarvestRepository):
             oai_record = self.format_dataverse_to_oai(dataverse_record)
             if oai_record:
                 self.db.write_record(oai_record, self)
+            else:
+                if oai_record is False:
+                    # This record has been deaccessioned, remove it from the results
+                    self.db.delete_record(record)
+                else:
+                    # Some other problem, this record will be updated by a future crawl
+                    self.db.touch_record(record)
             return True
         except Exception as e:
             self.logger.error("Updating record {} failed: {}".format(record['local_identifier'], e))
