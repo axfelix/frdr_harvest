@@ -113,7 +113,8 @@ class DataverseRepository(HarvestRepository):
                 for keyword in citation_field["value"]:
                     record["tags"].append(keyword["topicClassValue"]["value"])
             elif citation_field["typeName"] == "series":
-                record["series"] = citation_field["value"]["seriesName"]["value"]
+                if "seriesName" in citation_field["value"]:
+                    record["series"] = record["series"] + " : " + citation_field["value"]["seriesName"]["value"]
             elif citation_field["typeName"] == "language":
                 for language in citation_field["value"]:
                     if language == "French":
@@ -124,8 +125,6 @@ class DataverseRepository(HarvestRepository):
                 record["contributor"] = []
                 for contributor in citation_field["value"]:
                     record["contributor"].append(contributor["contributorName"]["value"])
-            elif citation_field["typeName"] == "series":
-                print(citation_field["value"])
 
         if default_language == "French":
             # Swap title, description, tags
