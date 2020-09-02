@@ -34,11 +34,7 @@ class DataverseRepository(HarvestRepository):
         try:
             dataverse_id = ":root"
             publisher_name = "Scholars Portal Dataverse"
-            item_count = self.get_datasets_from_dataverse_id(dataverse_id, publisher_name)
-            if (item_count % self.update_log_after_numitems == 0):
-                tdelta = time.time() - self.tstart + 0.1
-                self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,
-                                                                                           item_count / tdelta))
+            item_count = self.get_datasets_from_dataverse_id(dataverse_id, publisher_name, 0)
             self.logger.info("Found {} items in feed".format(item_count))
             return True
         except Exception as e:
@@ -49,10 +45,9 @@ class DataverseRepository(HarvestRepository):
 
         return False
 
-    def get_datasets_from_dataverse_id(self, dataverse_id, publisher_name):
+    def get_datasets_from_dataverse_id(self, dataverse_id, publisher_name, item_count):
         response = requests.get(self.url.replace("%id%", str(dataverse_id)), verify=False)
         records = response.json()
-        item_count = 0
         parent_publisher_name = publisher_name
         for record in records["data"]:
             if record["type"] == "dataset":
@@ -61,9 +56,13 @@ class DataverseRepository(HarvestRepository):
                 combined_identifer = publisher_name + " // " + str(item_identifier)
                 result = self.db.write_header(combined_identifer, self.repository_id)
                 item_count = item_count + 1
+                if (item_count % self.update_log_after_numitems == 0):
+                    tdelta = time.time() - self.tstart + 0.1
+                    self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,self.formatter.humanize(
+                                                                                               tdelta),item_count / tdelta))
             elif record["type"] == "dataverse":
                 publisher_name = parent_publisher_name + " // " + record["title"]
-                item_count = item_count + self.get_datasets_from_dataverse_id(record["id"], publisher_name)
+                item_count = self.get_datasets_from_dataverse_id(record["id"], publisher_name, item_count)
         return item_count
 
     def format_dataverse_to_oai(self, dataverse_record):
