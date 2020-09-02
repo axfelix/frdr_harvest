@@ -85,7 +85,9 @@ class DataverseRepository(HarvestRepository):
 
         if "latestVersion" not in dataverse_record:
             # Dataset is deaccessioned
-            return False
+            record["deleted"] = 1
+            record["title"], record["title_fr"] = "", ""
+            return record
 
         if dataverse_record["latestVersion"]["license"] != "NONE":
             record["rights"] = dataverse_record["latestVersion"]["license"]
@@ -187,11 +189,10 @@ class DataverseRepository(HarvestRepository):
             oai_record = self.format_dataverse_to_oai(dataverse_record)
             if oai_record:
                 self.db.write_record(oai_record, self)
-            else:
-                if oai_record is False:
+                if "deleted" in oai_record:
                     # This record has been deaccessioned, remove it from the results
                     self.db.delete_record(record)
-                else:
+            else:
                     # Some other problem, this record will be updated by a future crawl
                     self.db.touch_record(record)
             return True
