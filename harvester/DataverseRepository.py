@@ -90,8 +90,11 @@ class DataverseRepository(HarvestRepository):
         if dataverse_record["latestVersion"]["license"] != "NONE":
             record["rights"] = dataverse_record["latestVersion"]["license"]
 
+        # Citation block
+        record["description"] = []
+        record["tags"] = []
+        default_language = "English"
         for citation_field in dataverse_record["latestVersion"]["metadataBlocks"]["citation"]["fields"]:
-            # TODO: Check for "language" field and switch to _fr fields if not English
             if citation_field["typeName"] == "title":
                 record["title"] = citation_field["value"]
             elif citation_field["typeName"] == "author":
@@ -99,27 +102,34 @@ class DataverseRepository(HarvestRepository):
                 for creator in citation_field["value"]:
                     record["creator"].append(creator["authorName"]["value"])
             elif citation_field["typeName"] == "dsDescription":
-                record["description"] = []
                 for description in citation_field["value"]:
                     record["description"].append(description["dsDescriptionValue"]["value"])
             elif citation_field["typeName"] == "subject":
                 record["subject"] = citation_field["value"]
             elif citation_field["typeName"] == "keyword":
-                if "tags" not in record:
-                    record["tags"] = []
                 for keyword in citation_field["value"]:
                     record["tags"].append(keyword["keywordValue"]["value"])
             elif citation_field["typeName"] == "topicClassification":
-                if "tags" not in record:
-                    record["tags"] = []
                 for keyword in citation_field["value"]:
                     record["tags"].append(keyword["topicClassValue"]["value"])
             elif citation_field["typeName"] == "series":
                 record["series"] = citation_field["value"]["seriesName"]["value"]
+            elif citation_field["typeName"] == "language":
+                for language in citation_field["value"]:
+                    if language == "French":
+                        default_language = "French"
 
-        if "series" not in record:
-            record["series"] = ""
-        record["title_fr"] = ""
+        if default_language == "French":
+            # Swap title, description, tags
+            record["title_fr"] = record["title"]
+            record["title"] = ""
+            record["description_fr"] = record["description"]
+            record["description"] = ""
+            record["tags_fr"] = record["tags"]
+            record["tags"] = ""
+        else:
+            record["title_fr"] = ""
+
 
         # TODO: Add geospatial block
 
