@@ -7,6 +7,7 @@ from sickle.oaiexceptions import BadArgument, CannotDisseminateFormat, IdDoesNot
     BadResumptionToken, NoRecordsMatch, OAIError
 from collections import defaultdict
 import re
+import dateparser
 import os.path
 import time
 import json
@@ -269,31 +270,15 @@ class OAIRepository(HarvestRepository):
         if isinstance(record["pub_date"], list):
             record["pub_date"] = record["pub_date"][0]
 
-        # Convert long dates into YYYY-MM-DD
-        datestring = re.search("(\d{4}[-/]?\d{2}[-/]?\d{2})", record["pub_date"])
-        if datestring:
-            record["pub_date"] = datestring.group(0).replace("/", "-")
-
-        # If dates are entirely numeric, add separators
-        if not re.search("\D", record["pub_date"]):
-            if (len(record["pub_date"]) == 6):
-                record["pub_date"] = record["pub_date"][0] + record["pub_date"][1] + record["pub_date"][2] + \
-                                     record["pub_date"][3] + "-" + record["pub_date"][4] + record["pub_date"][5]
-            if (len(record["pub_date"]) == 8):
-                record["pub_date"] = record["pub_date"][0] + record["pub_date"][1] + record["pub_date"][2] + \
-                                     record["pub_date"][3] + "-" + record["pub_date"][4] + record["pub_date"][5] + "-" + \
-                                     record["pub_date"][6] + record["pub_date"][7]
-
         # If a date has question marks, chuck it
         if "?" in record["pub_date"]:
             return None
 
-        # Make sure dates are valid
-        if not re.search("^(1|2)\d{3}(-?(0[1-9]|1[0-2])(-?(0[1-9]|1[0-9]|2[0-9]|3[0-1]))?)?$", record["pub_date"]):
-            self.logger.debug("Invalid date for record {}".format(record["dc:source"]))
+        try:
+            record["pub_date"] = dateparser.parse(record["pub_date"]).strftime("%Y-%m-%d")
+        except:
             return None
 
-            # record["pub_date"] = dateparser.parse(record["pub_date"]).strftime("%Y-%m-%d")
 
         if "title" not in record.keys():
             return None
