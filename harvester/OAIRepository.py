@@ -7,6 +7,7 @@ from sickle.oaiexceptions import BadArgument, CannotDisseminateFormat, IdDoesNot
     BadResumptionToken, NoRecordsMatch, OAIError
 from collections import defaultdict
 import re
+import dateparser
 import os.path
 import time
 import json
@@ -221,8 +222,8 @@ class OAIRepository(HarvestRepository):
                 record["geospatial"] = {"type": "Polygon", "coordinates": [
                     [boxcoordinates[x:x + 2] for x in range(0, len(boxcoordinates), 2)]]}
             # Look for datacite.creatorAffiliation
-            if "creatorAffiliation" in record:
-                record["affiliation"] = record.get("creatorAffiliation")
+            if "http://datacite.org/schema/kernel-4#creatorAffiliation" in record:
+                record["affiliation"] = record.get("http://datacite.org/schema/kernel-4#creatorAffiliation")
 
         if 'identifier' not in record.keys():
             return None
@@ -269,31 +270,15 @@ class OAIRepository(HarvestRepository):
         if isinstance(record["pub_date"], list):
             record["pub_date"] = record["pub_date"][0]
 
-        # Convert long dates into YYYY-MM-DD
-        datestring = re.search("(\d{4}[-/]?\d{2}[-/]?\d{2})", record["pub_date"])
-        if datestring:
-            record["pub_date"] = datestring.group(0).replace("/", "-")
-
-        # If dates are entirely numeric, add separators
-        if not re.search("\D", record["pub_date"]):
-            if (len(record["pub_date"]) == 6):
-                record["pub_date"] = record["pub_date"][0] + record["pub_date"][1] + record["pub_date"][2] + \
-                                     record["pub_date"][3] + "-" + record["pub_date"][4] + record["pub_date"][5]
-            if (len(record["pub_date"]) == 8):
-                record["pub_date"] = record["pub_date"][0] + record["pub_date"][1] + record["pub_date"][2] + \
-                                     record["pub_date"][3] + "-" + record["pub_date"][4] + record["pub_date"][5] + "-" + \
-                                     record["pub_date"][6] + record["pub_date"][7]
-
         # If a date has question marks, chuck it
         if "?" in record["pub_date"]:
             return None
 
-        # Make sure dates are valid
-        if not re.search("^(1|2)\d{3}(-?(0[1-9]|1[0-2])(-?(0[1-9]|1[0-9]|2[0-9]|3[0-1]))?)?$", record["pub_date"]):
-            self.logger.debug("Invalid date for record {}".format(record["dc:source"]))
+        try:
+            record["pub_date"] = dateparser.parse(record["pub_date"]).strftime("%Y-%m-%d")
+        except:
             return None
 
-            # record["pub_date"] = dateparser.parse(record["pub_date"]).strftime("%Y-%m-%d")
 
         if "title" not in record.keys():
             return None
@@ -314,16 +299,19 @@ class OAIRepository(HarvestRepository):
             # Remove "title" from record since this is the English field
             record["title"] = ""
 
-            record["tags_fr"] = record.get("subject")
-            record.pop("subject", None)
+            if "tags_fr" not in record.keys():
+                record["tags_fr"] = record.get("subject")
+                record.pop("subject", None)
         else:
             if isinstance(record["title"], list):
                 record["title"] = record["title"][0].strip()
             else:
                 record["title"] = record["title"].strip()
             record["title_fr"] = ""
-            record["tags"] = record.get("subject")
-            record.pop("subject", None)
+
+            if "tags" not in record.keys():
+                record["tags"] = record.get("subject")
+                record.pop("subject", None)
 
         if "publisher" in record.keys():
             if isinstance(record["publisher"], list):
@@ -351,10 +339,16 @@ class OAIRepository(HarvestRepository):
         return record
 
     def find_domain_metadata(self, record):
+        excludedElements = ['http://datacite.org/schema/kernel-4#resourcetype',
+                    'http://datacite.org/schema/kernel-4#creatorAffiliation',
+                    'http://datacite.org/schema/kernel-4#publicationyear',
+                    'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointName',
+                    'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath']
         newRecord = {}
         for elementName in list(record.keys()):
             if '#' in elementName:
-                newRecord[elementName] = record.pop(elementName, None)
+                if not [ele for ele in excludedElements if(ele in elementName)]:
+                    newRecord[elementName] = record.pop(elementName, None)
         return newRecord
 
     @rate_limited(5)

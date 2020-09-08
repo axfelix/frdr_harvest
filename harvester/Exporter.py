@@ -76,7 +76,6 @@ class Exporter(object):
             if self.buffer_size > buffer_limit:
                 self._write_batch(export_filepath, temp_filepath, start_time)
 
-            # TODO: Add bilingual titles
             record = (dict(zip(
 
                 ['record_id', 'title', 'title_fr', 'pub_date', 'series', 'source_url', 'deleted', 'local_identifier',
@@ -151,7 +150,6 @@ class Exporter(object):
                                 (record["record_id"],))
                 record["dc_contributor"] = self._rows_to_dict(litecur)
 
-                # TODO: Add bilingual subjects
                 litecur.execute(self.db._prep("""SELECT subjects.subject FROM subjects JOIN records_x_subjects on records_x_subjects.subject_id = subjects.subject_id
                     WHERE records_x_subjects.record_id=? and subjects.language='en'"""), (record["record_id"],))
                 record["frdr_category_en"] = self._rows_to_dict(litecur)
