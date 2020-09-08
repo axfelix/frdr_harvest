@@ -32,7 +32,10 @@ class DataverseRepository(HarvestRepository):
         self.repository_id = self.db.update_repo(**kwargs)
 
         try:
-            dataverse_id = ":root"
+            if self.set == "":
+                dataverse_id = ":root"
+            else:
+                dataverse_id = self.set
             publisher_name = self.name
             item_count = self.get_datasets_from_dataverse_id(dataverse_id, publisher_name, 0)
             self.logger.info("Found {} items in feed".format(item_count))
