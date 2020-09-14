@@ -16,9 +16,14 @@ Utility application to manage Globus Search Indexes for FRDR.
 If running on a new host you will likely have to authorize it by running a query using the globus search-client app.
 """
 
-_cmd = "/opt/rdm/search_client/search-client"
+# Deprecated - need to start using the new Globus Search client
+_cmd = ""
+
 _api_host = "search.api.globus.org"
-_tokens_filepath = "/home/harvest/.globus_search_client_tokens.json"
+
+# Deprecated - need to start using the new Globus Search client
+_tokens_filepath = ""
+
 CONFIG = {"db": None, "handles": {}}
 
 
