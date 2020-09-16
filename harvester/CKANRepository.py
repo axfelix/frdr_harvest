@@ -5,6 +5,7 @@ import time
 import json
 import re
 import os.path
+import ftfy
 
 
 class CKANRepository(HarvestRepository):
@@ -102,9 +103,7 @@ class CKANRepository(HarvestRepository):
         if not isinstance(record["creator"], list):
             record["creator"] = [record["creator"]]
 
-        if isinstance(record["creator"], list):
-            record["creator"] = [x.strip() for x in record["creator"] if x != '']
-            record["creator"] = [x.encode('utf-8').decode('unicode-escape').strip() for x in record["creator"] if "\\u" in x]
+        record["creator"] = [ftfy.fixes.decode_escapes(x).strip() for x in record["creator"] if x != '']
 
         if ('owner_division' in ckan_record) and ckan_record['owner_division']:
             # Toronto
@@ -186,11 +185,8 @@ class CKANRepository(HarvestRepository):
                 record["description_fr"] = ckan_record.get("notes", "")
                 record["description"] = ""
 
-        if "\\u" in record["description"]:
-            record["description"] = record["description"].encode('utf-8').decode('unicode-escape').strip()
-        if "\\u" in record["description_fr"]:
-            record["description_fr"] = record["description_fr"].encode('utf-8').decode('unicode-escape').strip()
-
+        record["description"] = ftfy.fixes.decode_escapes(record["description"]).strip()
+        record["description_fr"] = ftfy.fixes.decode_escapes(record["description_fr"]).strip()
 
         if ('sector' in ckan_record):
             # BC Data Catalogue
