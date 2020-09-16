@@ -84,14 +84,10 @@ class CKANRepository(HarvestRepository):
             record["creator"] = ckan_record['maintainer']
         elif ('creator' in ckan_record) and ckan_record['creator']:
             record["creator"] = ckan_record["creator"]
-        elif ('organization' in ckan_record) and ckan_record['organization']:
+        elif ('organization' in ckan_record) and ckan_record['organization'] and ckan_record['organization'].get('title', "") != "":
             record["creator"] = ckan_record['organization'].get('title', "")
-        else:
-            record["creator"] = self.name
-
-        # CIOOS only
-        if record["creator"] == '':
-            record["creator"] = ['']
+        elif self.name == 'Canadian Integrated Ocean Observing System (CIOOS)':
+            record["creator"] = []
             if ('cited-responsible-party' in ckan_record) and ckan_record['cited-responsible-party']:
                 for creator in json.loads(ckan_record['cited-responsible-party']):
                     if ("organisation-name" in creator) and creator["organisation-name"]:
@@ -100,6 +96,11 @@ class CKANRepository(HarvestRepository):
                     if ("individual-name" in creator) and creator["individual-name"]:
                         if creator["individual-name"] not in record["creator"]:
                             record["creator"].append(creator["individual-name"])
+        else:
+            record["creator"] = self.name
+
+        if not isinstance(record["creator"], list):
+            record["creator"] = [record["creator"]]
 
         if isinstance(record["creator"], list):
             record["creator"] = [x.strip() for x in record["creator"] if x != '']
