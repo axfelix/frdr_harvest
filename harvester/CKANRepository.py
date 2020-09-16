@@ -64,7 +64,7 @@ class CKANRepository(HarvestRepository):
 
         if ('type' in ckan_record) and ckan_record['type']:
             # Exclude showcases and other non-dataset records (publications from Alberta, info from Open Data Canada)
-            if ckan_record['type'] in ['showcase', 'publications', 'info']:
+            if ckan_record['type'] in ['showcase', 'publications', 'info', 'harvest']:
                 return False
 
         if not 'date_published' in ckan_record and not 'dates' in ckan_record and not 'record_publish_date' in ckan_record and not 'metadata_created' in ckan_record and not 'date_issued' in ckan_record:
