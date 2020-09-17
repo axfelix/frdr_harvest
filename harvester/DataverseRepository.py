@@ -102,6 +102,12 @@ class DataverseRepository(HarvestRepository):
         if dataverse_record["latestVersion"]["license"] != "NONE":
             record["rights"] = dataverse_record["latestVersion"]["license"]
 
+        if dataverse_record["latestVersion"]["fileAccessRequest"]:
+            # fileAccessRequest = True indicates at least one file is restricted
+            record["access"] = "Restricted"
+        else:
+            record["access"] = "Public"
+
         # Citation block
         record["description"] = []
         record["tags"] = []
