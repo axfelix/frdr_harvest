@@ -33,8 +33,10 @@ class DataverseRepository(HarvestRepository):
 
         try:
             if self.set == "":
+                # If set is not specified, get the entire dataverse (:root)
                 dataverse_id = ":root"
             else:
+                # Otherwise, use the specified set as the dataverse_id
                 dataverse_id = self.set
             publisher_name = self.name
             item_count = self.get_datasets_from_dataverse_id(dataverse_id, publisher_name, 0)
@@ -64,7 +66,9 @@ class DataverseRepository(HarvestRepository):
                     self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,self.formatter.humanize(
                                                                                                tdelta),item_count / tdelta))
             elif record["type"] == "dataverse":
+                # Append the dataverse name to the overall publisher_name
                 publisher_name = parent_publisher_name + " // " + record["title"]
+                # Recursive call to get children of this dataverse
                 item_count = self.get_datasets_from_dataverse_id(record["id"], publisher_name, item_count)
         return item_count
 
@@ -78,19 +82,24 @@ class DataverseRepository(HarvestRepository):
 
         if self.name == "Scholars Portal Dataverse":
             if len(identifier_split) == 2:
-                record["publisher"] = identifier_split[0] # Scholars Portal Dataverse; no institutional dataverse
-                record["series"] = "" # No sub-dataverses
+                # dataset is direct child of :root
+                record["publisher"] = identifier_split[0] # Scholars Portal Dataverse (no institutional dataverse)
+                record["series"] = "" # no sub-dataverses
             elif len(identifier_split) == 3:
-                record["publisher"] = identifier_split[1] # Instituional dataverse
-                record["series"] = "" # No sub-dataverses
+                # dataset is direct child of institutional dataverse
+                record["publisher"] = identifier_split[1] # institutional dataverse
+                record["series"] = "" # no sub-dataverses of institutional dataverse
             else:
-                record["publisher"] = identifier_split[1] # Institutional dataverse
-                record["series"] = " // ".join(identifier_split[2:len(identifier_split) - 1]) # Sub-dataverses
+                # dataset is direct child of sub-dataverse(s) of institutional dataverse
+                record["publisher"] = identifier_split[1] # institutional dataverse
+                record["series"] = " // ".join(identifier_split[2:len(identifier_split) - 1]) # sub-dataverse(s) of institutional dataverse
         else:
             if len(identifier_split) == 2:
-                record["series"] = "" # No sub-dataverses
+                # dataset is direct child of :root
+                record["series"] = "" # no sub-dataverses
             else:
-                record["series"] = " // ".join(identifier_split[1:len(identifier_split) - 1]) # Sub-dataverses
+                # dataset is direct child of sub-dataverse(s)
+                record["series"] = " // ".join(identifier_split[1:len(identifier_split) - 1]) # sub-dataverses
 
 
         if "latestVersion" not in dataverse_record:
@@ -100,6 +109,7 @@ class DataverseRepository(HarvestRepository):
             return record
 
         if dataverse_record["latestVersion"]["license"] != "NONE":
+            # Add license information to rights, if available
             record["rights"] = dataverse_record["latestVersion"]["license"]
 
         if dataverse_record["latestVersion"]["fileAccessRequest"]:
@@ -136,11 +146,14 @@ class DataverseRepository(HarvestRepository):
             elif citation_field["typeName"] == "series":
                 if "seriesName" in citation_field["value"]:
                     if record["series"] and len(record["series"]) > 0:
+                        # If there is already a series from a sub-dataverse, append the seriesName separated by space-colon-space
                         record["series"] = record["series"] + " : " + citation_field["value"]["seriesName"]["value"]
                     else:
+                        # Otherwise, set series to the seriesName
                         record["series"] = citation_field["value"]["seriesName"]["value"]
             elif citation_field["typeName"] == "language":
                 for language in citation_field["value"]:
+                    # If any language is "French", infer that the default_language for the metadata is French
                     if language == "French":
                         default_language = "French"
             elif citation_field["typeName"] == "notesText":
@@ -150,6 +163,7 @@ class DataverseRepository(HarvestRepository):
                 for contributor in citation_field["value"]:
                     record["contributor"].append(contributor["contributorName"]["value"])
             elif citation_field["typeName"] == "productionDate":
+                # If the record has a productionDate, prefer this over the publicationDate
                 record["pub_date"] = citation_field["value"]
 
         if default_language == "French":
@@ -168,6 +182,7 @@ class DataverseRepository(HarvestRepository):
             if "fields" in dataverse_record["latestVersion"]["metadataBlocks"]["geospatial"]:
                 for geospatial_field in dataverse_record["latestVersion"]["metadataBlocks"]["geospatial"]["fields"]:
                     if geospatial_field["typeName"] == "geographicCoverage":
+                        # Get country, state, city, and otherGeographicCoverage
                         geolocationPlaces = []
                         for geographicCoverage in geospatial_field["value"]:
                             geolocationPlace = {}
@@ -181,6 +196,7 @@ class DataverseRepository(HarvestRepository):
                                 geolocationPlace["other"] = geographicCoverage["otherGeographicCoverage"]["value"]
                             geolocationPlaces.append(geolocationPlace)
                     elif geospatial_field["typeName"] == "geographicBoundingBox":
+                        # Get bounding box values
                         geolocationBoxes = []
                         for geographicBoundingBox in geospatial_field["value"]:
                             geolocationBox = {}
@@ -193,7 +209,6 @@ class DataverseRepository(HarvestRepository):
                             if "southLongitude" in geographicBoundingBox:
                                 geolocationBox["southLatitude"] = geographicBoundingBox["southLongitude"]["value"]
                             geolocationBoxes.append(geolocationBox)
-
 
         return record
 
