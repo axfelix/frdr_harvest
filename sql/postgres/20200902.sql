@@ -40,4 +40,4 @@ CREATE TABLE geospatial_file (
     uri TEXT NOT NULL);
 CREATE INDEX  geospatial_file_by_record on   geospatial_file(record_id);
 CREATE SEQUENCE IF NOT EXISTS  geospatial_file_id_sequence;
-ALTER TABLE geospatial_file ALTER  geospatial_file_id SET DEFAULT NEXTVAL( geospatial_file_id_sequence');
+ALTER TABLE geospatial_file ALTER  geospatial_file_id SET DEFAULT NEXTVAL('geospatial_file_id_sequence');
