@@ -150,7 +150,8 @@ class DataverseRepository(HarvestRepository):
             elif citation_field["typeName"] == "contributor":
                 record["contributor"] = []
                 for contributor in citation_field["value"]:
-                    record["contributor"].append(contributor["contributorName"]["value"])
+                    if "contributorName" in contributor:
+                        record["contributor"].append(contributor["contributorName"]["value"])
             elif citation_field["typeName"] == "productionDate":
                 # If the record has a productionDate, prefer this over the publicationDate
                 record["pub_date"] = citation_field["value"]
