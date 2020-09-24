@@ -38,8 +38,8 @@ class DataverseRepository(HarvestRepository):
             else:
                 # Otherwise, use the specified set as the dataverse_id
                 dataverse_id = self.set
-            publisher_name = self.name
-            item_count = self.get_datasets_from_dataverse_id(dataverse_id, publisher_name, 0)
+            dataverse_hierarchy = self.name
+            item_count = self.get_datasets_from_dataverse_id(dataverse_id, dataverse_hierarchy, 0)
             self.logger.info("Found {} items in feed".format(item_count))
             return True
         except Exception as e:
@@ -50,26 +50,30 @@ class DataverseRepository(HarvestRepository):
 
         return False
 
-    def get_datasets_from_dataverse_id(self, dataverse_id, publisher_name, item_count):
+    def get_datasets_from_dataverse_id(self, dataverse_id, dataverse_hierarchy, item_count):
         response = requests.get(self.url.replace("%id%", str(dataverse_id)), verify=False)
         records = response.json()
-        parent_publisher_name = publisher_name
+        parent_dataverse_hierarchy = dataverse_hierarchy
         for record in records["data"]:
             if record["type"] == "dataset":
                 item_identifier = record["id"]
-                # Write publisher_name and identifier as local_identifier
-                combined_identifer = publisher_name + " // " + str(item_identifier)
-                result = self.db.write_header(combined_identifer, self.repository_id)
+                combined_identifier = str(item_identifier)
+                dataverse_hierarchy_split = [x.strip() for x in dataverse_hierarchy.split(" // ")]
+                if len(dataverse_hierarchy_split) > 1:
+                    # Write dataverse_hierarchy - minus the repository name - plus identifier as local_identifier
+                    dataverse_hierarchy_string = " // ".join(dataverse_hierarchy_split[1:])
+                    combined_identifier = combined_identifier + " // " + dataverse_hierarchy_string
+                result = self.db.write_header(combined_identifier, self.repository_id)
                 item_count = item_count + 1
                 if (item_count % self.update_log_after_numitems == 0):
                     tdelta = time.time() - self.tstart + 0.1
                     self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,self.formatter.humanize(
                                                                                                tdelta),item_count / tdelta))
             elif record["type"] == "dataverse":
-                # Append the dataverse name to the overall publisher_name
-                publisher_name = parent_publisher_name + " // " + record["title"]
+                # Append the dataverse name to the overall dataverse_hierarchy
+                dataverse_hierarchy = parent_dataverse_hierarchy + " // " + record["title"]
                 # Recursive call to get children of this dataverse
-                item_count = self.get_datasets_from_dataverse_id(record["id"], publisher_name, item_count)
+                item_count = self.get_datasets_from_dataverse_id(record["id"], dataverse_hierarchy, item_count)
         return item_count
 
     def format_dataverse_to_oai(self, dataverse_record):
@@ -78,29 +82,14 @@ class DataverseRepository(HarvestRepository):
         record["pub_date"] = dataverse_record["publicationDate"]
         record["item_url"] = dataverse_record["persistentUrl"]
 
-        identifier_split = dataverse_record["combined_identifier"].split(" // ")
+        identifier_split = [x.strip() for x in dataverse_record["combined_identifier"].split(" // ")]
 
-        if self.name == "Scholars Portal Dataverse":
-            if len(identifier_split) == 2:
-                # dataset is direct child of :root
-                record["publisher"] = identifier_split[0] # Scholars Portal Dataverse (no institutional dataverse)
-                record["series"] = "" # no sub-dataverses
-            elif len(identifier_split) == 3:
-                # dataset is direct child of institutional dataverse
-                record["publisher"] = identifier_split[1] # institutional dataverse
-                record["series"] = "" # no sub-dataverses of institutional dataverse
-            else:
-                # dataset is direct child of sub-dataverse(s) of institutional dataverse
-                record["publisher"] = identifier_split[1] # institutional dataverse
-                record["series"] = " // ".join(identifier_split[2:len(identifier_split) - 1]) # sub-dataverse(s) of institutional dataverse
+        if len(identifier_split) == 1:
+            # dataset is direct child of repository
+            record["series"] = "" # no sub-dataverses
         else:
-            if len(identifier_split) == 2:
-                # dataset is direct child of :root
-                record["series"] = "" # no sub-dataverses
-            else:
-                # dataset is direct child of sub-dataverse(s)
-                record["series"] = " // ".join(identifier_split[1:len(identifier_split) - 1]) # sub-dataverses
-
+            # dataset is direct child of sub-dataverse(s)
+            record["series"] = " // ".join(identifier_split[1:]) # sub-dataverses
 
         if "latestVersion" not in dataverse_record:
             # Dataset is deaccessioned
@@ -215,7 +204,7 @@ class DataverseRepository(HarvestRepository):
     def _update_record(self, record):
         try:
             identifier_split = record['local_identifier'].split(" // ")
-            item_identifier = identifier_split[len(identifier_split)-1]
+            item_identifier = identifier_split[0]
             record_url = self.url.replace("dataverses/%id%/contents", "datasets/") + item_identifier
             try:
                 item_response = requests.get(record_url)
