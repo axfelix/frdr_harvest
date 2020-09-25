@@ -28,7 +28,8 @@ class HarvestRepository(object):
             'formatter': TimeFormatter(),
             'error_count': 0,
             'db': None,
-            'logger': None
+            'logger': None,
+            'dataverses_list': None
         }
         for key, value in defaultParams.items():
             setattr(self, key, value)

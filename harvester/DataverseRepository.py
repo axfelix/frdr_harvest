@@ -27,19 +27,18 @@ class DataverseRepository(HarvestRepository):
             "update_log_after_numitems": self.update_log_after_numitems,
             "record_refresh_days": self.record_refresh_days,
             "repo_refresh_days": self.repo_refresh_days, "homepage_url": self.homepage_url,
-            "repo_oai_name": self.repo_oai_name
+            "repo_oai_name": self.repo_oai_name,
+            "dataverses_list": self.dataverses_list # only retrieve these sub-dataverses; defaults to None
         }
         self.repository_id = self.db.update_repo(**kwargs)
 
         try:
-            if self.set == "":
-                # If set is not specified, get the entire dataverse (:root)
-                dataverse_id = ":root"
-            else:
-                # Otherwise, use the specified set as the dataverse_id
+            dataverse_id = ":root" # If set is not specified, get the entire dataverse (:root)
+            if self.set != "":
+                # If a single set is specified, use the specified set as the dataverse_id
                 dataverse_id = self.set
             dataverse_hierarchy = self.name
-            item_count = self.get_datasets_from_dataverse_id(dataverse_id, dataverse_hierarchy, 0)
+            item_count = self.get_datasets_from_dataverse_id(dataverse_id, dataverse_hierarchy, 0, self.dataverses_list)
             self.logger.info("Found {} items in feed".format(item_count))
             return True
         except Exception as e:
@@ -50,7 +49,7 @@ class DataverseRepository(HarvestRepository):
 
         return False
 
-    def get_datasets_from_dataverse_id(self, dataverse_id, dataverse_hierarchy, item_count):
+    def get_datasets_from_dataverse_id(self, dataverse_id, dataverse_hierarchy, item_count, dataverses_list=None):
         response = requests.get(self.url.replace("%id%", str(dataverse_id)), verify=False)
         records = response.json()
         parent_dataverse_hierarchy = dataverse_hierarchy
@@ -70,10 +69,14 @@ class DataverseRepository(HarvestRepository):
                     self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,self.formatter.humanize(
                                                                                                tdelta),item_count / tdelta))
             elif record["type"] == "dataverse":
-                # Append the dataverse name to the overall dataverse_hierarchy
-                dataverse_hierarchy = parent_dataverse_hierarchy + " // " + record["title"]
-                # Recursive call to get children of this dataverse
-                item_count = self.get_datasets_from_dataverse_id(record["id"], dataverse_hierarchy, item_count)
+                if dataverses_list and record["id"] not in dataverses_list:
+                    # If a dataverses_list is specified, ignore any dataverses not in it
+                    pass
+                else:
+                    # Append the dataverse name to the overall dataverse_hierarchy
+                    dataverse_hierarchy = parent_dataverse_hierarchy + " // " + record["title"]
+                    # Recursive call to get children of this dataverse
+                    item_count = self.get_datasets_from_dataverse_id(record["id"], dataverse_hierarchy, item_count)
         return item_count
 
     def format_dataverse_to_oai(self, dataverse_record):
