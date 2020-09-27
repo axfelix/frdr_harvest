@@ -12,3 +12,4 @@ sodapy
 urllib3
 python-dateutil
 dateparser
+ftfy

@@ -5,6 +5,7 @@ import time
 import json
 import re
 import os.path
+import ftfy
 
 
 class CKANRepository(HarvestRepository):
@@ -64,7 +65,7 @@ class CKANRepository(HarvestRepository):
 
         if ('type' in ckan_record) and ckan_record['type']:
             # Exclude showcases and other non-dataset records (publications from Alberta, info from Open Data Canada)
-            if ckan_record['type'] in ['showcase', 'publications', 'info']:
+            if ckan_record['type'] in ['showcase', 'publications', 'info', 'harvest']:
                 return False
 
         if not 'date_published' in ckan_record and not 'dates' in ckan_record and not 'record_publish_date' in ckan_record and not 'metadata_created' in ckan_record and not 'date_issued' in ckan_record:
@@ -84,14 +85,10 @@ class CKANRepository(HarvestRepository):
             record["creator"] = ckan_record['maintainer']
         elif ('creator' in ckan_record) and ckan_record['creator']:
             record["creator"] = ckan_record["creator"]
-        elif ('organization' in ckan_record) and ckan_record['organization']:
+        elif ('organization' in ckan_record) and ckan_record['organization'] and ckan_record['organization'].get('title', "") != "":
             record["creator"] = ckan_record['organization'].get('title', "")
-        else:
-            record["creator"] = self.name
-
-        # CIOOS only
-        if record["creator"] == '':
-            record["creator"] = ['']
+        elif self.name == 'Canadian Integrated Ocean Observing System (CIOOS)':
+            record["creator"] = []
             if ('cited-responsible-party' in ckan_record) and ckan_record['cited-responsible-party']:
                 for creator in json.loads(ckan_record['cited-responsible-party']):
                     if ("organisation-name" in creator) and creator["organisation-name"]:
@@ -100,10 +97,13 @@ class CKANRepository(HarvestRepository):
                     if ("individual-name" in creator) and creator["individual-name"]:
                         if creator["individual-name"] not in record["creator"]:
                             record["creator"].append(creator["individual-name"])
+        else:
+            record["creator"] = self.name
 
-        if isinstance(record["creator"], list):
-            record["creator"] = [x.strip() for x in record["creator"] if x != '']
-            record["creator"] = [x.encode('utf-8').decode('unicode-escape').strip() for x in record["creator"] if "\\u" in x]
+        if not isinstance(record["creator"], list):
+            record["creator"] = [record["creator"]]
+
+        record["creator"] = [ftfy.fixes.decode_escapes(x).strip() for x in record["creator"] if x != '']
 
         if ('owner_division' in ckan_record) and ckan_record['owner_division']:
             # Toronto
@@ -185,11 +185,8 @@ class CKANRepository(HarvestRepository):
                 record["description_fr"] = ckan_record.get("notes", "")
                 record["description"] = ""
 
-        if "\\u" in record["description"]:
-            record["description"] = record["description"].encode('utf-8').decode('unicode-escape').strip()
-        if "\\u" in record["description_fr"]:
-            record["description_fr"] = record["description_fr"].encode('utf-8').decode('unicode-escape').strip()
-
+        record["description"] = ftfy.fixes.decode_escapes(record["description"]).strip()
+        record["description_fr"] = ftfy.fixes.decode_escapes(record["description_fr"]).strip()
 
         if ('sector' in ckan_record):
             # BC Data Catalogue
