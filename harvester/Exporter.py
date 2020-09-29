@@ -84,7 +84,7 @@ class Exporter(object):
                  'last_crawl_timestamp'], row)))
             record["deleted"] = int(record["deleted"])
 
-            if record["item_url"] == "":
+            if record["item_url"] == "" and record["modified_timestamp"] != 0:
                 record["item_url"] = self.db.construct_local_url(record)
                 
             if record["deleted"] == 1:
