@@ -32,17 +32,17 @@ class CKANRepository(HarvestRepository):
         }
         self.repository_id = self.db.update_repo(**kwargs)
 
-        records = self.ckanrepo.action.package_list()
+        records = self.ckanrepo.call_action('package_list', requests_kwargs={'verify': False})
 
         # If response is limited to 1000, get all records with pagination
         if len(records) == 1000:
             offset = 0
-            records = self.ckanrepo.call_action('package_list?limit=1000&offset=' + str(offset))
+            records = self.ckanrepo.call_action('package_list?limit=1000&offset=' + str(offset), requests_kwargs={'verify': False})
 
             # Iterate through sets of 1000 records until no records returned
             while len(records) % 1000 == 0:
                 offset +=1000
-                response = self.ckanrepo.call_action('package_list?limit=1000&offset=' + str(offset))
+                response = self.ckanrepo.call_action('package_list?limit=1000&offset=' + str(offset), requests_kwargs={'verify': False})
                 if len(response) == 0:
                     break
                 records = records + response
@@ -352,7 +352,7 @@ class CKANRepository(HarvestRepository):
         # self.logger.debug("Updating CKAN record {}".format(record['local_identifier']) )
 
         try:
-            ckan_record = self.ckanrepo.action.package_show(id=record['local_identifier'])
+            ckan_record = self.ckanrepo.call_action('package_show', {'id':record['local_identifier']}, requests_kwargs={'verify': False})
             oai_record = self.format_ckan_to_oai(ckan_record, record['local_identifier'])
             if oai_record:
                 self.db.write_record(oai_record, self)
