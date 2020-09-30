@@ -86,6 +86,9 @@ class Exporter(object):
 
             if record["item_url"] == "" and record["modified_timestamp"] != 0:
                 record["item_url"] = self.db.construct_local_url(record)
+
+            if record["item_url"] == "":
+                continue
                 
             if record["deleted"] == 1:
                 deleted.append(record["item_url"])
