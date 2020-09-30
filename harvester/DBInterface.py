@@ -598,14 +598,15 @@ class DBInterface:
                     record["description"] = [record["description"]]
                 for description in record["description"]:
                     # Use a hash for lookups so we don't need to maintain a full text index
-                    sha1 = hashlib.sha1()
-                    sha1.update(description.encode('utf-8'))
-                    description_hash = sha1.hexdigest()
-                    description_id = self.get_single_record_id("descriptions", description_hash, "and record_id=" + str(
-                        record["record_id"]) + " and language='en'")
-                    if description_id is None:
-                        extras = {"record_id": record["record_id"], "language": "en", "description": description}
-                        self.insert_related_record("descriptions", description_hash, **extras)
+                    if description is not None:
+                        sha1 = hashlib.sha1()
+                        sha1.update(description.encode('utf-8'))
+                        description_hash = sha1.hexdigest()
+                        description_id = self.get_single_record_id("descriptions", description_hash, "and record_id=" + str(
+                            record["record_id"]) + " and language='en'")
+                        if description_id is None:
+                            extras = {"record_id": record["record_id"], "language": "en", "description": description}
+                            self.insert_related_record("descriptions", description_hash, **extras)
 
             if "description_fr" in record:
                 if not isinstance(record["description_fr"], list):
