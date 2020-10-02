@@ -698,6 +698,20 @@ class DBInterface:
                             extras = {"record_id": record["record_id"], "lat": coordinate_pair[0], "lon": coordinate_pair[1]}
                             self.insert_related_record("geospatial", record["geospatial"]["type"], **extras)
 
+            if "geobboxes" in record:
+                existing_boundingboxes = self.get_multiple_records("geobbox", "*", "record_id",
+                                                                    record["record_id"])
+                if existing_boundingboxes:
+                    self.delete_related_records("geobbox", record["record_id"])
+
+                for geobbox in record["geobboxes"]:
+                    if "westLon" in geobbox and "eastLon" in geobbox and "northLat" in geobbox and "southLat" in geobbox:
+                        extras = {"westLon": geobbox["westLon"], "eastLon": geobbox["eastLon"],
+                                  "northLat": geobbox["northLat"], "southLat": geobbox["southLat"]}
+                        self.insert_related_record("geobbox", record["record_id"], **extras)
+                    # TODO elif there is one lon and one lat, treat as a point?
+
+
             if len(domain_metadata) > 0:
                 existing_metadata_ids = self.get_multiple_records("domain_metadata", "metadata_id", "record_id",
                                                                   record["record_id"])
