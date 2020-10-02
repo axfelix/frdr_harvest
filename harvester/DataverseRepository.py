@@ -191,20 +191,22 @@ class DataverseRepository(HarvestRepository):
                             if "otherGeographicCoverage" in geographicCoverage:
                                 geolocationPlace["other"] = geographicCoverage["otherGeographicCoverage"]["value"]
                             geolocationPlaces.append(geolocationPlace)
+                        record["geoplaces"] = geolocationPlaces
                     elif geospatial_field["typeName"] == "geographicBoundingBox":
                         # Get bounding box values
                         geolocationBoxes = []
                         for geographicBoundingBox in geospatial_field["value"]:
                             geolocationBox = {}
                             if "westLongitude" in geographicBoundingBox:
-                                geolocationBox["westLongitude"] = geographicBoundingBox["westLongitude"]["value"]
+                                geolocationBox["westLon"] = geographicBoundingBox["westLongitude"]["value"]
                             if "eastLongitude" in geographicBoundingBox:
-                                geolocationBox["eastLongitude"] = geographicBoundingBox["eastLongitude"]["value"]
+                                geolocationBox["eastLon"] = geographicBoundingBox["eastLongitude"]["value"]
                             if "northLongitude" in geographicBoundingBox:
-                                geolocationBox["northLatitude"] = geographicBoundingBox["northLongitude"]["value"]
+                                geolocationBox["northLat"] = geographicBoundingBox["northLongitude"]["value"]
                             if "southLongitude" in geographicBoundingBox:
-                                geolocationBox["southLatitude"] = geographicBoundingBox["southLongitude"]["value"]
+                                geolocationBox["southLat"] = geographicBoundingBox["southLongitude"]["value"]
                             geolocationBoxes.append(geolocationBox)
+                        record["geobboxes"] = geolocationBoxes
 
         return record
 
