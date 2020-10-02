@@ -185,7 +185,7 @@ class DataverseRepository(HarvestRepository):
                             if "country" in geographicCoverage:
                                 geolocationPlace["country"] = geographicCoverage["country"]["value"]
                             if "state" in geographicCoverage:
-                                geolocationPlace["state"] = geographicCoverage["state"]["value"]
+                                geolocationPlace["province_state"] = geographicCoverage["state"]["value"]
                             if "city" in geographicCoverage:
                                 geolocationPlace["city"] = geographicCoverage["city"]["value"]
                             if "otherGeographicCoverage" in geographicCoverage:

@@ -711,6 +711,34 @@ class DBInterface:
                         self.insert_related_record("geobbox", record["record_id"], **extras)
                     # TODO elif there is one lon and one lat, treat as a point?
 
+            if "geoplaces" in record:
+                existing_geoplace_recs = self.get_multiple_records("records_x_geoplace", "geoplace_id", "record_id",
+                                                              record["record_id"])
+                existing_geoplace_ids = [e["geoplace_id"] for e in existing_geoplace_recs]
+
+                for geoplace in record["geoplaces"]:
+                    if "country" not in geoplace:
+                        geoplace["country"] = ""
+                    if "province_state" not in geoplace:
+                        geoplace["province_state"] = ""
+                    if "city" not in geoplace:
+                        geoplace["city"] = ""
+                    if "other" not in geoplace:
+                        geoplace["other"] = ""
+                    if "place_name" not in geoplace:
+                        geoplace["place_name"] = ""
+                    extrawhere = "and country='" + geoplace["country"] + "' and province_state='" + geoplace["province_state"] +\
+                                 "' and city='" + geoplace["city"] + "' and other='" + geoplace["other"] + "'"
+                    extras = {"country": geoplace["country"], "province_state": geoplace["province_state"], \
+                              "city": geoplace["city"], "other": geoplace["other"]}
+                    geoplace_id = self.get_single_record_id("geoplace", geoplace["place_name"], extrawhere)
+
+                    if geoplace_id is None:
+                        geoplace_id = self.insert_related_record("geoplace", geoplace["place_name"], **extras)
+                    if geoplace_id is not None:
+                        if geoplace_id not in existing_geoplace_ids:
+                            self.insert_cross_record("records_x_geoplace", "geoplace", geoplace_id, record["record_id"])
+
 
             if len(domain_metadata) > 0:
                 existing_metadata_ids = self.get_multiple_records("domain_metadata", "metadata_id", "record_id",
