@@ -327,6 +327,16 @@ class OAIRepository(HarvestRepository):
         if "series" not in record.keys():
             record["series"] = ""
 
+        if "coverage" in record.keys():
+            record["geoplaces"] = []
+            if self.name == "SFU Radar":
+                record["coverage"] = [x.strip() for x in record["coverage"][0].split(";")]
+            if not isinstance(record["coverage"], list):
+                record["coverage"] = [record["coverage"]]
+            for place_name in record["coverage"]:
+                if place_name != "" and place_name.lower().islower(): # to filter out dates, confirm at least one letter
+                    record["geoplaces"].append({"place_name": place_name})
+
         # DSpace workaround to exclude theses and non-data content
         if self.prune_non_dataset_items:
             if record["type"] and "Dataset" not in record["type"]:
