@@ -180,13 +180,6 @@ class OAIRepository(HarvestRepository):
             record["identifier"] = record.get("IDNo")
             record["rights"] = record.get("copyright")
 
-            if "northBL" in record.keys():
-                # This record has geoSpatial bounding lines
-                # Convert into an array of closed bounding box points (clockwise polygon)
-                record["geospatial"] = {"type": "Polygon", "coordinates": [
-                    [[record["northBL"][0], record["westBL"][0]], [record["northBL"][0], record["eastBL"][0]],
-                     [record["southBL"][0], record["westBL"][0]], [record["southBL"][0], record["eastBL"][0]]]]}
-
         if self.metadataprefix.lower() == "fgdc" or self.metadataprefix.lower() == "fgdc-std":
             record["creator"] = record.get("origin")
             record["tags"] = record.get("themekey")
@@ -199,15 +192,21 @@ class OAIRepository(HarvestRepository):
             record["rights"] = record.get("distliab")
             record["access"] = record.get("accconst")
 
+            if "placekt" in record.keys():
+                record["coverage"] = record["placekt"]
+
             if "bounding" in record.keys():
                 # Sometimes point data is hacked in as a bounding box
                 if record["westbc"] == record["eastbc"] and record["northbc"] == record["southbc"]:
                     record["geospatial"] = {"type": "Point",
-                                            "coordinates": [[[record["northbc"][0], record["westbc"][0]]]]}
+                                            "coordinates": [[[record["northbc"][0], record["westbc"][0]]]]} # TODO remove
+                    record["geopoints"] = [{"lat": record["northbc"][0], "lon": record["westbc"][0]}]
                 else:
                     record["geospatial"] = {"type": "Polygon", "coordinates": [
                         [[record["northbc"][0], record["westbc"][0]], [record["northbc"][0], record["eastbc"][0]],
-                         [record["southbc"][0], record["westbc"][0]], [record["southbc"][0], record["eastbc"][0]]]]}
+                         [record["southbc"][0], record["westbc"][0]], [record["southbc"][0], record["eastbc"][0]]]]} # TODO remove
+                    record["geobboxes"] = [{"westLon": record["westbc"][0], "eastLon": record["eastbc"][0],
+                                            "northLat": record["northbc"][0], "southLat": record["southbc"][0]}]
 
         # Parse FRDR records
         if self.metadataprefix.lower() == "frdr":
