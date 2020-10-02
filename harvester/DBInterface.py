@@ -711,6 +711,17 @@ class DBInterface:
                         self.insert_related_record("geobbox", record["record_id"], **extras)
                     # TODO elif there is one lon and one lat, treat as a point?
 
+            if "geopoints" in record:
+                existing_geopoints = self.get_multiple_records("geopoint", "*", "record_id",
+                                                                    record["record_id"])
+                if existing_geopoints:
+                    self.delete_related_records("geopoint", record["record_id"])
+
+                for geopoint in record["geopoints"]:
+                    if "lat" in geopoint and "lon" in geopoint:
+                        extras = {"lat": geopoint["lat"], "lon": geopoint["lon"]}
+                        self.insert_related_record("geopoint", record["record_id"], **extras)
+
             if "geoplaces" in record:
                 existing_geoplace_recs = self.get_multiple_records("records_x_geoplace", "geoplace_id", "record_id",
                                                               record["record_id"])
