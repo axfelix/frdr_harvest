@@ -211,16 +211,24 @@ class OAIRepository(HarvestRepository):
 
         # Parse FRDR records
         if self.metadataprefix.lower() == "frdr":
-            record["coverage"] = record.get("geolocationPlace")
+            if "http://datacite.org/schema/kernel-4#geolocationPlace" in record.keys():
+                record["coverage"] = record.get("http://datacite.org/schema/kernel-4#geolocationPlace")
 
-            if "geolocationPoint" in record.keys():
-                point_split = re.compile(",? ").split(record["geolocationPoint"][0])
-                record["geospatial"] = {"type": "Point", "coordinates": [[point_split]]}
+            if "http://datacite.org/schema/kernel-4#geolocationPoint" in record.keys():
+                record["geopoints"] = []
+                for geopoint in record["http://datacite.org/schema/kernel-4#geolocationPoint"]:
+                    point_split = re.compile(",? ").split(geopoint)
+                    if len(point_split) == 2:
+                        record["geopoints"].append({"lat": point_split[0], "lon": point_split[1]})
 
-            if "geolocationBox" in record.keys():
-                boxcoordinates = record["geolocationBox"][0].split()
-                record["geospatial"] = {"type": "Polygon", "coordinates": [
-                    [boxcoordinates[x:x + 2] for x in range(0, len(boxcoordinates), 2)]]}
+            if "http://datacite.org/schema/kernel-4#geolocationBox" in record.keys():
+                record["geobboxes"] = []
+                for geobbox in record["http://datacite.org/schema/kernel-4#geolocationBox"]:
+                    boxcoordinates = geobbox.split()
+                    if len(boxcoordinates) == 4:
+                        record["geobboxes"].append({"southLat": boxcoordinates[0], "westLon": boxcoordinates[1],
+                                                    "northLat": boxcoordinates[2], "eastLon": boxcoordinates[3]})
+
             # Look for datacite.creatorAffiliation
             if "http://datacite.org/schema/kernel-4#creatorAffiliation" in record:
                 record["affiliation"] = record.get("http://datacite.org/schema/kernel-4#creatorAffiliation")
