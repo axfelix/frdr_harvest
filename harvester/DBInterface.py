@@ -699,17 +699,33 @@ class DBInterface:
                             self.insert_related_record("geospatial", record["geospatial"]["type"], **extras)
 
             if "geobboxes" in record:
-                existing_boundingboxes = self.get_multiple_records("geobbox", "*", "record_id",
+                existing_geobboxes = self.get_multiple_records("geobbox", "*", "record_id",
                                                                     record["record_id"])
-                if existing_boundingboxes:
+                if existing_geobboxes:
                     self.delete_related_records("geobbox", record["record_id"])
 
                 for geobbox in record["geobboxes"]:
+                    # Fill in any missing values
+                    if "eastLon" not in geobbox and "westLon" in geobbox:
+                        geobbox["eastLon"] = geobbox["westLon"]
+                    if "westLon" not in geobbox and "eastLon" in geobbox:
+                        geobbox["westLon"] = geobbox["eastLon"]
+                    if "northLat" not in geobbox and "southLat" in geobbox:
+                        geobbox["northLat"] = geobbox["southLat"]
+                    if "southLat" not in geobbox and "northLat" in geobbox:
+                            geobbox["southLat"] = geobbox["northLat"]
+
                     if "westLon" in geobbox and "eastLon" in geobbox and "northLat" in geobbox and "southLat" in geobbox:
-                        extras = {"westLon": geobbox["westLon"], "eastLon": geobbox["eastLon"],
-                                  "northLat": geobbox["northLat"], "southLat": geobbox["southLat"]}
-                        self.insert_related_record("geobbox", record["record_id"], **extras)
-                    # TODO elif there is one lon and one lat, treat as a point?
+                        if geobbox["westLon"] != geobbox["eastLon"] or geobbox["northLat"] != geobbox["southLat"]:
+                            # If west/east or north/south don't match, this is a box
+                            extras = {"westLon": geobbox["westLon"], "eastLon": geobbox["eastLon"],
+                                      "northLat": geobbox["northLat"], "southLat": geobbox["southLat"]}
+                            self.insert_related_record("geobbox", record["record_id"], **extras)
+                        else:
+                            # If west/east and north/south match, this is a point
+                            if "geopoints" not in record:
+                                record["geopoints"] = []
+                            record["geopoints"].append({"lat": geobbox["northLat"], "lon": geobbox["westLon"]})
 
             if "geopoints" in record:
                 existing_geopoints = self.get_multiple_records("geopoint", "*", "record_id",
