@@ -101,8 +101,14 @@ class DataStreamRepository(HarvestRepository):
         if ("@id" in datastream_record) and datastream_record["@id"]:
             record["identifier"] = datastream_record["@id"]
 
-        # TODO: Update later when updating for Geodisy
-        #record["geospatial"] = datastream_record["spatialCoverage"]["geo"]["box"]
+        if ("spatialCoverage" in datastream_record) and datastream_record["spatialCoverage"]:
+            try:
+                boxcoordinates = datastream_record["spatialCoverage"]["geo"]["box"].split()
+                if len(boxcoordinates) == 4:
+                    record["geobboxes"] = [{"westLon": boxcoordinates[0], "southLat": boxcoordinates[1],
+                                            "eastLon": boxcoordinates[2], "northLat": boxcoordinates[3]}]
+            except:
+                pass
 
         return record
 
