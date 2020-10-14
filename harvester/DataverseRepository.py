@@ -37,8 +37,7 @@ class DataverseRepository(HarvestRepository):
             if self.set != "":
                 # If a single set is specified, use the specified set as the dataverse_id
                 dataverse_id = self.set
-            dataverse_hierarchy = str(dataverse_id)
-            item_count = self.get_datasets_from_dataverse_id(dataverse_id, dataverse_hierarchy, 0, self.dataverses_list) # FIXME just pass dataverse_id
+            item_count = self.get_datasets_from_dataverse_id(dataverse_id, str(dataverse_id), 0, self.dataverses_list)
             self.logger.info("Found {} items in feed".format(item_count))
             return True
         except Exception as e:
@@ -52,14 +51,9 @@ class DataverseRepository(HarvestRepository):
     def get_datasets_from_dataverse_id(self, dataverse_id, dataverse_hierarchy, item_count, dataverses_list=None):
         response = requests.get(self.url.replace("%id%", str(dataverse_id)), verify=False)
         records = response.json()
-        parent_dataverse_hierarchy = dataverse_hierarchy
         for record in records["data"]:
             if record["type"] == "dataset":
                 item_identifier = record["id"]
-                if item_identifier in [71998, 62635, 73074]:
-                    # FIXME These (and others) are getting the parent dataverse as 123945
-                    # FIXME dataverse_hierarchy is being taken from previous function call, not parent call
-                    print("This has the wrong parent")
                 combined_identifier = str(item_identifier)
                 dataverse_hierarchy_split = [x.strip() for x in dataverse_hierarchy.split("_")]
                 if len(dataverse_hierarchy_split) > 1:
@@ -75,13 +69,11 @@ class DataverseRepository(HarvestRepository):
             elif record["type"] == "dataverse":
                 if dataverses_list and record["id"] not in dataverses_list:
                     # If a dataverses_list is specified, ignore any dataverses not in it
-                    # FIXME separate issue--this will ignore sub-dataverses of the specified dataverses
                     pass
                 else:
-                    # Append the dataverse id to the overall dataverse_hierarchy
-                    dataverse_hierarchy = parent_dataverse_hierarchy + "_" + str(record["id"])
                     # Recursive call to get children of this dataverse
-                    item_count = self.get_datasets_from_dataverse_id(record["id"], dataverse_hierarchy, item_count)
+                    # Append the dataverse id to the overall dataverse_hierarchy
+                    item_count = self.get_datasets_from_dataverse_id(record["id"], dataverse_hierarchy + "_" + str(record["id"]), item_count)
         return item_count
 
     def get_dataverse_name_from_dataverse_id(self, dataverse_id):
