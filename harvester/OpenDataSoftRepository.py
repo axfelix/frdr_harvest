@@ -104,10 +104,14 @@ class OpenDataSoftRepository(HarvestRepository):
         if "data-team" in opendatasoft_record["metas"] and opendatasoft_record["metas"]["data-team"]:
             record["affiliation"] = opendatasoft_record["metas"]["data-team"]
 
-        # Use opendatasoft_record["metas"]["geographic_area"] for Kingston - MultiPolygons, generate bounding box
-
         record["series"] = ""
         record["title_fr"] = ""
+
+        if "territory" in opendatasoft_record["metas"]:
+            record["geoplaces"] = []
+            if isinstance(opendatasoft_record["metas"]["territory"], list):
+                for territory in opendatasoft_record["metas"]["territory"]:
+                    record["geoplaces"].append({"place_name": territory})
 
         return record
 
