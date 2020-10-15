@@ -282,6 +282,17 @@ class DBInterface:
 
         return True
 
+    def delete_row_generic(self, tablename, columnname, row_id):
+        con = self.getConnection()
+        with con:
+            cur = self.getCursor(con)
+            try:
+                sqlstring = "DELETE from {} where {}=?".format(tablename, columnname)
+                cur.execute(self._prep(sqlstring), (row_id,))
+            except:
+                return False
+        return True
+
     def get_table_id_column(self, tablename):
         if tablename in self.tabledict and "idcol" in self.tabledict[tablename]:
             return str(self.tabledict[tablename]["idcol"])
@@ -739,7 +750,7 @@ class DBInterface:
                         self.insert_related_record("geopoint", record["record_id"], **extras)
 
             if "geoplaces" in record:
-                existing_geoplace_recs = self.get_multiple_records("records_x_geoplace", "geoplace_id", "record_id",
+                existing_geoplace_recs = self.get_multiple_records("records_x_geoplace", "*", "record_id",
                                                               record["record_id"])
                 existing_geoplace_ids = [e["geoplace_id"] for e in existing_geoplace_recs]
 
@@ -765,6 +776,24 @@ class DBInterface:
                     if geoplace_id is not None:
                         if geoplace_id not in existing_geoplace_ids:
                             self.insert_cross_record("records_x_geoplace", "geoplace", geoplace_id, record["record_id"])
+
+                for existing_geoplace_id in existing_geoplace_ids:
+                    existing_geoplace = self.get_multiple_records("geoplace", "*", "geoplace_id", existing_geoplace_id)[0]
+                    match = False
+                    for geoplace in record["geoplaces"]:
+                        # Check if the existing geoplace matches any of the new geoplaces
+                        if existing_geoplace["country"] == geoplace["country"] and \
+                                existing_geoplace["province_state"] == geoplace["province_state"] and \
+                                existing_geoplace["city"] == geoplace["city"] and \
+                                existing_geoplace["other"] == geoplace["other"] and \
+                                existing_geoplace["place_name"] == geoplace["place_name"]:
+                            match = True
+                            break
+                    if not match:
+                        # If it doesn't match, remove it
+                        records_x_geoplace_id = self.get_multiple_records("records_x_geoplace", "records_x_geoplace_id", "record_id", record["record_id"], "and geoplace_id='" + str(existing_geoplace_id) + "'")[0]["records_x_geoplace_id"]
+                        self.delete_row_generic("records_x_geoplace", "records_x_geoplace_id", records_x_geoplace_id)
+
 
 
             if len(domain_metadata) > 0:
