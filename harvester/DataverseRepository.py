@@ -16,6 +16,8 @@ class DataverseRepository(HarvestRepository):
         self.domain_metadata = []
         self.params = {
         }
+        self.geofile_extensions = [".tif", ".tiff",".xyz", ".png", ".aux.xml",".tab",".twf",".tifw", ".tiffw",".wld",
+                                  ".tif.prj",".tfw", ".geojson",".shp",".gpkg", ".shx", ".dbf", ".sbn",".prj", ".csv"]
 
     def _crawl(self):
         kwargs = {
@@ -207,6 +209,25 @@ class DataverseRepository(HarvestRepository):
                                 geolocationBox["southLat"] = geographicBoundingBox["southLongitude"]["value"]
                             geolocationBoxes.append(geolocationBox)
                         record["geobboxes"] = geolocationBoxes
+
+        if "files" in dataverse_record["latestVersion"]:
+            record["geofiles"] = []
+            for dataverse_file in dataverse_record["latestVersion"]["files"]:
+                if "dataFile" in dataverse_file:
+                    if not dataverse_file["restricted"]:
+                        try:
+                            extension = "." + dataverse_file["dataFile"]["filename"].split(".")[1]
+                            if extension.lower() in self.geofile_extensions:
+                                geofile = {}
+                                geofile["filename"] = dataverse_file["dataFile"]["filename"]
+                                geofile["uri"] = self.url.replace("dataverses/%id%/contents", "access/datafile/") + str(
+                                    dataverse_file["dataFile"]["id"])
+                                record["geofiles"].append(geofile)
+                        except IndexError: # no extension
+                            pass
+
+            if len(record["geofiles"]) == 0:
+                record.pop("geofiles")
 
         return record
 

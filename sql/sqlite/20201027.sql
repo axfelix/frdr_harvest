@@ -37,8 +37,6 @@ CREATE INDEX records_x_geoplace_by_geoplace on records_x_geoplace(geoplace_id);
 CREATE TABLE geofile (
 	geofile_id INTEGER PRIMARY KEY NOT NULL,
 	record_id INTEGER NOT NULL,
-	server_name TEXT NOT NULL,
-	format TEXT,
 	filename TEXT NOT NULL,
     uri TEXT NOT NULL);
 CREATE INDEX  geofileby_record on   geofile(record_id);

@@ -795,6 +795,16 @@ class DBInterface:
                         self.delete_row_generic("records_x_geoplace", "records_x_geoplace_id", records_x_geoplace_id)
 
 
+            if "geofiles" in record:
+                existing_geofiles = self.get_multiple_records("geofile", "*", "record_id",
+                                                               record["record_id"])
+                if existing_geofiles:
+                    self.delete_related_records("geofile", record["record_id"])
+
+                for geofile in record["geofiles"]:
+                    if "filename" in geofile and "uri" in geofile:
+                        extras = {"filename": geofile["filename"], "uri": geofile["uri"]}
+                        self.insert_related_record("geofile", record["record_id"], **extras)
 
             if len(domain_metadata) > 0:
                 existing_metadata_ids = self.get_multiple_records("domain_metadata", "metadata_id", "record_id",

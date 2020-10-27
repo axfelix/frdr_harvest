@@ -44,8 +44,6 @@ ALTER TABLE records_x_geoplace ALTER records_x_geoplace_id SET DEFAULT NEXTVAL('
 CREATE TABLE geofile (
 	geofile_id INTEGER PRIMARY KEY NOT NULL,
 	record_id INTEGER NOT NULL,
-	server_name TEXT NOT NULL,
-	format TEXT,
 	filename TEXT NOT NULL,
     uri TEXT NOT NULL);
 
