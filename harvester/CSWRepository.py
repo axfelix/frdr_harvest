@@ -5,7 +5,12 @@ import time
 import json
 import re
 import os.path
+import warnings
 
+# Disable FutureWarning from owslib - we do not use the properties listed in
+# https://github.com/geopython/OWSLib/issues/38 and
+# https://github.com/geopython/OWSLib/issues/301
+warnings.simplefilter("ignore", category=FutureWarning)
 
 class CSWRepository(HarvestRepository):
     """ CSW Repository """

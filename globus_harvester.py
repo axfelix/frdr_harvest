@@ -23,6 +23,7 @@ import configparser
 
 from harvester.OAIRepository import OAIRepository
 from harvester.CKANRepository import CKANRepository
+from harvester.DataverseRepository import DataverseRepository
 from harvester.MarkLogicRepository import MarkLogicRepository
 from harvester.OpenDataSoftRepository import OpenDataSoftRepository
 from harvester.CSWRepository import CSWRepository
@@ -103,6 +104,8 @@ if __name__ == "__main__":
                 repo = OAIRepository(final_config)
             elif repoconfig['type'] == "ckan":
                 repo = CKANRepository(final_config)
+            elif repoconfig['type'] == "dataverse":
+                repo = DataverseRepository(final_config)
             elif repoconfig['type'] == "marklogic":
                 repo = MarkLogicRepository(final_config)
             elif repoconfig['type'] == "opendatasoft":
