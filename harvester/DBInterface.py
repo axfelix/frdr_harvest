@@ -282,17 +282,6 @@ class DBInterface:
                 return False
         return True
 
-    def delete_row_generic(self, tablename, columnname, row_id):
-        con = self.getConnection()
-        with con:
-            cur = self.getCursor(con)
-            try:
-                sqlstring = "DELETE from {} where {}=?".format(tablename, columnname)
-                cur.execute(self._prep(sqlstring), (row_id,))
-            except:
-                return False
-        return True
-
     def get_table_id_column(self, tablename):
         if tablename in self.tabledict and "idcol" in self.tabledict[tablename]:
             return str(self.tabledict[tablename]["idcol"])
