@@ -201,7 +201,7 @@ class CKANRepository(HarvestRepository):
             elif self.default_language == "fr":
                 record["subject_fr"] = ckan_record.get('subject', "")
         elif "groups" in ckan_record and ckan_record["groups"]:
-            # Surrey, CanWin Data Hub, Donnees Quebec (plus Regina, Guelph, Montreal, Niagara)
+            # Surrey, CanWin Data Hub, Quebec, Montreal (plus Regina, Guelph, Niagara)
             record["subject"] = []
             record["subject_fr"] = []
             for group in ckan_record["groups"]:

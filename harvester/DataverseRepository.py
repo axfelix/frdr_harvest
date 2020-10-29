@@ -39,8 +39,7 @@ class DataverseRepository(HarvestRepository):
             if self.set != "":
                 # If a single set is specified, use the specified set as the dataverse_id
                 dataverse_id = self.set
-            dataverse_hierarchy = self.name
-            item_count = self.get_datasets_from_dataverse_id(dataverse_id, dataverse_hierarchy, 0, self.dataverses_list)
+            item_count = self.get_datasets_from_dataverse_id(dataverse_id, str(dataverse_id), 0, self.dataverses_list)
             self.logger.info("Found {} items in feed".format(item_count))
             return True
         except Exception as e:
@@ -54,16 +53,15 @@ class DataverseRepository(HarvestRepository):
     def get_datasets_from_dataverse_id(self, dataverse_id, dataverse_hierarchy, item_count, dataverses_list=None):
         response = requests.get(self.url.replace("%id%", str(dataverse_id)), verify=False)
         records = response.json()
-        parent_dataverse_hierarchy = dataverse_hierarchy
         for record in records["data"]:
             if record["type"] == "dataset":
                 item_identifier = record["id"]
                 combined_identifier = str(item_identifier)
-                dataverse_hierarchy_split = [x.strip() for x in dataverse_hierarchy.split(" // ")]
+                dataverse_hierarchy_split = [x.strip() for x in dataverse_hierarchy.split("_")]
                 if len(dataverse_hierarchy_split) > 1:
-                    # Write dataverse_hierarchy - minus the repository name - plus identifier as local_identifier
-                    dataverse_hierarchy_string = " // ".join(dataverse_hierarchy_split[1:])
-                    combined_identifier = combined_identifier + " // " + dataverse_hierarchy_string
+                    # Write dataverse_hierarchy - minus the repository id - plus identifier as local_identifier
+                    dataverse_hierarchy_string = "_".join(dataverse_hierarchy_split[1:])
+                    combined_identifier = combined_identifier + "_" + dataverse_hierarchy_string
                 result = self.db.write_header(combined_identifier, self.repository_id)
                 item_count = item_count + 1
                 if (item_count % self.update_log_after_numitems == 0):
@@ -75,11 +73,19 @@ class DataverseRepository(HarvestRepository):
                     # If a dataverses_list is specified, ignore any dataverses not in it
                     pass
                 else:
-                    # Append the dataverse name to the overall dataverse_hierarchy
-                    dataverse_hierarchy = parent_dataverse_hierarchy + " // " + record["title"]
                     # Recursive call to get children of this dataverse
-                    item_count = self.get_datasets_from_dataverse_id(record["id"], dataverse_hierarchy, item_count)
+                    # Append the dataverse id to the overall dataverse_hierarchy
+                    item_count = self.get_datasets_from_dataverse_id(record["id"], dataverse_hierarchy + "_" + str(record["id"]), item_count)
         return item_count
+
+    def get_dataverse_name_from_dataverse_id(self, dataverse_id):
+        try:
+            response = requests.get(self.url.replace("%id%/contents", str(dataverse_id)), verify=False)
+            record = response.json()
+            return record["data"]["name"]
+        except Exception as e:
+            print(e)
+
 
     def format_dataverse_to_oai(self, dataverse_record):
         record = {}
@@ -87,14 +93,17 @@ class DataverseRepository(HarvestRepository):
         record["pub_date"] = dataverse_record["publicationDate"]
         record["item_url"] = dataverse_record["persistentUrl"]
 
-        identifier_split = [x.strip() for x in dataverse_record["combined_identifier"].split(" // ")]
+        identifier_split = [x.strip() for x in dataverse_record["combined_identifier"].split("_")]
 
         if len(identifier_split) == 1:
             # dataset is direct child of repository
             record["series"] = "" # no sub-dataverses
         else:
             # dataset is direct child of sub-dataverse(s)
-            record["series"] = " // ".join(identifier_split[1:]) # sub-dataverses
+            record["series"] = []
+            for dataverse_id in identifier_split[1:]:
+                record["series"].append(self.get_dataverse_name_from_dataverse_id(int(dataverse_id)))
+            record["series"] = " // ".join(record["series"]) # list of sub-dataverse names
 
         if "latestVersion" not in dataverse_record:
             # Dataset is deaccessioned
@@ -233,7 +242,7 @@ class DataverseRepository(HarvestRepository):
 
     def _update_record(self, record):
         try:
-            identifier_split = record['local_identifier'].split(" // ")
+            identifier_split = record['local_identifier'].split("_")
             item_identifier = identifier_split[0]
             record_url = self.url.replace("dataverses/%id%/contents", "datasets/") + item_identifier
             try:

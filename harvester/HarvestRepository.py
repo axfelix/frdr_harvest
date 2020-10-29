@@ -107,11 +107,11 @@ class HarvestRepository(object):
             status = self._update_record(record)
             if not status:
                 self.logger.error(
-                    "Aborting due to errors after {} items updated in {} ({:.1f} items/sec)".format(record_count,
-                                                                                                    self.formatter.humanize(
-                                                                                                        time.time() - tstart),
-                                                                                                    record_count / (
-                                                                                                        time.time() - tstart + 0.1)))
+                    "Aborting due to errors after {} items updated in {} ({:.1f} items/sec)".format(
+                        record_count, 
+                        self.formatter.humanize(time.time() - tstart), 
+                        record_count / (time.time() - tstart + 0.1))
+                    )
                 break
 
             record_count = record_count + 1

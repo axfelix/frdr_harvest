@@ -248,7 +248,6 @@ class DBInterface:
                 self.delete_related_records("records_x_tags", record['record_id'])
                 self.delete_related_records("descriptions", record['record_id'])
                 self.delete_related_records("geospatial", record['record_id'])
-                self.delete_related_records("affiliations", record['record_id'])
                 self.delete_related_records("domain_metadata", record['record_id'])
             except:
                 self.logger.error(
@@ -267,19 +266,20 @@ class DBInterface:
                 cur.execute(sqlstring)
             except:
                 return False
-
         return True
 
     def delete_related_records(self, crosstable, record_id):
+        return self.delete_row_generic(crosstable, "record_id", record_id)
+
+    def delete_row_generic(self, tablename, columnname, row_id):
         con = self.getConnection()
         with con:
             cur = self.getCursor(con)
             try:
-                sqlstring = "DELETE from {} where record_id=?".format(crosstable)
-                cur.execute(self._prep(sqlstring), (record_id,))
+                sqlstring = "DELETE from {} where {}=?".format(tablename, columnname)
+                cur.execute(self._prep(sqlstring), (row_id,))
             except:
                 return False
-
         return True
 
     def delete_row_generic(self, tablename, columnname, row_id):
@@ -561,34 +561,47 @@ class DBInterface:
                 existing_publisher_recs = self.get_multiple_records("records_x_publishers", "publisher_id", "record_id",
                                                                     record["record_id"])
                 existing_publisher_ids = [e["publisher_id"] for e in existing_publisher_recs]
+                new_publisher_ids = []
                 for publisher in record["publisher"]:
                     publisher_id = self.get_single_record_id("publishers", publisher)
                     if publisher_id is None:
                         publisher_id = self.insert_related_record("publishers", publisher)
                     if publisher_id is not None:
+                        new_publisher_ids.append(publisher_id)
                         if publisher_id not in existing_publisher_ids:
                             self.insert_cross_record("records_x_publishers", "publishers", publisher_id,
                                                      record["record_id"])
+                for eid in existing_publisher_ids:
+                    if eid not in new_publisher_ids:
+                        self.delete_row_generic("records_x_publishers", "publisher_id", eid)
+
             if "affiliation" in record:
                 if not isinstance(record["affiliation"], list):
                     record["affiliation"] = [record["affiliation"]]
                 existing_affiliation_recs = self.get_multiple_records("records_x_affiliations", "affiliation_id", "record_id",
                                                                     record["record_id"])
                 existing_affiliation_ids = [e["affiliation_id"] for e in existing_affiliation_recs]
+                new_affiliation_ids = []
                 for affil in record["affiliation"]:
                     affiliation_id = self.get_single_record_id("affiliations", affil)
                     if affiliation_id is None:
                         affiliation_id = self.insert_related_record("affiliations", affil)
                     if affiliation_id is not None:
+                        new_affiliation_ids.append(affiliation_id)
                         if affiliation_id not in existing_affiliation_ids:
                             self.insert_cross_record("records_x_affiliations", "affiliations", affiliation_id,
                                                      record["record_id"])
+                for eid in existing_affiliation_ids:
+                    if eid not in new_affiliation_ids:
+                        self.delete_row_generic("records_x_affiliations", "affiliation_id", eid)
+
             if "rights" in record:
                 if not isinstance(record["rights"], list):
                     record["rights"] = [record["rights"]]
                 existing_rights_recs = self.get_multiple_records("records_x_rights", "rights_id", "record_id",
                                                                  record["record_id"])
                 existing_rights_ids = [e["rights_id"] for e in existing_rights_recs]
+                new_rights_ids = []
                 for rights in record["rights"]:
                     # Use a hash for lookups so we don't need to maintain a full text index
                     sha1 = hashlib.sha1()
@@ -601,8 +614,12 @@ class DBInterface:
                         extras = {"rights": rights}
                         rights_id = self.insert_related_record("rights", rights_hash, **extras)
                     if rights_id is not None:
+                        new_rights_ids.append(rights_id)
                         if rights_id not in existing_rights_ids:
                             self.insert_cross_record("records_x_rights", "rights", rights_id, record["record_id"])
+                for eid in existing_rights_ids:
+                    if eid not in new_rights_ids:
+                        self.delete_row_generic("records_x_rights", "rights_id", eid)
 
             if "description" in record:
                 if not isinstance(record["description"], list):
@@ -669,13 +686,18 @@ class DBInterface:
                 existing_access_recs = self.get_multiple_records("records_x_access", "access_id", "record_id",
                                                                  record["record_id"])
                 existing_access_ids = [e["access_id"] for e in existing_access_recs]
+                new_access_ids = []
                 for access in record["access"]:
                     access_id = self.get_single_record_id("access", access)
                     if access_id is None:
                         access_id = self.insert_related_record("access", access)
                     if access_id is not None:
+                        new_access_ids.append(access_id)
                         if access_id not in existing_access_ids:
                             self.insert_cross_record("records_x_access", "access", access_id, record["record_id"])
+                for eid in existing_access_ids:
+                    if eid not in new_access_ids:
+                        self.delete_row_generic("records_x_access", "access_id", eid)
 
             if "geospatial" in record:
                 existing_geospatial_ids = self.get_multiple_records("geospatial", "geospatial_id", "record_id",
