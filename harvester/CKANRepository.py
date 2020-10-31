@@ -313,14 +313,23 @@ class CKANRepository(HarvestRepository):
             # CIOOS
             record["geobboxes"] = [{"southLat": ckan_record['bbox-south-lat'], "westLon": ckan_record['bbox-west-long'],
                                     "northLat": ckan_record['bbox-north-lat'], "eastLon": ckan_record['bbox-east-long']}]
-        elif ('geometry' in ckan_record) and ckan_record['geometry']:
-            # TODO delete if not used
-            record["geospatial"] = ckan_record['geometry']
+        elif ('spatialcoverage1' in ckan_record) and ckan_record['spatialcoverage1']:
+            # Alberta
+            spatialcoverage1 = ckan_record['spatialcoverage1'].split(",")
+            if len(spatialcoverage1) == 4:
+                # Check to make sure we have the right number of pieces because sometimes spatialcoverage1 is a place name
+                # Coordinates are in W N E S order
+                record["geobboxes"] = [
+                    {"southLat": spatialcoverage1[3], "westLon": spatialcoverage1[0],
+                     "northLat": spatialcoverage1[1], "eastLon": spatialcoverage1[2]}]
+            else:
+                # If it isn't split into 4 pieces, use as a place name
+                record["geoplaces"] = [{"place_name": ckan_record['spatialcoverage1']}]
         elif ('spatial' in ckan_record) and ckan_record['spatial']:
-            # CanWin Data Hub, Open Data Canada (Polygon)
+            # CanWin Data Hub, Open Data Canada, plus a few from BC Data Catalogue
             spatial = ckan_record["spatial"]
             if isinstance(ckan_record["spatial"], str):
-                # TODO which repository is this? delete if not used
+                # Open Data Canada
                 spatial = json.loads(ckan_record["spatial"])
             xValues = []
             yValues = []
@@ -340,29 +349,6 @@ class CKANRepository(HarvestRepository):
                              "northLat": max(yValues), "eastLon": max(xValues)})
                 if len(record["geobboxes"]) == 0:
                     record.pop("geobboxes")
-            elif spatial["type"] == "Point":
-                # TODO not used by CanWin; delete if not used by ODC
-                record["geopoints"] = []
-                for coordinates in spatial['coordinates']:
-                    record["geopoints"].append(coordinates)
-        elif('spatialcoverage1' in ckan_record) and ckan_record['spatialcoverage1']:
-            # Alberta
-            spatialcoverage1 = ckan_record['spatialcoverage1'].split(",")
-            if len(spatialcoverage1) == 4:
-                # Check to make sure we have the right number of pieces because sometimes spatialcoverage1 is a place name
-                # Coordinates are in W N E S order
-                record["geobboxes"] = [
-                    {"southLat": spatialcoverage1[3], "westLon": spatialcoverage1[0],
-                     "northLat": spatialcoverage1[1], "eastLon": spatialcoverage1[2]}]
-            else:
-                # If it isn't split into 4 pieces, use as a place name
-                record["geoplaces"] = [{"place_name": ckan_record['spatialcoverage1']}]
-        elif ('extras' in ckan_record) and ckan_record['extras']:
-            # TODO delete if not used
-            for dictionary in ckan_record['extras']:
-                if ('key' in dictionary) and dictionary['key'] == "spatial":
-                    record["geospatial"] = json.loads(dictionary['value'])
-
         if ('ext_spatial' in ckan_record) and ckan_record['ext_spatial']:
             # Quebec, Montreal
             record["geoplaces"] = [{"place_name": ckan_record['ext_spatial']}]
