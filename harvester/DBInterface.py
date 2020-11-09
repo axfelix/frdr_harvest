@@ -691,6 +691,7 @@ class DBInterface:
                         if description_id is None:
                             extras = {"record_id": record["record_id"], "language": "en", "description": description}
                             description_id = self.insert_related_record("descriptions", description_hash, **extras)
+                            modified_upstream = True
                         if description_id is not None:
                             new_description_ids.append(description_id)
                 for eid in existing_description_ids:
@@ -716,6 +717,7 @@ class DBInterface:
                         if description_id is None:
                             extras = {"record_id": record["record_id"], "language": "fr", "description": description}
                             description_id = self.insert_related_record("descriptions", description_hash, **extras)
+                            modified_upstream = True
                         if description_id is not None:
                             new_description_ids.append(description_id)
                 for eid in existing_description_ids:
