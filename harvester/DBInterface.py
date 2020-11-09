@@ -452,6 +452,8 @@ class DBInterface:
         repo_id = repo.repository_id
         metadata_prefix = repo.metadataprefix.lower()
         domain_metadata = repo.domain_metadata
+        modified_upstream = False # Track whether metadata changed since last crawl
+
         if record == None:
             return None
         record["record_id"] = self.get_single_record_id("records", record["identifier"],
@@ -471,8 +473,28 @@ class DBInterface:
                     source_url = record["dc:source"]
 
             if record["record_id"] is None:
+                modified_upstream = True # New record has new metadata
                 record["record_id"] = self.create_new_record(record, source_url, repo_id)
             else:
+                # Compare title, title_fr, pub_date, series, source_url, item_url, local_identifier for changes
+                records = self.get_multiple_records("records", "*", "record_id", record["record_id"])
+                if len(records) == 1:
+                    existing_record = records[0]
+                    if existing_record["title"] != record["title"]:
+                        modified_upstream = True
+                    elif existing_record["title_fr"] != record["title_fr"]:
+                        modified_upstream = True
+                    elif existing_record["pub_date"] != record["pub_date"]:
+                        modified_upstream = True
+                    elif existing_record["series"] != record["series"]:
+                        modified_upstream = True
+                    elif existing_record["source_url"]!=None and  existing_record["source_url"] != source_url:
+                        modified_upstream = True
+                    elif existing_record["item_url"] != record["item_url"]:
+                        modified_upstream = True
+                    elif existing_record["local_identifier"] != record["identifier"]:
+                        modified_upstream = True
+
                 cur.execute(self._prep(
                     """UPDATE records set title=?, title_fr=?, pub_date=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=?, item_url=? 
                     WHERE record_id = ?"""),
@@ -493,15 +515,18 @@ class DBInterface:
                     creator_id = self.get_single_record_id("creators", creator)
                     if creator_id is None:
                         creator_id = self.insert_related_record("creators", creator)
+                        modified_upstream = True
                     if creator_id is not None:
                         new_creator_ids.append(creator_id)
                         if creator_id not in existing_creator_ids:
                             extras = {"is_contributor": 0}
                             self.insert_cross_record("records_x_creators", "creators", creator_id, record["record_id"],
                                                      **extras)
+                            modified_upstream = True
                 for eid in existing_creator_ids:
                     if eid not in new_creator_ids:
                         self.delete_row_generic("records_x_creators", "creator_id", eid)
+                        modified_upstream = True
 
             if "contributor" in record:
                 if not isinstance(record["contributor"], list):
@@ -514,15 +539,18 @@ class DBInterface:
                     creator_id = self.get_single_record_id("creators", creator)
                     if creator_id is None:
                         creator_id = self.insert_related_record("creators", creator)
+                        modified_upstream = True
                     if creator_id is not None:
                         new_creator_ids.append(creator_id)
                         if creator_id not in existing_creator_ids:
                             extras = {"is_contributor": 1}
                             self.insert_cross_record("records_x_creators", "creators", creator_id, record["record_id"],
                                                      **extras)
+                            modified_upstream = True
                 for eid in existing_creator_ids:
                     if eid not in new_creator_ids:
                         self.delete_row_generic("records_x_creators", "creator_id", eid)
+                        modified_upstream = True
 
             if "subject" in record:
                 if not isinstance(record["subject"], list):
@@ -536,13 +564,16 @@ class DBInterface:
                     if subject_id is None:
                         extras = {"language": "en"}
                         subject_id = self.insert_related_record("subjects", subject, **extras)
+                        modified_upstream = True
                     if subject_id is not None:
                         new_subject_ids.append(subject_id)
                         if subject_id not in existing_subject_ids:
                             self.insert_cross_record("records_x_subjects", "subjects", subject_id, record["record_id"])
+                            modified_upstream = True
                 for eid in existing_subject_ids:
                     if eid not in new_subject_ids:
                         self.delete_row_generic("records_x_subjects", "subject_id", eid)
+                        modified_upstream = True
 
             if "subject_fr" in record:
                 if not isinstance(record["subject_fr"], list):
@@ -556,13 +587,16 @@ class DBInterface:
                     if subject_id is None:
                         extras = {"language": "fr"}
                         subject_id = self.insert_related_record("subjects", subject, **extras)
+                        modified_upstream = True
                     if subject_id is not None:
                         new_subject_ids.append(subject_id)
                         if subject_id not in existing_subject_ids:
                             self.insert_cross_record("records_x_subjects", "subjects", subject_id, record["record_id"])
+                            modified_upstream = True
                 for eid in existing_subject_ids:
                     if eid not in new_subject_ids:
                         self.delete_row_generic("records_x_subjects", "subject_id", eid)
+                        modified_upstream = True
 
             if "publisher" in record:
                 if not isinstance(record["publisher"], list):
@@ -575,14 +609,17 @@ class DBInterface:
                     publisher_id = self.get_single_record_id("publishers", publisher)
                     if publisher_id is None:
                         publisher_id = self.insert_related_record("publishers", publisher)
+                        modified_upstream = True
                     if publisher_id is not None:
                         new_publisher_ids.append(publisher_id)
                         if publisher_id not in existing_publisher_ids:
                             self.insert_cross_record("records_x_publishers", "publishers", publisher_id,
                                                      record["record_id"])
+                            modified_upstream = True
                 for eid in existing_publisher_ids:
                     if eid not in new_publisher_ids:
                         self.delete_row_generic("records_x_publishers", "publisher_id", eid)
+                        modified_upstream = True
 
             if "affiliation" in record:
                 if not isinstance(record["affiliation"], list):
@@ -595,14 +632,17 @@ class DBInterface:
                     affiliation_id = self.get_single_record_id("affiliations", affil)
                     if affiliation_id is None:
                         affiliation_id = self.insert_related_record("affiliations", affil)
+                        modified_upstream = True
                     if affiliation_id is not None:
                         new_affiliation_ids.append(affiliation_id)
                         if affiliation_id not in existing_affiliation_ids:
                             self.insert_cross_record("records_x_affiliations", "affiliations", affiliation_id,
                                                      record["record_id"])
+                            modified_upstream = True
                 for eid in existing_affiliation_ids:
                     if eid not in new_affiliation_ids:
                         self.delete_row_generic("records_x_affiliations", "affiliation_id", eid)
+                        modified_upstream = True
 
             if "rights" in record:
                 if not isinstance(record["rights"], list):
@@ -622,13 +662,16 @@ class DBInterface:
                             "record_id"])  # Needed for transition, can be removed once all rights rows have hashes
                         extras = {"rights": rights}
                         rights_id = self.insert_related_record("rights", rights_hash, **extras)
+                        modified_upstream = True
                     if rights_id is not None:
                         new_rights_ids.append(rights_id)
                         if rights_id not in existing_rights_ids:
                             self.insert_cross_record("records_x_rights", "rights", rights_id, record["record_id"])
+                            modified_upstream = True
                 for eid in existing_rights_ids:
                     if eid not in new_rights_ids:
                         self.delete_row_generic("records_x_rights", "rights_id", eid)
+                        modified_upstream = True
 
             if "description" in record:
                 if not isinstance(record["description"], list):
@@ -671,13 +714,16 @@ class DBInterface:
                     if tag_id is None:
                         extras = {"language": "en"}
                         tag_id = self.insert_related_record("tags", tag, **extras)
+                        modified_upstream = True
                     if tag_id is not None:
                         new_tag_ids.append(tag_id)
                         if tag_id not in existing_tag_ids:
                             self.insert_cross_record("records_x_tags", "tags", tag_id, record["record_id"])
+                            modified_upstream = True
                 for eid in existing_tag_ids:
                     if eid not in new_tag_ids:
                         self.delete_row_generic("records_x_tags", "tag_id", eid)
+                        modified_upstream = True
 
             if "tags_fr" in record:
                 if not isinstance(record["tags_fr"], list):
@@ -691,13 +737,16 @@ class DBInterface:
                     if tag_id is None:
                         extras = {"language": "fr"}
                         tag_id = self.insert_related_record("tags", tag, **extras)
+                        modified_upstream = True
                     if tag_id is not None:
                         new_tag_ids.append(tag_id)
                         if tag_id not in existing_tag_ids:
                             self.insert_cross_record("records_x_tags", "tags", tag_id, record["record_id"])
+                            modified_upstream = True
                 for eid in existing_tag_ids:
                     if eid not in new_tag_ids:
                         self.delete_row_generic("records_x_tags", "tag_id", eid)
+                        modified_upstream = True
 
             if "access" in record:
                 if not isinstance(record["access"], list):
@@ -710,13 +759,16 @@ class DBInterface:
                     access_id = self.get_single_record_id("access", access)
                     if access_id is None:
                         access_id = self.insert_related_record("access", access)
+                        modified_upstream = True
                     if access_id is not None:
                         new_access_ids.append(access_id)
                         if access_id not in existing_access_ids:
                             self.insert_cross_record("records_x_access", "access", access_id, record["record_id"])
+                            modified_upstream = True
                 for eid in existing_access_ids:
                     if eid not in new_access_ids:
                         self.delete_row_generic("records_x_access", "access_id", eid)
+                        modified_upstream = True
 
             if "geospatial" in record:
                 existing_geospatial_ids = self.get_multiple_records("geospatial", "geospatial_id", "record_id",
