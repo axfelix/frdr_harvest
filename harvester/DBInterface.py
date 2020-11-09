@@ -676,6 +676,10 @@ class DBInterface:
             if "description" in record:
                 if not isinstance(record["description"], list):
                     record["description"] = [record["description"]]
+                existing_description_recs = self.get_multiple_records("descriptions", "description_id", "record_id",
+                                                              record["record_id"], "and language='en'")
+                existing_description_ids = [e["description_id"] for e in existing_description_recs]
+                new_description_ids = []
                 for description in record["description"]:
                     # Use a hash for lookups so we don't need to maintain a full text index
                     if description is not None:
@@ -686,21 +690,38 @@ class DBInterface:
                             record["record_id"]) + " and language='en'")
                         if description_id is None:
                             extras = {"record_id": record["record_id"], "language": "en", "description": description}
-                            self.insert_related_record("descriptions", description_hash, **extras)
+                            description_id = self.insert_related_record("descriptions", description_hash, **extras)
+                        if description_id is not None:
+                            new_description_ids.append(description_id)
+                for eid in existing_description_ids:
+                    if eid not in new_description_ids:
+                        self.delete_row_generic("descriptions", "description_id", eid)
+                        modified_upstream = True
 
             if "description_fr" in record:
                 if not isinstance(record["description_fr"], list):
                     record["description_fr"] = [record["description_fr"]]
+                existing_description_recs = self.get_multiple_records("descriptions", "description_id", "record_id",
+                                                                      record["record_id"], "and language='fr'")
+                existing_description_ids = [e["description_id"] for e in existing_description_recs]
+                new_description_ids = []
                 for description in record["description_fr"]:
                     # Use a hash for lookups so we don't need to maintain a full text index
-                    sha1 = hashlib.sha1()
-                    sha1.update(description.encode('utf-8'))
-                    description_hash = sha1.hexdigest()
-                    description_id = self.get_single_record_id("descriptions", description_hash, "and record_id=" + str(
-                        record["record_id"]) + " and language='fr'")
-                    if description_id is None:
-                        extras = {"record_id": record["record_id"], "language": "fr", "description": description}
-                        self.insert_related_record("descriptions", description_hash, **extras)
+                    if description is not None:
+                        sha1 = hashlib.sha1()
+                        sha1.update(description.encode('utf-8'))
+                        description_hash = sha1.hexdigest()
+                        description_id = self.get_single_record_id("descriptions", description_hash, "and record_id=" + str(
+                            record["record_id"]) + " and language='fr'")
+                        if description_id is None:
+                            extras = {"record_id": record["record_id"], "language": "fr", "description": description}
+                            description_id = self.insert_related_record("descriptions", description_hash, **extras)
+                        if description_id is not None:
+                            new_description_ids.append(description_id)
+                for eid in existing_description_ids:
+                    if eid not in new_description_ids:
+                        self.delete_row_generic("descriptions", "description_id", eid)
+                        modified_upstream = True
 
             if "tags" in record:
                 if not isinstance(record["tags"], list):
