@@ -486,33 +486,43 @@ class DBInterface:
                 if not isinstance(record["creator"], list):
                     record["creator"] = [record["creator"]]
                 existing_creator_recs = self.get_multiple_records("records_x_creators", "creator_id", "record_id",
-                                                                  record["record_id"])
+                                                                  record["record_id"], "and is_contributor=0")
                 existing_creator_ids = [e["creator_id"] for e in existing_creator_recs]
+                new_creator_ids = []
                 for creator in record["creator"]:
                     creator_id = self.get_single_record_id("creators", creator)
                     if creator_id is None:
                         creator_id = self.insert_related_record("creators", creator)
                     if creator_id is not None:
+                        new_creator_ids.append(creator_id)
                         if creator_id not in existing_creator_ids:
                             extras = {"is_contributor": 0}
                             self.insert_cross_record("records_x_creators", "creators", creator_id, record["record_id"],
                                                      **extras)
+                for eid in existing_creator_ids:
+                    if eid not in new_creator_ids:
+                        self.delete_row_generic("records_x_creators", "creator_id", eid)
 
             if "contributor" in record:
                 if not isinstance(record["contributor"], list):
                     record["contributor"] = [record["contributor"]]
                 existing_creator_recs = self.get_multiple_records("records_x_creators", "creator_id", "record_id",
-                                                                  record["record_id"])
+                                                                  record["record_id"], "and is_contributor=1")
                 existing_creator_ids = [e["creator_id"] for e in existing_creator_recs]
+                new_creator_ids = []
                 for creator in record["contributor"]:
                     creator_id = self.get_single_record_id("creators", creator)
                     if creator_id is None:
                         creator_id = self.insert_related_record("creators", creator)
                     if creator_id is not None:
+                        new_creator_ids.append(creator_id)
                         if creator_id not in existing_creator_ids:
                             extras = {"is_contributor": 1}
                             self.insert_cross_record("records_x_creators", "creators", creator_id, record["record_id"],
                                                      **extras)
+                for eid in existing_creator_ids:
+                    if eid not in new_creator_ids:
+                        self.delete_row_generic("records_x_creators", "creator_id", eid)
 
             if "subject" in record:
                 if not isinstance(record["subject"], list):
@@ -520,14 +530,19 @@ class DBInterface:
                 existing_subject_recs = self.get_multiple_records("records_x_subjects", "subject_id", "record_id",
                                                                   record["record_id"])
                 existing_subject_ids = [e["subject_id"] for e in existing_subject_recs]
+                new_subject_ids = []
                 for subject in record["subject"]:
                     subject_id = self.get_single_record_id("subjects", subject, "and language='en'")
                     if subject_id is None:
                         extras = {"language": "en"}
                         subject_id = self.insert_related_record("subjects", subject, **extras)
                     if subject_id is not None:
+                        new_subject_ids.append(subject_id)
                         if subject_id not in existing_subject_ids:
                             self.insert_cross_record("records_x_subjects", "subjects", subject_id, record["record_id"])
+                for eid in existing_subject_ids:
+                    if eid not in new_subject_ids:
+                        self.delete_row_generic("records_x_subjects", "subject_id", eid)
 
             if "subject_fr" in record:
                 if not isinstance(record["subject_fr"], list):
@@ -535,14 +550,19 @@ class DBInterface:
                 existing_subject_recs = self.get_multiple_records("records_x_subjects", "subject_id", "record_id",
                                                                   record["record_id"])
                 existing_subject_ids = [e["subject_id"] for e in existing_subject_recs]
+                new_subject_ids = []
                 for subject in record["subject_fr"]:
                     subject_id = self.get_single_record_id("subjects", subject, "and language='fr'")
                     if subject_id is None:
                         extras = {"language": "fr"}
                         subject_id = self.insert_related_record("subjects", subject, **extras)
                     if subject_id is not None:
+                        new_subject_ids.append(subject_id)
                         if subject_id not in existing_subject_ids:
                             self.insert_cross_record("records_x_subjects", "subjects", subject_id, record["record_id"])
+                for eid in existing_subject_ids:
+                    if eid not in new_subject_ids:
+                        self.delete_row_generic("records_x_subjects", "subject_id", eid)
 
             if "publisher" in record:
                 if not isinstance(record["publisher"], list):
@@ -645,14 +665,19 @@ class DBInterface:
                 existing_tag_recs = self.get_multiple_records("records_x_tags", "tag_id", "record_id",
                                                               record["record_id"])
                 existing_tag_ids = [e["tag_id"] for e in existing_tag_recs]
+                new_tag_ids = []
                 for tag in record["tags"]:
                     tag_id = self.get_single_record_id("tags", tag, "and language='en'")
                     if tag_id is None:
                         extras = {"language": "en"}
                         tag_id = self.insert_related_record("tags", tag, **extras)
                     if tag_id is not None:
+                        new_tag_ids.append(tag_id)
                         if tag_id not in existing_tag_ids:
                             self.insert_cross_record("records_x_tags", "tags", tag_id, record["record_id"])
+                for eid in existing_tag_ids:
+                    if eid not in new_tag_ids:
+                        self.delete_row_generic("records_x_tags", "tag_id", eid)
 
             if "tags_fr" in record:
                 if not isinstance(record["tags_fr"], list):
@@ -660,14 +685,19 @@ class DBInterface:
                 existing_tag_recs = self.get_multiple_records("records_x_tags", "tag_id", "record_id",
                                                               record["record_id"])
                 existing_tag_ids = [e["tag_id"] for e in existing_tag_recs]
+                new_tag_ids = []
                 for tag in record["tags_fr"]:
                     tag_id = self.get_single_record_id("tags", tag, "and language='fr'")
                     if tag_id is None:
                         extras = {"language": "fr"}
                         tag_id = self.insert_related_record("tags", tag, **extras)
                     if tag_id is not None:
+                        new_tag_ids.append(tag_id)
                         if tag_id not in existing_tag_ids:
                             self.insert_cross_record("records_x_tags", "tags", tag_id, record["record_id"])
+                for eid in existing_tag_ids:
+                    if eid not in new_tag_ids:
+                        self.delete_row_generic("records_x_tags", "tag_id", eid)
 
             if "access" in record:
                 if not isinstance(record["access"], list):
