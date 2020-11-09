@@ -773,9 +773,7 @@ class DBInterface:
             if "geobboxes" in record:
                 existing_geobboxes = self.get_multiple_records("geobbox", "*", "record_id",
                                                                     record["record_id"])
-                if existing_geobboxes:
-                    self.delete_related_records("geobbox", record["record_id"])
-
+                new_geobboxes = []
                 for geobbox in record["geobboxes"]:
                     # Fill in any missing values
                     if "eastLon" not in geobbox and "westLon" in geobbox:
@@ -790,14 +788,40 @@ class DBInterface:
                     if "westLon" in geobbox and "eastLon" in geobbox and "northLat" in geobbox and "southLat" in geobbox:
                         if geobbox["westLon"] != geobbox["eastLon"] or geobbox["northLat"] != geobbox["southLat"]:
                             # If west/east or north/south don't match, this is a box
-                            extras = {"westLon": geobbox["westLon"], "eastLon": geobbox["eastLon"],
-                                      "northLat": geobbox["northLat"], "southLat": geobbox["southLat"]}
-                            self.insert_related_record("geobbox", record["record_id"], **extras)
+                            new_geobboxes.append(geobbox)
+                            new_geobbox_matches_existing = False
+                            for existing_geobbox in existing_geobboxes:
+                                # Check if new box matches any of the existing boxes
+                                if existing_geobbox["westLon"] == geobbox["westLon"] and \
+                                        existing_geobbox["eastLon"] == geobbox["eastLon"] and \
+                                        existing_geobbox["northLat"] == geobbox["northLat"] and \
+                                        existing_geobbox["southLat"] == geobbox["southLat"]:
+                                    new_geobbox_matches_existing = True
+                                    break
+                            if not new_geobbox_matches_existing:
+                                # If it doesn't already exist, add it
+                                extras = {"westLon": geobbox["westLon"], "eastLon": geobbox["eastLon"],
+                                          "northLat": geobbox["northLat"], "southLat": geobbox["southLat"]}
+                                self.insert_related_record("geobbox", record["record_id"], **extras)
+                                modified_upstream = True
                         else:
                             # If west/east and north/south match, this is a point
                             if "geopoints" not in record:
                                 record["geopoints"] = []
                             record["geopoints"].append({"lat": geobbox["northLat"], "lon": geobbox["westLon"]})
+                # Remove any existing boxes that aren't also in the new boxes
+                for existing_geobbox in existing_geobboxes:
+                    existing_geobbox_matches_new = False
+                    for new_geobbox in new_geobboxes:
+                        if existing_geobbox["westLon"] == geobbox["westLon"] and \
+                                existing_geobbox["eastLon"] == geobbox["eastLon"] and \
+                                existing_geobbox["northLat"] == geobbox["northLat"] and \
+                                existing_geobbox["southLat"] == geobbox["southLat"]:
+                            existing_geobbox_matches_new = True
+                            break
+                    if not existing_geobbox_matches_new:
+                        self.delete_row_generic("geobbox", "geobbox_id", existing_geobbox["geobbox_id"])
+                        modified_upstream = True
 
             if "geopoints" in record:
                 existing_geopoints = self.get_multiple_records("geopoint", "*", "record_id",
