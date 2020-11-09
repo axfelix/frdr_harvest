@@ -770,38 +770,6 @@ class DBInterface:
                         self.delete_row_generic("records_x_access", "access_id", eid)
                         modified_upstream = True
 
-            if "geospatial" in record:
-                existing_geospatial_ids = self.get_multiple_records("geospatial", "geospatial_id", "record_id",
-                                                                    record["record_id"])
-                if not existing_geospatial_ids:
-                    coordinates = record["geospatial"]["coordinates"][0]
-                    if isinstance(coordinates, float):
-                        if len(record["geospatial"]["coordinates"]) == 2:
-                            coordinates = [record["geospatial"]["coordinates"]]
-                    if len(coordinates) == 5:
-                        # Check if this is a sneaky bounding box
-                        lats = []
-                        longs = []
-                        for coordinate_pair in coordinates:
-                            if len(coordinate_pair) == 2:
-                                if coordinate_pair[0] not in lats:
-                                    lats.append(coordinate_pair[0])
-                                if coordinate_pair[1] not in longs:
-                                    longs.append(coordinate_pair[1])
-                        if len(lats) == 2 and len(longs) == 2:
-                            # Remove duplicate point if present
-                            unique_coordinates = []
-                            for coordinate_pair in coordinates:
-                                if coordinate_pair not in unique_coordinates:
-                                    unique_coordinates.append(coordinate_pair)
-                            if len(unique_coordinates) == 4:
-                                coordinates = unique_coordinates
-                    for coordinate_pair in coordinates:
-                        # Write each coordinate pair to geospatial table
-                        if len(coordinate_pair) == 2:
-                            extras = {"record_id": record["record_id"], "lat": coordinate_pair[0], "lon": coordinate_pair[1]}
-                            self.insert_related_record("geospatial", record["geospatial"]["type"], **extras)
-
             if "geobboxes" in record:
                 existing_geobboxes = self.get_multiple_records("geobbox", "*", "record_id",
                                                                     record["record_id"])
