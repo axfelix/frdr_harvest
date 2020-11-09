@@ -525,7 +525,7 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_creator_ids:
                     if eid not in new_creator_ids:
-                        self.delete_row_generic("records_x_creators", "creator_id", eid)
+                        # FIXME self.delete_row_generic("records_x_creators", "creator_id", eid)
                         modified_upstream = True
 
             if "contributor" in record:
@@ -549,7 +549,7 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_creator_ids:
                     if eid not in new_creator_ids:
-                        self.delete_row_generic("records_x_creators", "creator_id", eid)
+                        # FIXME self.delete_row_generic("records_x_creators", "creator_id", eid)
                         modified_upstream = True
 
             if "subject" in record:
@@ -572,7 +572,7 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_subject_ids:
                     if eid not in new_subject_ids:
-                        self.delete_row_generic("records_x_subjects", "subject_id", eid)
+                        # FIXME self.delete_row_generic("records_x_subjects", "subject_id", eid)
                         modified_upstream = True
 
             if "subject_fr" in record:
@@ -595,7 +595,7 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_subject_ids:
                     if eid not in new_subject_ids:
-                        self.delete_row_generic("records_x_subjects", "subject_id", eid)
+                        # FIXME self.delete_row_generic("records_x_subjects", "subject_id", eid)
                         modified_upstream = True
 
             if "publisher" in record:
@@ -618,7 +618,7 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_publisher_ids:
                     if eid not in new_publisher_ids:
-                        self.delete_row_generic("records_x_publishers", "publisher_id", eid)
+                        # FIXME self.delete_row_generic("records_x_publishers", "publisher_id", eid)
                         modified_upstream = True
 
             if "affiliation" in record:
@@ -641,7 +641,7 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_affiliation_ids:
                     if eid not in new_affiliation_ids:
-                        self.delete_row_generic("records_x_affiliations", "affiliation_id", eid)
+                        # FIXME self.delete_row_generic("records_x_affiliations", "affiliation_id", eid)
                         modified_upstream = True
 
             if "rights" in record:
@@ -670,7 +670,7 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_rights_ids:
                     if eid not in new_rights_ids:
-                        self.delete_row_generic("records_x_rights", "rights_id", eid)
+                        # FIXME self.delete_row_generic("records_x_rights", "rights_id", eid)
                         modified_upstream = True
 
             if "description" in record:
@@ -722,7 +722,7 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_tag_ids:
                     if eid not in new_tag_ids:
-                        self.delete_row_generic("records_x_tags", "tag_id", eid)
+                        # FIXME self.delete_row_generic("records_x_tags", "tag_id", eid)
                         modified_upstream = True
 
             if "tags_fr" in record:
@@ -745,7 +745,7 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_tag_ids:
                     if eid not in new_tag_ids:
-                        self.delete_row_generic("records_x_tags", "tag_id", eid)
+                        # FIXME self.delete_row_generic("records_x_tags", "tag_id", eid)
                         modified_upstream = True
 
             if "access" in record:
@@ -767,7 +767,7 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_access_ids:
                     if eid not in new_access_ids:
-                        self.delete_row_generic("records_x_access", "access_id", eid)
+                        # FIXME self.delete_row_generic("records_x_access", "access_id", eid)
                         modified_upstream = True
 
             if "geobboxes" in record:
