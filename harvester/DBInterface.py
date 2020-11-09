@@ -838,7 +838,7 @@ class DBInterface:
                 existing_geoplace_recs = self.get_multiple_records("records_x_geoplace", "*", "record_id",
                                                               record["record_id"])
                 existing_geoplace_ids = [e["geoplace_id"] for e in existing_geoplace_recs]
-
+                new_geoplace_ids = []
                 for geoplace in record["geoplaces"]:
                     if "country" not in geoplace:
                         geoplace["country"] = ""
@@ -859,26 +859,15 @@ class DBInterface:
                     if geoplace_id is None:
                         geoplace_id = self.insert_related_record("geoplace", geoplace["place_name"], **extras)
                     if geoplace_id is not None:
+                        new_geoplace_ids.append(geoplace_id)
                         if geoplace_id not in existing_geoplace_ids:
                             self.insert_cross_record("records_x_geoplace", "geoplace", geoplace_id, record["record_id"])
 
-                for existing_geoplace_id in existing_geoplace_ids:
-                    existing_geoplace = self.get_multiple_records("geoplace", "*", "geoplace_id", existing_geoplace_id)[0]
-                    match = False
-                    for geoplace in record["geoplaces"]:
-                        # Check if the existing geoplace matches any of the new geoplaces
-                        if existing_geoplace["country"] == geoplace["country"] and \
-                                existing_geoplace["province_state"] == geoplace["province_state"] and \
-                                existing_geoplace["city"] == geoplace["city"] and \
-                                existing_geoplace["other"] == geoplace["other"] and \
-                                existing_geoplace["place_name"] == geoplace["place_name"]:
-                            match = True
-                            break
-                    if not match:
-                        # If it doesn't match, remove it
-                        records_x_geoplace_id = self.get_multiple_records("records_x_geoplace", "records_x_geoplace_id", "record_id", record["record_id"], "and geoplace_id='" + str(existing_geoplace_id) + "'")[0]["records_x_geoplace_id"]
+                for eid in existing_geoplace_ids:
+                    if eid not in new_geoplace_ids:
+                        records_x_geoplace_id = self.get_multiple_records("records_x_geoplace", "records_x_geoplace_id", "record_id", record["record_id"]," and geoplace_id='" + str(eid) + "'")[0]["records_x_geoplace_id"]
                         self.delete_row_generic("records_x_geoplace", "records_x_geoplace_id", records_x_geoplace_id)
-
+                        modified_upstream = True
 
             if "geofiles" in record:
                 existing_geofiles = self.get_multiple_records("geofile", "*", "record_id",
