@@ -816,7 +816,7 @@ class DBInterface:
                                         " and northLat=" + str(geobbox["northLat"]) + " and southLat=" + str(geobbox["southLat"])
                             extras = {"westLon": geobbox["westLon"], "eastLon": geobbox["eastLon"],
                                       "northLat": geobbox["northLat"], "southLat": geobbox["southLat"]}
-                            geobbox_id = self.get_single_record_id("geobbox", "record_id", record["record_id"], extrawhere)
+                            geobbox_id = self.get_single_record_id("geobbox", record["record_id"], extrawhere)
                             if geobbox_id is None:
                                 geobbox_id = self.insert_related_record("geobbox", record["record_id"], **extras)
                                 modified_upstream = True
@@ -842,7 +842,7 @@ class DBInterface:
                     if "lat" in geopoint and "lon" in geopoint:
                         extrawhere = "and lat=" + str(geopoint["lat"]) + " and lon=" + str(geopoint["lon"])
                         extras = {"lat": geopoint["lat"], "lon": geopoint["lon"]}
-                        geopoint_id = self.get_single_record_id("geopoint", "record_id", record["record_id"], extrawhere)
+                        geopoint_id = self.get_single_record_id("geopoint", record["record_id"], extrawhere)
                         if geopoint_id is None:
                             self.insert_related_record("geopoint", record["record_id"], **extras)
                             modified_upstream = True
