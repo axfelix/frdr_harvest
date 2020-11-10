@@ -239,16 +239,16 @@ class DBInterface:
                 return False
 
             try:
-                self.delete_related_records("records_x_access", record['record_id'])
-                self.delete_related_records("records_x_creators", record['record_id'])
-                self.delete_related_records("records_x_publishers", record['record_id'])
-                self.delete_related_records("records_x_rights", record['record_id'])
-                self.delete_related_records("records_x_subjects", record['record_id'])
-                self.delete_related_records("records_x_affiliations", record['record_id'])
-                self.delete_related_records("records_x_tags", record['record_id'])
-                self.delete_related_records("descriptions", record['record_id'])
-                self.delete_related_records("geospatial", record['record_id'])
-                self.delete_related_records("domain_metadata", record['record_id'])
+                self.delete_all_related_records("records_x_access", record['record_id'])
+                self.delete_all_related_records("records_x_creators", record['record_id'])
+                self.delete_all_related_records("records_x_publishers", record['record_id'])
+                self.delete_all_related_records("records_x_rights", record['record_id'])
+                self.delete_all_related_records("records_x_subjects", record['record_id'])
+                self.delete_all_related_records("records_x_affiliations", record['record_id'])
+                self.delete_all_related_records("records_x_tags", record['record_id'])
+                self.delete_all_related_records("descriptions", record['record_id'])
+                self.delete_all_related_records("geospatial", record['record_id'])
+                self.delete_all_related_records("domain_metadata", record['record_id'])
             except:
                 self.logger.error(
                     "Unable to delete related table rows for record {}".format(record['local_identifier']))
@@ -268,15 +268,18 @@ class DBInterface:
                 return False
         return True
 
-    def delete_related_records(self, crosstable, record_id):
+    def delete_all_related_records(self, crosstable, record_id):
         return self.delete_row_generic(crosstable, "record_id", record_id)
 
-    def delete_row_generic(self, tablename, columnname, row_id):
+    def delete_one_related_record(self, crosstable, columnname, row_id, record_id):
+        self.delete_row_generic(crosstable, columnname, row_id, "and record_id="+str(record_id) )
+
+    def delete_row_generic(self, tablename, columnname, row_id, extrawhere=""):
         con = self.getConnection()
         with con:
             cur = self.getCursor(con)
             try:
-                sqlstring = "DELETE from {} where {}=?".format(tablename, columnname)
+                sqlstring = "DELETE from {} where {}=? {}".format(tablename, columnname, extrawhere)
                 cur.execute(self._prep(sqlstring), (row_id,))
             except:
                 return False
@@ -562,7 +565,7 @@ class DBInterface:
                                                      record["record_id"])
                 for eid in existing_publisher_ids:
                     if eid not in new_publisher_ids:
-                        self.delete_row_generic("records_x_publishers", "publisher_id", eid)
+                        self.delete_one_related_record("records_x_publishers", "publisher_id", eid, record["record_id"])
 
             if "affiliation" in record:
                 if not isinstance(record["affiliation"], list):
@@ -582,7 +585,7 @@ class DBInterface:
                                                      record["record_id"])
                 for eid in existing_affiliation_ids:
                     if eid not in new_affiliation_ids:
-                        self.delete_row_generic("records_x_affiliations", "affiliation_id", eid)
+                        self.delete_one_related_record("records_x_affiliations", "affiliation_id", eid, record["record_id"])
 
             if "rights" in record:
                 if not isinstance(record["rights"], list):
@@ -598,7 +601,7 @@ class DBInterface:
                     rights_hash = sha1.hexdigest()
                     rights_id = self.get_single_record_id("rights", rights_hash)
                     if rights_id is None:
-                        self.delete_related_records("records_x_rights", record[
+                        self.delete_all_related_records("records_x_rights", record[
                             "record_id"])  # Needed for transition, can be removed once all rights rows have hashes
                         extras = {"rights": rights}
                         rights_id = self.insert_related_record("rights", rights_hash, **extras)
@@ -608,7 +611,7 @@ class DBInterface:
                             self.insert_cross_record("records_x_rights", "rights", rights_id, record["record_id"])
                 for eid in existing_rights_ids:
                     if eid not in new_rights_ids:
-                        self.delete_row_generic("records_x_rights", "rights_id", eid)
+                        self.delete_one_related_record("records_x_rights", "rights_id", eid, record["record_id"])
 
             if "description" in record:
                 if not isinstance(record["description"], list):
@@ -686,7 +689,7 @@ class DBInterface:
                             self.insert_cross_record("records_x_access", "access", access_id, record["record_id"])
                 for eid in existing_access_ids:
                     if eid not in new_access_ids:
-                        self.delete_row_generic("records_x_access", "access_id", eid)
+                        self.delete_one_related_record("records_x_access", "access_id", eid, record["record_id"])
 
             if "geospatial" in record:
                 existing_geospatial_ids = self.get_multiple_records("geospatial", "geospatial_id", "record_id",
