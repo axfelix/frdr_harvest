@@ -890,15 +890,25 @@ class DBInterface:
                         modified_upstream = True
 
             if "geofiles" in record:
-                existing_geofiles = self.get_multiple_records("geofile", "*", "record_id",
+                existing_geofile_recs = self.get_multiple_records("geofile", "*", "record_id",
                                                                record["record_id"])
-                if existing_geofiles:
-                    self.delete_related_records("geofile", record["record_id"])
-
+                existing_geofile_ids = [e["geofile_id"] for e in existing_geofile_recs]
+                new_geofile_ids = []
                 for geofile in record["geofiles"]:
                     if "filename" in geofile and "uri" in geofile:
+                        extrawhere = "and filename='" + geofile["filename"] + "' and uri='" + geofile["uri"] + "'"
                         extras = {"filename": geofile["filename"], "uri": geofile["uri"]}
-                        self.insert_related_record("geofile", record["record_id"], **extras)
+                        geofile_id = self.get_single_record_id("geofile", record["record_id"], extrawhere)
+                        if geofile_id is None:
+                            geofile_id = self.insert_related_record("geofile", record["record_id"], **extras)
+                            modified_upstream = True
+                        if geofile_id is not None:
+                            new_geofile_ids.append(geofile_id)
+                # Remove any existing files that aren't also in the new files
+                for eid in existing_geofile_ids:
+                    if eid not in new_geofile_ids:
+                        self.delete_row_generic("geofile", "geofile_id", eid)
+                        modified_upstream = True
 
             if len(domain_metadata) > 0:
                 existing_metadata_ids = self.get_multiple_records("domain_metadata", "metadata_id", "record_id",
