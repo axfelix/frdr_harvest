@@ -579,10 +579,11 @@ class DBInterface:
                     if affiliation_id is None:
                         affiliation_id = self.insert_related_record("affiliations", affil)
                     if affiliation_id is not None:
-                        new_affiliation_ids.append(affiliation_id)
-                        if affiliation_id not in existing_affiliation_ids:
+                        if affiliation_id not in existing_affiliation_ids and affiliation_id not in new_affiliation_ids:
                             self.insert_cross_record("records_x_affiliations", "affiliations", affiliation_id,
                                                      record["record_id"])
+                        if affiliation_id not in new_affiliation_ids:
+                            new_affiliation_ids.append(affiliation_id)
                 for eid in existing_affiliation_ids:
                     if eid not in new_affiliation_ids:
                         self.delete_one_related_record("records_x_affiliations", "affiliation_id", eid, record["record_id"])
