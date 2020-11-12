@@ -271,16 +271,17 @@ class DBInterface:
     def delete_all_related_records(self, crosstable, record_id):
         return self.delete_row_generic(crosstable, "record_id", record_id)
 
-    def delete_one_related_record(self, crosstable, columnname, row_id, record_id):
-        self.delete_row_generic(crosstable, columnname, row_id, "and record_id="+str(record_id) )
+    def delete_one_related_record(self, crosstable, column_value, record_id):
+        columnname = self.get_table_value_column(crosstable)
+        self.delete_row_generic(crosstable, columnname, column_value, "and record_id="+str(record_id) )
 
-    def delete_row_generic(self, tablename, columnname, row_id, extrawhere=""):
+    def delete_row_generic(self, tablename, columnname, column_value, extrawhere=""):
         con = self.getConnection()
         with con:
             cur = self.getCursor(con)
             try:
                 sqlstring = "DELETE from {} where {}=? {}".format(tablename, columnname, extrawhere)
-                cur.execute(self._prep(sqlstring), (row_id,))
+                cur.execute(self._prep(sqlstring), (column_value,))
             except:
                 return False
         return True
@@ -565,7 +566,7 @@ class DBInterface:
                                                      record["record_id"])
                 for eid in existing_publisher_ids:
                     if eid not in new_publisher_ids:
-                        self.delete_one_related_record("records_x_publishers", "publisher_id", eid, record["record_id"])
+                        self.delete_one_related_record("records_x_publishers", eid, record["record_id"])
 
             if "affiliation" in record:
                 if not isinstance(record["affiliation"], list):
@@ -586,7 +587,7 @@ class DBInterface:
                             new_affiliation_ids.append(affiliation_id)
                 for eid in existing_affiliation_ids:
                     if eid not in new_affiliation_ids:
-                        self.delete_one_related_record("records_x_affiliations", "affiliation_id", eid, record["record_id"])
+                        self.delete_one_related_record("records_x_affiliations", eid, record["record_id"])
 
             if "rights" in record:
                 if not isinstance(record["rights"], list):
@@ -612,7 +613,7 @@ class DBInterface:
                             self.insert_cross_record("records_x_rights", "rights", rights_id, record["record_id"])
                 for eid in existing_rights_ids:
                     if eid not in new_rights_ids:
-                        self.delete_one_related_record("records_x_rights", "rights_id", eid, record["record_id"])
+                        self.delete_one_related_record("records_x_rights", eid, record["record_id"])
 
             if "description" in record:
                 if not isinstance(record["description"], list):
@@ -690,7 +691,7 @@ class DBInterface:
                             self.insert_cross_record("records_x_access", "access", access_id, record["record_id"])
                 for eid in existing_access_ids:
                     if eid not in new_access_ids:
-                        self.delete_one_related_record("records_x_access", "access_id", eid, record["record_id"])
+                        self.delete_one_related_record("records_x_access", eid, record["record_id"])
 
             if "geospatial" in record:
                 existing_geospatial_ids = self.get_multiple_records("geospatial", "geospatial_id", "record_id",
