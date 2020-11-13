@@ -511,8 +511,9 @@ class DBInterface:
             if "creator" in record:
                 if not isinstance(record["creator"], list):
                     record["creator"] = [record["creator"]]
+                extrawhere = "and is_contributor=0"
                 existing_creator_recs = self.get_multiple_records("records_x_creators", "creator_id", "record_id",
-                                                                  record["record_id"], "and is_contributor=0")
+                                                                  record["record_id"], extrawhere)
                 existing_creator_ids = [e["creator_id"] for e in existing_creator_recs]
                 new_creator_ids = []
                 for creator in record["creator"]:
@@ -529,14 +530,15 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_creator_ids:
                     if eid not in new_creator_ids:
-                        # FIXME self.delete_row_generic("records_x_creators", "creator_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_creators", eid, record["record_id"], extrawhere)
 
             if "contributor" in record:
                 if not isinstance(record["contributor"], list):
                     record["contributor"] = [record["contributor"]]
+                extrawhere = "and is_contributor=1"
                 existing_creator_recs = self.get_multiple_records("records_x_creators", "creator_id", "record_id",
-                                                                  record["record_id"], "and is_contributor=1")
+                                                                  record["record_id"], extrawhere)
                 existing_creator_ids = [e["creator_id"] for e in existing_creator_recs]
                 new_creator_ids = []
                 for creator in record["contributor"]:
@@ -553,8 +555,8 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_creator_ids:
                     if eid not in new_creator_ids:
-                        # FIXME self.delete_row_generic("records_x_creators", "creator_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_creators", eid, record["record_id"], extrawhere)
 
             if "subject" in record:
                 if not isinstance(record["subject"], list):
@@ -576,8 +578,8 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_subject_ids:
                     if eid not in new_subject_ids:
-                        # FIXME self.delete_row_generic("records_x_subjects", "subject_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_subjects", eid, record["record_id"])
 
             if "subject_fr" in record:
                 if not isinstance(record["subject_fr"], list):
@@ -599,8 +601,8 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_subject_ids:
                     if eid not in new_subject_ids:
-                        # FIXME self.delete_row_generic("records_x_subjects", "subject_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_subjects", eid, record["record_id"])
 
             if "publisher" in record:
                 if not isinstance(record["publisher"], list):
@@ -750,8 +752,8 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_tag_ids:
                     if eid not in new_tag_ids:
-                        # FIXME self.delete_row_generic("records_x_tags", "tag_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_tags", eid, record["record_id"])
 
             if "tags_fr" in record:
                 if not isinstance(record["tags_fr"], list):
@@ -773,8 +775,8 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_tag_ids:
                     if eid not in new_tag_ids:
-                        # FIXME self.delete_row_generic("records_x_tags", "tag_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_tags", eid, record["record_id"])
 
             if "access" in record:
                 if not isinstance(record["access"], list):
