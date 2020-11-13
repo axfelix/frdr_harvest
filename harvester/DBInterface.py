@@ -346,23 +346,28 @@ class DBInterface:
             except self.dblayer.IntegrityError as e:
                 self.logger.error("Record insertion problem: {}".format(e))
 
-    def get_multiple_records(self, tablename, columnlist, given_col, given_val, extrawhere=""):
+    def get_multiple_records(self, tablename, columnlist, given_col, given_val, extrawhere="", **kwargs):
         records = []
+        paramlist = {}
+        for key, value in kwargs.items():
+            paramlist[key] = value
+        if len(paramlist) > 0:
+            extrawhere = extrawhere + " and " + "=? and ".join(str(k) for k in list(paramlist.keys())) + "=?"
         sqlstring = "select {} from {} where {}=? {}".format(columnlist, tablename, given_col, extrawhere)
         con = self.getConnection()
         with con:
             cur = self.getCursor(con)
-            cur.execute(self._prep(sqlstring), (given_val,))
+            cur.execute(self._prep(sqlstring), [given_val] + (list(paramlist.values())))
             if cur is not None:
                 records = cur.fetchall()
 
         return records
 
-    def get_single_record_id(self, tablename, val, extrawhere=""):
+    def get_single_record_id(self, tablename, val, extrawhere="", **kwargs):
         returnvalue = None
         idcolumn = self.get_table_id_column(tablename)
         valcolumn = self.get_table_value_column(tablename)
-        records = self.get_multiple_records(tablename, idcolumn, valcolumn, val, extrawhere)
+        records = self.get_multiple_records(tablename, idcolumn, valcolumn, val, extrawhere, **kwargs)
         for record in records:
             returnvalue = int(record[idcolumn])
 
@@ -819,11 +824,9 @@ class DBInterface:
                     if "westLon" in geobbox and "eastLon" in geobbox and "northLat" in geobbox and "southLat" in geobbox:
                         if geobbox["westLon"] != geobbox["eastLon"] or geobbox["northLat"] != geobbox["southLat"]:
                             # If west/east or north/south don't match, this is a box
-                            extrawhere = "and westLon=" + str(geobbox["westLon"]) + " and eastLon=" + str(geobbox["eastLon"]) + \
-                                        " and northLat=" + str(geobbox["northLat"]) + " and southLat=" + str(geobbox["southLat"])
                             extras = {"westLon": geobbox["westLon"], "eastLon": geobbox["eastLon"],
                                       "northLat": geobbox["northLat"], "southLat": geobbox["southLat"]}
-                            geobbox_id = self.get_single_record_id("geobbox", record["record_id"], extrawhere)
+                            geobbox_id = self.get_single_record_id("geobbox", record["record_id"], **extras)
                             if geobbox_id is None:
                                 geobbox_id = self.insert_related_record("geobbox", record["record_id"], **extras)
                                 modified_upstream = True
@@ -847,9 +850,8 @@ class DBInterface:
                 new_geopoint_ids = []
                 for geopoint in record["geopoints"]:
                     if "lat" in geopoint and "lon" in geopoint:
-                        extrawhere = "and lat=" + str(geopoint["lat"]) + " and lon=" + str(geopoint["lon"])
                         extras = {"lat": geopoint["lat"], "lon": geopoint["lon"]}
-                        geopoint_id = self.get_single_record_id("geopoint", record["record_id"], extrawhere)
+                        geopoint_id = self.get_single_record_id("geopoint", record["record_id"], **extras)
                         if geopoint_id is None:
                             self.insert_related_record("geopoint", record["record_id"], **extras)
                             modified_upstream = True
@@ -877,11 +879,9 @@ class DBInterface:
                         geoplace["other"] = ""
                     if "place_name" not in geoplace:
                         geoplace["place_name"] = ""
-                    extrawhere = "and country='" + geoplace["country"] + "' and province_state='" + geoplace["province_state"] +\
-                                 "' and city='" + geoplace["city"] + "' and other='" + geoplace["other"] + "'"
                     extras = {"country": geoplace["country"], "province_state": geoplace["province_state"], \
                               "city": geoplace["city"], "other": geoplace["other"]}
-                    geoplace_id = self.get_single_record_id("geoplace", geoplace["place_name"], extrawhere)
+                    geoplace_id = self.get_single_record_id("geoplace", geoplace["place_name"], **extras)
 
                     if geoplace_id is None:
                         geoplace_id = self.insert_related_record("geoplace", geoplace["place_name"], **extras)
@@ -903,9 +903,8 @@ class DBInterface:
                 new_geofile_ids = []
                 for geofile in record["geofiles"]:
                     if "filename" in geofile and "uri" in geofile:
-                        extrawhere = "and filename='" + geofile["filename"] + "' and uri='" + geofile["uri"] + "'"
                         extras = {"filename": geofile["filename"], "uri": geofile["uri"]}
-                        geofile_id = self.get_single_record_id("geofile", record["record_id"], extrawhere)
+                        geofile_id = self.get_single_record_id("geofile", record["record_id"], **extras)
                         if geofile_id is None:
                             geofile_id = self.insert_related_record("geofile", record["record_id"], **extras)
                             modified_upstream = True
@@ -918,6 +917,7 @@ class DBInterface:
                         modified_upstream = True
 
             if len(domain_metadata) > 0:
+                # TODO Add deletion for domain metadata
                 existing_metadata_ids = self.get_multiple_records("domain_metadata", "metadata_id", "record_id",
                                                                   record["record_id"])
                 if not existing_metadata_ids:
