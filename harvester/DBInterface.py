@@ -135,7 +135,7 @@ class DBInterface:
                 # Existing repo
                 try:
                     self.logger.debug("This repo already exists in the database; updating")
-                    cur.execute(self._prep("""UPDATE repositories 
+                    cur.execute(self._prep("""UPDATE repositories
                         set repository_url=?, repository_set=?, repository_name=?, repository_type=?, repository_thumbnail=?, last_crawl_timestamp=?, item_url_pattern=?,enabled=?,
                         abort_after_numerrors=?,max_records_updated_per_run=?,update_log_after_numitems=?,record_refresh_days=?,repo_refresh_days=?,homepage_url=?,repo_oai_name=?
                         WHERE repository_id=?"""), (
@@ -153,9 +153,9 @@ class DBInterface:
                 try:
                     self.logger.debug("This repo does not exist in the database; adding")
                     if self.dbtype == "postgres":
-                        cur.execute(self._prep("""INSERT INTO repositories 
+                        cur.execute(self._prep("""INSERT INTO repositories
                             (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
-                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url,repo_oai_name) 
+                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url,repo_oai_name)
                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING repository_id"""), (
                             self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail,
                             time.time(), self.item_url_pattern,
@@ -165,9 +165,9 @@ class DBInterface:
                         self.repo_id = int(cur.fetchone()['repository_id'])
 
                     if self.dbtype == "sqlite":
-                        cur.execute(self._prep("""INSERT INTO repositories 
+                        cur.execute(self._prep("""INSERT INTO repositories
                             (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
-                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url,repo_oai_name) 
+                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url,repo_oai_name)
                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""), (
                             self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail,
                             time.time(), self.item_url_pattern,
@@ -239,16 +239,16 @@ class DBInterface:
                 return False
 
             try:
-                self.delete_related_records("records_x_access", record['record_id'])
-                self.delete_related_records("records_x_creators", record['record_id'])
-                self.delete_related_records("records_x_publishers", record['record_id'])
-                self.delete_related_records("records_x_rights", record['record_id'])
-                self.delete_related_records("records_x_subjects", record['record_id'])
-                self.delete_related_records("records_x_affiliations", record['record_id'])
-                self.delete_related_records("records_x_tags", record['record_id'])
-                self.delete_related_records("descriptions", record['record_id'])
-                self.delete_related_records("geospatial", record['record_id'])
-                self.delete_related_records("domain_metadata", record['record_id'])
+                self.delete_all_related_records("records_x_access", record['record_id'])
+                self.delete_all_related_records("records_x_creators", record['record_id'])
+                self.delete_all_related_records("records_x_publishers", record['record_id'])
+                self.delete_all_related_records("records_x_rights", record['record_id'])
+                self.delete_all_related_records("records_x_subjects", record['record_id'])
+                self.delete_all_related_records("records_x_affiliations", record['record_id'])
+                self.delete_all_related_records("records_x_tags", record['record_id'])
+                self.delete_all_related_records("descriptions", record['record_id'])
+                self.delete_all_related_records("geospatial", record['record_id'])
+                self.delete_all_related_records("domain_metadata", record['record_id'])
             except:
                 self.logger.error(
                     "Unable to delete related table rows for record {}".format(record['local_identifier']))
@@ -268,16 +268,20 @@ class DBInterface:
                 return False
         return True
 
-    def delete_related_records(self, crosstable, record_id):
+    def delete_all_related_records(self, crosstable, record_id):
         return self.delete_row_generic(crosstable, "record_id", record_id)
 
-    def delete_row_generic(self, tablename, columnname, row_id):
+    def delete_one_related_record(self, crosstable, column_value, record_id):
+        columnname = self.get_table_value_column(crosstable)
+        self.delete_row_generic(crosstable, columnname, column_value, "and record_id="+str(record_id) )
+
+    def delete_row_generic(self, tablename, columnname, column_value, extrawhere=""):
         con = self.getConnection()
         with con:
             cur = self.getCursor(con)
             try:
-                sqlstring = "DELETE from {} where {}=?".format(tablename, columnname)
-                cur.execute(self._prep(sqlstring), (row_id,))
+                sqlstring = "DELETE from {} where {}=? {}".format(tablename, columnname, extrawhere)
+                cur.execute(self._prep(sqlstring), (column_value,))
             except:
                 return False
         return True
@@ -342,23 +346,28 @@ class DBInterface:
             except self.dblayer.IntegrityError as e:
                 self.logger.error("Record insertion problem: {}".format(e))
 
-    def get_multiple_records(self, tablename, columnlist, given_col, given_val, extrawhere=""):
+    def get_multiple_records(self, tablename, columnlist, given_col, given_val, extrawhere="", **kwargs):
         records = []
+        paramlist = {}
+        for key, value in kwargs.items():
+            paramlist[key] = value
+        if len(paramlist) > 0:
+            extrawhere = extrawhere + " and " + "=? and ".join(str(k) for k in list(paramlist.keys())) + "=?"
         sqlstring = "select {} from {} where {}=? {}".format(columnlist, tablename, given_col, extrawhere)
         con = self.getConnection()
         with con:
             cur = self.getCursor(con)
-            cur.execute(self._prep(sqlstring), (given_val,))
+            cur.execute(self._prep(sqlstring), [given_val] + (list(paramlist.values())))
             if cur is not None:
                 records = cur.fetchall()
 
         return records
 
-    def get_single_record_id(self, tablename, val, extrawhere=""):
+    def get_single_record_id(self, tablename, val, extrawhere="", **kwargs):
         returnvalue = None
         idcolumn = self.get_table_id_column(tablename)
         valcolumn = self.get_table_value_column(tablename)
-        records = self.get_multiple_records(tablename, idcolumn, valcolumn, val, extrawhere)
+        records = self.get_multiple_records(tablename, idcolumn, valcolumn, val, extrawhere, **kwargs)
         for record in records:
             returnvalue = int(record[idcolumn])
 
@@ -431,14 +440,14 @@ class DBInterface:
             try:
                 if self.dbtype == "postgres":
                     cur.execute(self._prep(
-                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
+                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id)
                         VALUES(?,?,?,?,?,?,?,?,?,?) RETURNING record_id"""),
                         (rec["title"], rec["title_fr"], rec["pub_date"],  rec["series"], time.time(), source_url, 0,
                          rec["identifier"], rec["item_url"], repo_id))
                     returnvalue = int(cur.fetchone()['record_id'])
                 if self.dbtype == "sqlite":
                     cur.execute(self._prep(
-                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
+                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id)
                         VALUES(?,?,?,?,?,?,?,?,?,?)"""),
                         (rec["title"], rec["title_fr"], rec["pub_date"], rec["series"], time.time(), source_url, 0,
                          rec["identifier"], rec["item_url"], repo_id))
@@ -496,7 +505,7 @@ class DBInterface:
                         modified_upstream = True
 
                 cur.execute(self._prep(
-                    """UPDATE records set title=?, title_fr=?, pub_date=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=?, item_url=? 
+                    """UPDATE records set title=?, title_fr=?, pub_date=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=?, item_url=?
                     WHERE record_id = ?"""),
                     (record["title"], record["title_fr"], record["pub_date"], record["series"], time.time(),
                      source_url, 0, record["identifier"], record["item_url"], record["record_id"]))
@@ -507,8 +516,9 @@ class DBInterface:
             if "creator" in record:
                 if not isinstance(record["creator"], list):
                     record["creator"] = [record["creator"]]
+                extrawhere = "and is_contributor=0"
                 existing_creator_recs = self.get_multiple_records("records_x_creators", "creator_id", "record_id",
-                                                                  record["record_id"], "and is_contributor=0")
+                                                                  record["record_id"], extrawhere)
                 existing_creator_ids = [e["creator_id"] for e in existing_creator_recs]
                 new_creator_ids = []
                 for creator in record["creator"]:
@@ -525,14 +535,15 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_creator_ids:
                     if eid not in new_creator_ids:
-                        # FIXME self.delete_row_generic("records_x_creators", "creator_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_creators", eid, record["record_id"], extrawhere)
 
             if "contributor" in record:
                 if not isinstance(record["contributor"], list):
                     record["contributor"] = [record["contributor"]]
+                extrawhere = "and is_contributor=1"
                 existing_creator_recs = self.get_multiple_records("records_x_creators", "creator_id", "record_id",
-                                                                  record["record_id"], "and is_contributor=1")
+                                                                  record["record_id"], extrawhere)
                 existing_creator_ids = [e["creator_id"] for e in existing_creator_recs]
                 new_creator_ids = []
                 for creator in record["contributor"]:
@@ -549,8 +560,8 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_creator_ids:
                     if eid not in new_creator_ids:
-                        # FIXME self.delete_row_generic("records_x_creators", "creator_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_creators", eid, record["record_id"], extrawhere)
 
             if "subject" in record:
                 if not isinstance(record["subject"], list):
@@ -572,8 +583,8 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_subject_ids:
                     if eid not in new_subject_ids:
-                        # FIXME self.delete_row_generic("records_x_subjects", "subject_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_subjects", eid, record["record_id"])
 
             if "subject_fr" in record:
                 if not isinstance(record["subject_fr"], list):
@@ -595,8 +606,8 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_subject_ids:
                     if eid not in new_subject_ids:
-                        # FIXME self.delete_row_generic("records_x_subjects", "subject_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_subjects", eid, record["record_id"])
 
             if "publisher" in record:
                 if not isinstance(record["publisher"], list):
@@ -618,8 +629,8 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_publisher_ids:
                     if eid not in new_publisher_ids:
-                        # FIXME self.delete_row_generic("records_x_publishers", "publisher_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_publishers", eid, record["record_id"])
 
             if "affiliation" in record:
                 if not isinstance(record["affiliation"], list):
@@ -634,15 +645,16 @@ class DBInterface:
                         affiliation_id = self.insert_related_record("affiliations", affil)
                         modified_upstream = True
                     if affiliation_id is not None:
-                        new_affiliation_ids.append(affiliation_id)
-                        if affiliation_id not in existing_affiliation_ids:
+                        if affiliation_id not in existing_affiliation_ids and affiliation_id not in new_affiliation_ids:
                             self.insert_cross_record("records_x_affiliations", "affiliations", affiliation_id,
                                                      record["record_id"])
                             modified_upstream = True
+                        if affiliation_id not in new_affiliation_ids:
+                            new_affiliation_ids.append(affiliation_id)
                 for eid in existing_affiliation_ids:
                     if eid not in new_affiliation_ids:
-                        # FIXME self.delete_row_generic("records_x_affiliations", "affiliation_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_affiliations", eid, record["record_id"])
 
             if "rights" in record:
                 if not isinstance(record["rights"], list):
@@ -658,7 +670,7 @@ class DBInterface:
                     rights_hash = sha1.hexdigest()
                     rights_id = self.get_single_record_id("rights", rights_hash)
                     if rights_id is None:
-                        self.delete_related_records("records_x_rights", record[
+                        self.delete_all_related_records("records_x_rights", record[
                             "record_id"])  # Needed for transition, can be removed once all rights rows have hashes
                         extras = {"rights": rights}
                         rights_id = self.insert_related_record("rights", rights_hash, **extras)
@@ -670,8 +682,8 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_rights_ids:
                     if eid not in new_rights_ids:
-                        # FIXME self.delete_row_generic("records_x_rights", "rights_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_rights", eid, record["record_id"])
 
             if "description" in record:
                 if not isinstance(record["description"], list):
@@ -745,8 +757,8 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_tag_ids:
                     if eid not in new_tag_ids:
-                        # FIXME self.delete_row_generic("records_x_tags", "tag_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_tags", eid, record["record_id"])
 
             if "tags_fr" in record:
                 if not isinstance(record["tags_fr"], list):
@@ -768,8 +780,8 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_tag_ids:
                     if eid not in new_tag_ids:
-                        # FIXME self.delete_row_generic("records_x_tags", "tag_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_tags", eid, record["record_id"])
 
             if "access" in record:
                 if not isinstance(record["access"], list):
@@ -790,8 +802,8 @@ class DBInterface:
                             modified_upstream = True
                 for eid in existing_access_ids:
                     if eid not in new_access_ids:
-                        # FIXME self.delete_row_generic("records_x_access", "access_id", eid)
                         modified_upstream = True
+                        self.delete_one_related_record("records_x_access", eid, record["record_id"])
 
             if "geobboxes" in record:
                 existing_geobbox_recs = self.get_multiple_records("geobbox", "*", "record_id",
@@ -812,11 +824,9 @@ class DBInterface:
                     if "westLon" in geobbox and "eastLon" in geobbox and "northLat" in geobbox and "southLat" in geobbox:
                         if geobbox["westLon"] != geobbox["eastLon"] or geobbox["northLat"] != geobbox["southLat"]:
                             # If west/east or north/south don't match, this is a box
-                            extrawhere = "and westLon=" + str(geobbox["westLon"]) + " and eastLon=" + str(geobbox["eastLon"]) + \
-                                        " and northLat=" + str(geobbox["northLat"]) + " and southLat=" + str(geobbox["southLat"])
                             extras = {"westLon": geobbox["westLon"], "eastLon": geobbox["eastLon"],
                                       "northLat": geobbox["northLat"], "southLat": geobbox["southLat"]}
-                            geobbox_id = self.get_single_record_id("geobbox", record["record_id"], extrawhere)
+                            geobbox_id = self.get_single_record_id("geobbox", record["record_id"], **extras)
                             if geobbox_id is None:
                                 geobbox_id = self.insert_related_record("geobbox", record["record_id"], **extras)
                                 modified_upstream = True
@@ -840,9 +850,8 @@ class DBInterface:
                 new_geopoint_ids = []
                 for geopoint in record["geopoints"]:
                     if "lat" in geopoint and "lon" in geopoint:
-                        extrawhere = "and lat=" + str(geopoint["lat"]) + " and lon=" + str(geopoint["lon"])
                         extras = {"lat": geopoint["lat"], "lon": geopoint["lon"]}
-                        geopoint_id = self.get_single_record_id("geopoint", record["record_id"], extrawhere)
+                        geopoint_id = self.get_single_record_id("geopoint", record["record_id"], **extras)
                         if geopoint_id is None:
                             self.insert_related_record("geopoint", record["record_id"], **extras)
                             modified_upstream = True
@@ -870,11 +879,9 @@ class DBInterface:
                         geoplace["other"] = ""
                     if "place_name" not in geoplace:
                         geoplace["place_name"] = ""
-                    extrawhere = "and country='" + geoplace["country"] + "' and province_state='" + geoplace["province_state"] +\
-                                 "' and city='" + geoplace["city"] + "' and other='" + geoplace["other"] + "'"
                     extras = {"country": geoplace["country"], "province_state": geoplace["province_state"], \
                               "city": geoplace["city"], "other": geoplace["other"]}
-                    geoplace_id = self.get_single_record_id("geoplace", geoplace["place_name"], extrawhere)
+                    geoplace_id = self.get_single_record_id("geoplace", geoplace["place_name"], **extras)
 
                     if geoplace_id is None:
                         geoplace_id = self.insert_related_record("geoplace", geoplace["place_name"], **extras)
@@ -896,9 +903,8 @@ class DBInterface:
                 new_geofile_ids = []
                 for geofile in record["geofiles"]:
                     if "filename" in geofile and "uri" in geofile:
-                        extrawhere = "and filename='" + geofile["filename"] + "' and uri='" + geofile["uri"] + "'"
                         extras = {"filename": geofile["filename"], "uri": geofile["uri"]}
-                        geofile_id = self.get_single_record_id("geofile", record["record_id"], extrawhere)
+                        geofile_id = self.get_single_record_id("geofile", record["record_id"], **extras)
                         if geofile_id is None:
                             geofile_id = self.insert_related_record("geofile", record["record_id"], **extras)
                             modified_upstream = True
@@ -911,6 +917,7 @@ class DBInterface:
                         modified_upstream = True
 
             if len(domain_metadata) > 0:
+                # TODO Add deletion for domain metadata
                 existing_metadata_ids = self.get_multiple_records("domain_metadata", "metadata_id", "record_id",
                                                                   record["record_id"])
                 if not existing_metadata_ids:
@@ -935,7 +942,7 @@ class DBInterface:
         records = []
         with con:
             cur = self.getCursor(con)
-            cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.series, recs.modified_timestamp, 
+            cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.series, recs.modified_timestamp,
                 recs.local_identifier, recs.item_url, repos.repository_id, repos.repository_type
                 FROM records recs, repositories repos
                 where recs.repository_id = repos.repository_id and recs.modified_timestamp < ? and repos.repository_id = ? and recs.deleted = 0
