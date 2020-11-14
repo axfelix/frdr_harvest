@@ -440,15 +440,15 @@ class DBInterface:
             try:
                 if self.dbtype == "postgres":
                     cur.execute(self._prep(
-                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id)
-                        VALUES(?,?,?,?,?,?,?,?,?,?) RETURNING record_id"""),
+                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id, upstream_modified_timestamp)
+                        VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING record_id"""),
                         (rec["title"], rec["title_fr"], rec["pub_date"],  rec["series"], time.time(), source_url, 0,
                          rec["identifier"], rec["item_url"], repo_id))
                     returnvalue = int(cur.fetchone()['record_id'])
                 if self.dbtype == "sqlite":
                     cur.execute(self._prep(
-                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id)
-                        VALUES(?,?,?,?,?,?,?,?,?,?)"""),
+                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id, upstream_modified_timestamp)
+                        VALUES(?,?,?,?,?,?,?,?,?,?,?)"""),
                         (rec["title"], rec["title_fr"], rec["pub_date"], rec["series"], time.time(), source_url, 0,
                          rec["identifier"], rec["item_url"], repo_id))
                     returnvalue = int(cur.lastrowid)
@@ -503,12 +503,11 @@ class DBInterface:
                         modified_upstream = True
                     elif existing_record["local_identifier"] != record["identifier"]:
                         modified_upstream = True
-
                 cur.execute(self._prep(
-                    """UPDATE records set title=?, title_fr=?, pub_date=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=?, item_url=?
+                    """UPDATE records set title=?, title_fr=?, pub_date=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=?, item_url=?, upstream_modified_timestamp=?
                     WHERE record_id = ?"""),
                     (record["title"], record["title_fr"], record["pub_date"], record["series"], time.time(),
-                     source_url, 0, record["identifier"], record["item_url"], record["record_id"]))
+                     source_url, 0, record["identifier"], record["item_url"], record["record_id"], record["upstream_modified_timestamp"]))
 
             if record["record_id"] is None:
                 return None
@@ -935,6 +934,9 @@ class DBInterface:
                                       "field_value": field_value}
                             self.insert_related_record("domain_metadata", schema_id, **extras)
 
+            if modified_upstream:
+                self.update_record_upstream_modified(record)
+
         return None
 
     def get_stale_records(self, stale_timestamp, repo_id, max_records_updated_per_run):
@@ -979,3 +981,16 @@ class DBInterface:
                     self.logger.error("Error creating record header: {}".format(e))
 
         return None
+
+    def update_record_upstream_modified(self, record):
+        con = self.getConnection()
+        with con:
+            cur = self.getCursor(con)
+            try:
+                cur.execute(self._prep("UPDATE records set upstream_modified_timestamp = ? where record_id = ?"),
+                            (time.time(), record['record_id']))
+            except:
+                self.logger.error("Unable to update modified_timestamp for record id {}".format(record['record_id']))
+                return False
+
+        return True
