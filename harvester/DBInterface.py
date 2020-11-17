@@ -4,6 +4,7 @@ import sys
 import hashlib
 import json
 import re
+import pdb
 
 
 class DBInterface:
@@ -37,7 +38,8 @@ class DBInterface:
 
             # This table must always exist
             cur.execute(
-                "create table if not exists settings (setting_id INTEGER PRIMARY KEY NOT NULL, setting_name TEXT, setting_value TEXT)")
+                "create table if not exists "
+                "settings (setting_id INTEGER PRIMARY KEY NOT NULL, setting_name TEXT, setting_value TEXT)")
 
             # Determine if the database schema needs to be updated
             dbversion = self.get_setting("dbversion")
@@ -278,8 +280,10 @@ class DBInterface:
         return self.delete_row_generic(crosstable, "record_id", record_id)
 
     def delete_one_related_record(self, crosstable, column_value, record_id):
+        pdb.set_trace()
         columnname = self.get_table_value_column(crosstable)
-        self.delete_row_generic(crosstable, columnname, column_value, "and record_id="+str(record_id) )
+        pdb.set_trace()
+        self.delete_row_generic(crosstable, columnname, column_value, "and record_id="+str(record_id))
 
     def delete_row_generic(self, tablename, columnname, column_value, extrawhere=""):
         con = self.getConnection()
@@ -287,7 +291,7 @@ class DBInterface:
             cur = self.getCursor(con)
             try:
                 sqlstring = "DELETE from {} where {}=? {}".format(tablename, columnname, extrawhere)
-                cur.execute(self._prep(sqlstring), (column_value,))
+                cur.execute(self._prep(sqlstring), column_value)
             except:
                 return False
         return True
@@ -505,7 +509,7 @@ class DBInterface:
                         modified_upstream = True
                     elif existing_record["series"] != record["series"]:
                         modified_upstream = True
-                    elif existing_record["source_url"]!=None and  existing_record["source_url"] != source_url:
+                    elif existing_record["source_url"] is None and existing_record["source_url"] != source_url:
                         modified_upstream = True
                     elif existing_record["item_url"] != record["item_url"]:
                         modified_upstream = True
@@ -513,10 +517,10 @@ class DBInterface:
                         modified_upstream = True
                 cur.execute(self._prep(
                     """UPDATE records set title=?, title_fr=?, pub_date=?, series=?, modified_timestamp=?, source_url=?, 
-                    deleted=?, local_identifier=?, item_url=?, upstream_modified_timestamp=?
+                    deleted=?, local_identifier=?, item_url=?
                     WHERE record_id = ?"""),
                     (record["title"], record["title_fr"], record["pub_date"], record["series"], time.time(),
-                     source_url, 0, record["identifier"], record["item_url"], record["record_id"], time.time()))
+                     source_url, 0, record["identifier"], record["item_url"], record["record_id"]))
 
             if record["record_id"] is None:
                 return None
@@ -643,8 +647,8 @@ class DBInterface:
             if "affiliation" in record:
                 if not isinstance(record["affiliation"], list):
                     record["affiliation"] = [record["affiliation"]]
-                existing_affiliation_recs = self.get_multiple_records("records_x_affiliations", "affiliation_id", "record_id",
-                                                                    record["record_id"])
+                existing_affiliation_recs = self.get_multiple_records("records_x_affiliations", "affiliation_id",
+                                                                      "record_id", record["record_id"])
                 existing_affiliation_ids = [e["affiliation_id"] for e in existing_affiliation_recs]
                 new_affiliation_ids = []
                 for affil in record["affiliation"]:
@@ -697,7 +701,7 @@ class DBInterface:
                 if not isinstance(record["description"], list):
                     record["description"] = [record["description"]]
                 existing_description_recs = self.get_multiple_records("descriptions", "description_id", "record_id",
-                                                              record["record_id"], "and language='en'")
+                                                                      record["record_id"], "and language='en'")
                 existing_description_ids = [e["description_id"] for e in existing_description_recs]
                 new_description_ids = []
                 for description in record["description"]:
@@ -706,8 +710,8 @@ class DBInterface:
                         sha1 = hashlib.sha1()
                         sha1.update(description.encode('utf-8'))
                         description_hash = sha1.hexdigest()
-                        description_id = self.get_single_record_id("descriptions", description_hash, "and record_id=" + str(
-                            record["record_id"]) + " and language='en'")
+                        description_id = self.get_single_record_id("descriptions", description_hash, "and record_id=" +
+                                                                   str(record["record_id"]) + " and language='en'")
                         if description_id is None:
                             extras = {"record_id": record["record_id"], "language": "en", "description": description}
                             description_id = self.insert_related_record("descriptions", description_hash, **extras)
@@ -732,8 +736,8 @@ class DBInterface:
                         sha1 = hashlib.sha1()
                         sha1.update(description.encode('utf-8'))
                         description_hash = sha1.hexdigest()
-                        description_id = self.get_single_record_id("descriptions", description_hash, "and record_id=" + str(
-                            record["record_id"]) + " and language='fr'")
+                        description_id = self.get_single_record_id("descriptions", description_hash, "and record_id=" +
+                                                                   str(record["record_id"]) + " and language='fr'")
                         if description_id is None:
                             extras = {"record_id": record["record_id"], "language": "fr", "description": description}
                             description_id = self.insert_related_record("descriptions", description_hash, **extras)
@@ -887,8 +891,8 @@ class DBInterface:
                         geoplace["other"] = ""
                     if "place_name" not in geoplace:
                         geoplace["place_name"] = ""
-                    extras = {"country": geoplace["country"], "province_state": geoplace["province_state"], \
-                              "city": geoplace["city"], "other": geoplace["other"]}
+                    extras = {"country": geoplace["country"], "province_state": geoplace["province_state"]
+                              , "city": geoplace["city"], "other": geoplace["other"]}
                     geoplace_id = self.get_single_record_id("geoplace", geoplace["place_name"], **extras)
 
                     if geoplace_id is None:
@@ -900,7 +904,10 @@ class DBInterface:
 
                 for eid in existing_geoplace_ids:
                     if eid not in new_geoplace_ids:
-                        records_x_geoplace_id = self.get_multiple_records("records_x_geoplace", "records_x_geoplace_id", "record_id", record["record_id"]," and geoplace_id='" + str(eid) + "'")[0]["records_x_geoplace_id"]
+                        records_x_geoplace_id = \
+                            self.get_multiple_records("records_x_geoplace", "records_x_geoplace_id", "record_id",
+                                                      record["record_id"], " and geoplace_id='"
+                                                      + str(eid) + "'")[0]["records_x_geoplace_id"]
                         self.delete_row_generic("records_x_geoplace", "records_x_geoplace_id", records_x_geoplace_id)
                         modified_upstream = True
 
@@ -953,10 +960,12 @@ class DBInterface:
         records = []
         with con:
             cur = self.getCursor(con)
-            cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.series, recs.modified_timestamp,
-                recs.local_identifier, recs.item_url, repos.repository_id, repos.repository_type
+            cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.series
+                , recs.modified_timestamp, recs.local_identifier, recs.item_url
+                , repos.repository_id, repos.repository_type
                 FROM records recs, repositories repos
-                where recs.repository_id = repos.repository_id and recs.modified_timestamp < ? and repos.repository_id = ? and recs.deleted = 0
+                where recs.repository_id = repos.repository_id and recs.modified_timestamp < ? 
+                and repos.repository_id = ? and recs.deleted = 0
                 LIMIT ?"""), (stale_timestamp, repo_id, max_records_updated_per_run))
             if cur is not None:
                 records = cur.fetchall()
@@ -984,8 +993,8 @@ class DBInterface:
                 cur = self.getCursor(con)
                 try:
                     cur.execute(self._prep(
-                        "INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, local_identifier,"
-                        " item_url, repository_id, upstream_modified_timestamp) VALUES(?,?,?,?,?,?,?,?,?)"),
+                        "INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, local_identifier"
+                        ", item_url, repository_id, upstream_modified_timestamp) VALUES(?,?,?,?,?,?,?,?,?)"),
                         ("", "", "", "", 0, local_identifier, "", repo_id, time.time()))
                 except self.dblayer.IntegrityError as e:
                     self.logger.error("Error creating record header: {}".format(e))
@@ -997,10 +1006,10 @@ class DBInterface:
         with con:
             cur = self.getCursor(con)
             try:
-                cur.execute(self._prep("UPDATE records set upstream_modified_timestamp = ? where record_id = ?"),
-                            (time.time(), record['record_id']))
-            except:
-                self.logger.error("Unable to update modified_timestamp for record id {}".format(record['record_id']))
-                return False
+                cur.execute(self._prep("UPDATE records set upstream_modified_timestamp = ? where record_id = ?")
+                            , (time.time(), record['record_id']))
+            except self.dblayer.IntegrityError as e:
+                self.logger.error("Unable to update modified_timestamp for record id ? dur to error creating"
+                                  " record header: ?", record['record_id'], e)
 
-        return True
+        return None
