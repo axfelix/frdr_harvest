@@ -440,17 +440,19 @@ class DBInterface:
             try:
                 if self.dbtype == "postgres":
                     cur.execute(self._prep(
-                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id, upstream_modified_timestamp)
+                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, 
+                        deleted, local_identifier, item_url, repository_id, upstream_modified_timestamp)
                         VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING record_id"""),
                         (rec["title"], rec["title_fr"], rec["pub_date"],  rec["series"], time.time(), source_url, 0,
-                         rec["identifier"], rec["item_url"], repo_id))
+                         rec["identifier"], rec["item_url"], repo_id),time.time())
                     returnvalue = int(cur.fetchone()['record_id'])
                 if self.dbtype == "sqlite":
                     cur.execute(self._prep(
-                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id, upstream_modified_timestamp)
+                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, 
+                        deleted, local_identifier, item_url, repository_id, upstream_modified_timestamp)
                         VALUES(?,?,?,?,?,?,?,?,?,?,?)"""),
                         (rec["title"], rec["title_fr"], rec["pub_date"], rec["series"], time.time(), source_url, 0,
-                         rec["identifier"], rec["item_url"], repo_id))
+                         rec["identifier"], rec["item_url"], repo_id, time.time()))
                     returnvalue = int(cur.lastrowid)
             except self.dblayer.IntegrityError as e:
                 self.logger.error("Record insertion problem: {}".format(e))
@@ -879,7 +881,7 @@ class DBInterface:
                         geoplace["other"] = ""
                     if "place_name" not in geoplace:
                         geoplace["place_name"] = ""
-                    extras = {"country": geoplace["country"], "province_state": geoplace["province_state"], \
+                    extras = {"country": geoplace["country"], "province_state": geoplace["province_state"],
                               "city": geoplace["city"], "other": geoplace["other"]}
                     geoplace_id = self.get_single_record_id("geoplace", geoplace["place_name"], **extras)
 
@@ -945,10 +947,12 @@ class DBInterface:
         records = []
         with con:
             cur = self.getCursor(con)
-            cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.series, recs.modified_timestamp,
-                recs.local_identifier, recs.item_url, repos.repository_id, repos.repository_type
+            cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.series, 
+                recs.modified_timestamp, recs.local_identifier, recs.item_url, repos.repository_id,
+                repos.repository_type
                 FROM records recs, repositories repos
-                where recs.repository_id = repos.repository_id and recs.modified_timestamp < ? and repos.repository_id = ? and recs.deleted = 0
+                where recs.repository_id = repos.repository_id and recs.modified_timestamp < ? 
+                and repos.repository_id = ? and recs.deleted = 0
                 LIMIT ?"""), (stale_timestamp, repo_id, max_records_updated_per_run))
             if cur is not None:
                 records = cur.fetchall()
@@ -976,8 +980,9 @@ class DBInterface:
                 cur = self.getCursor(con)
                 try:
                     cur.execute(self._prep(
-                        "INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, local_identifier, item_url, repository_id) VALUES(?,?,?,?,?,?,?,?)"),
-                        ("", "", "", "", 0, local_identifier, "", repo_id))
+                        "INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, local_identifier, "
+                        "item_url, repository_id, upstream_modified_timestamp) VALUES(?,?,?,?,?,?,?,?,?)"),
+                        ("", "", "", "", 0, local_identifier, "", repo_id, time.time()))
                 except self.dblayer.IntegrityError as e:
                     self.logger.error("Error creating record header: {}".format(e))
 
