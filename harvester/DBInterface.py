@@ -504,7 +504,8 @@ class DBInterface:
                     elif existing_record["local_identifier"] != record["identifier"]:
                         modified_upstream = True
                 cur.execute(self._prep(
-                    """UPDATE records set title=?, title_fr=?, pub_date=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=?, item_url=?, upstream_modified_timestamp=?
+                    """UPDATE records set title=?, title_fr=?, pub_date=?, series=?, modified_timestamp=?, source_url=?, 
+                    deleted=?, local_identifier=?, item_url=?, upstream_modified_timestamp=?
                     WHERE record_id = ?"""),
                     (record["title"], record["title_fr"], record["pub_date"], record["series"], time.time(),
                      source_url, 0, record["identifier"], record["item_url"], record["record_id"], record["upstream_modified_timestamp"]))
