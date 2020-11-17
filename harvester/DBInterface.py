@@ -280,9 +280,7 @@ class DBInterface:
         return self.delete_row_generic(crosstable, "record_id", record_id)
 
     def delete_one_related_record(self, crosstable, column_value, record_id):
-        pdb.set_trace()
         columnname = self.get_table_value_column(crosstable)
-        pdb.set_trace()
         self.delete_row_generic(crosstable, columnname, column_value, "and record_id="+str(record_id))
 
     def delete_row_generic(self, tablename, columnname, column_value, extrawhere=""):
