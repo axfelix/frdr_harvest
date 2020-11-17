@@ -516,7 +516,7 @@ class DBInterface:
                     deleted=?, local_identifier=?, item_url=?, upstream_modified_timestamp=?
                     WHERE record_id = ?"""),
                     (record["title"], record["title_fr"], record["pub_date"], record["series"], time.time(),
-                     source_url, 0, record["identifier"], record["item_url"], record["record_id"], record["upstream_modified_timestamp"]))
+                     source_url, 0, record["identifier"], record["item_url"], record["record_id"], time.time()))
 
             if record["record_id"] is None:
                 return None
