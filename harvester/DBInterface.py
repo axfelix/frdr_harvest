@@ -136,8 +136,10 @@ class DBInterface:
                 try:
                     self.logger.debug("This repo already exists in the database; updating")
                     cur.execute(self._prep("""UPDATE repositories
-                        set repository_url=?, repository_set=?, repository_name=?, repository_type=?, repository_thumbnail=?, last_crawl_timestamp=?, item_url_pattern=?,enabled=?,
-                        abort_after_numerrors=?,max_records_updated_per_run=?,update_log_after_numitems=?,record_refresh_days=?,repo_refresh_days=?,homepage_url=?,repo_oai_name=?
+                        set repository_url=?, repository_set=?, repository_name=?, repository_type=?, 
+                        repository_thumbnail=?, last_crawl_timestamp=?, item_url_pattern=?,enabled=?,
+                        abort_after_numerrors=?,max_records_updated_per_run=?,update_log_after_numitems=?,
+                        record_refresh_days=?,repo_refresh_days=?,homepage_url=?,repo_oai_name=?
                         WHERE repository_id=?"""), (
                         self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail, time.time(),
                         self.item_url_pattern,
@@ -154,8 +156,10 @@ class DBInterface:
                     self.logger.debug("This repo does not exist in the database; adding")
                     if self.dbtype == "postgres":
                         cur.execute(self._prep("""INSERT INTO repositories
-                            (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
-                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url,repo_oai_name)
+                            (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, 
+                            last_crawl_timestamp, item_url_pattern, enabled,
+                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,
+                            record_refresh_days,repo_refresh_days,homepage_url,repo_oai_name)
                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING repository_id"""), (
                             self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail,
                             time.time(), self.item_url_pattern,
@@ -166,8 +170,10 @@ class DBInterface:
 
                     if self.dbtype == "sqlite":
                         cur.execute(self._prep("""INSERT INTO repositories
-                            (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
-                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url,repo_oai_name)
+                            (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, 
+                            last_crawl_timestamp, item_url_pattern, enabled, abort_after_numerrors,
+                            max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,
+                            homepage_url,repo_oai_name)
                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""), (
                             self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail,
                             time.time(), self.item_url_pattern,
@@ -440,17 +446,19 @@ class DBInterface:
             try:
                 if self.dbtype == "postgres":
                     cur.execute(self._prep(
-                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id, upstream_modified_timestamp)
+                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, 
+                        deleted, local_identifier, item_url, repository_id, upstream_modified_timestamp)
                         VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING record_id"""),
                         (rec["title"], rec["title_fr"], rec["pub_date"],  rec["series"], time.time(), source_url, 0,
-                         rec["identifier"], rec["item_url"], repo_id))
+                         rec["identifier"], rec["item_url"], repo_id, time.time()))
                     returnvalue = int(cur.fetchone()['record_id'])
                 if self.dbtype == "sqlite":
                     cur.execute(self._prep(
-                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id, upstream_modified_timestamp)
+                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, 
+                        deleted, local_identifier, item_url, repository_id, upstream_modified_timestamp)
                         VALUES(?,?,?,?,?,?,?,?,?,?,?)"""),
                         (rec["title"], rec["title_fr"], rec["pub_date"], rec["series"], time.time(), source_url, 0,
-                         rec["identifier"], rec["item_url"], repo_id))
+                         rec["identifier"], rec["item_url"], repo_id, time.time()))
                     returnvalue = int(cur.lastrowid)
             except self.dblayer.IntegrityError as e:
                 self.logger.error("Record insertion problem: {}".format(e))
@@ -976,8 +984,9 @@ class DBInterface:
                 cur = self.getCursor(con)
                 try:
                     cur.execute(self._prep(
-                        "INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, local_identifier, item_url, repository_id) VALUES(?,?,?,?,?,?,?,?)"),
-                        ("", "", "", "", 0, local_identifier, "", repo_id))
+                        "INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, local_identifier,"
+                        " item_url, repository_id, upstream_modified_timestamp) VALUES(?,?,?,?,?,?,?,?,?)"),
+                        ("", "", "", "", 0, local_identifier, "", repo_id, time.time()))
                 except self.dblayer.IntegrityError as e:
                     self.logger.error("Error creating record header: {}".format(e))
 
