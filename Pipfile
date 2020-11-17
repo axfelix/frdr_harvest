@@ -24,8 +24,6 @@ psycopg2-binary = "*"
 python-dateutil = "*"
 dateparser = "*"
 ftfy = "*"
-basicauth = "*"
-admin = "*"
 
 [requires]
 python_version = "3.7"

@@ -1,15 +1,6 @@
 {
     "repos": [
         {
-            "name": "UBC Dataverse",
-            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
-            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/ubc",
-            "set": 71618,
-            "thumbnail": "https://{{ web_hostname }}/discover/img/sources/ubccrest_80x80.png",
-            "type": "dataverse",
-            "enabled": true
-        },
-        {
             "name": "SFU Radar",
             "url": "https://researchdata.sfu.ca/oai2",
             "homepage_url": "https://researchdata.sfu.ca/",
