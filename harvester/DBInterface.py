@@ -491,7 +491,6 @@ class DBInterface:
                     source_url = record["dc:source"][0]
                 else:
                     source_url = record["dc:source"]
-
             if record["record_id"] is None:
                 modified_upstream = True # New record has new metadata
                 record["record_id"] = self.create_new_record(record, source_url, repo_id)

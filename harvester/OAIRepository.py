@@ -141,7 +141,7 @@ class OAIRepository(HarvestRepository):
                 metadata['identifier'] = record.header.identifier
                 oai_record = self.unpack_oai_metadata(metadata)
                 self.domain_metadata = self.find_domain_metadata(metadata)
-
+                
                 self.db.write_record(oai_record, self)
                 item_count = item_count + 1
                 if (item_count % self.update_log_after_numitems == 0):
