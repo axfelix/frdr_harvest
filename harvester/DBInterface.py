@@ -455,6 +455,7 @@ class DBInterface:
                          rec["identifier"], rec["item_url"], repo_id, time.time()))
                     returnvalue = int(cur.fetchone()['record_id'])
                 if self.dbtype == "sqlite":
+                    pdb.pdb.set_trace()
                     cur.execute(self._prep(
                         """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, 
                         deleted, local_identifier, item_url, repository_id, upstream_modified_timestamp)
@@ -513,6 +514,7 @@ class DBInterface:
                         modified_upstream = True
                     elif existing_record["local_identifier"] != record["identifier"]:
                         modified_upstream = True
+                    pdb.set_trace()
                 cur.execute(self._prep(
                     """UPDATE records set title=?, title_fr=?, pub_date=?, series=?, modified_timestamp=?, source_url=?, 
                     deleted=?, local_identifier=?, item_url=?
