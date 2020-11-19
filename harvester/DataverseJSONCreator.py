@@ -39,9 +39,10 @@ class DataverseJSONCreator(Exporter):
             json_output.join(self._generate_dv_json(DictCursor, records[current]))
             current += 1
 
-        self.send_json(json_output) # send the json to Geodisy
+        done = current == last_rec_num
+        self.send_json(json_output, done)  # send the json to Geodisy
 
-        if current < last_rec_num:
+        if not done:
             self.get_batch_record_metadata(current, last_rec_num, records, DictCursor)
 
     # make calls back to the FRDR Harvester's db to get the needed info to generate a DV-like json for Geodisy to parse
@@ -59,7 +60,7 @@ class DataverseJSONCreator(Exporter):
             litecur.execute(self.db._prep("SELECT * FROM records WHERE record_id=?"),
                             (record["record_id"],))
 
-            # _________________________________________ end of my code, need to edit below______________________________
+            # TODO _________________________________________ end of my code, need to edit below_______________________
             litecur.execute(self.db._prep("SELECT coordinate_type, lat, lon FROM geospatial WHERE record_id=?"),
                             (record["record_id"],))
             geodata = litecur.fetchall()
@@ -205,6 +206,11 @@ class DataverseJSONCreator(Exporter):
 
         self.buffer_size = self.buffer_size + len(json.dumps(gmeta_data))
         return json_representation
+
+    def send_json(self, json_string, done):
+        # TODO
+        # Think about how to let Geodisy know there aren't any more records right now
+        end = ""
 
     def json_dict(self, type_name, multiple, type_class, value):
         answer = ("{ " + self.json_pair("typeName", type_name) + ", " + self.json_pair("multiple", multiple) + ", "
