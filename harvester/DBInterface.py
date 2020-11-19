@@ -1003,7 +1003,7 @@ class DBInterface:
         with con:
             cur = self.getCursor(con)
             try:
-                cur.execute(self._prep("UPDATE records set upstream_modified_timestamp = ? where record_id = ?")
+                cur.execute(self._prep("UPDATE records set upstream_modified_timestamp = ?, geodisy_harvested = 0 where record_id = ?")
                             , (time.time(), record['record_id']))
             except self.dblayer.IntegrityError as e:
                 self.logger.error("Unable to update modified_timestamp for record id ? dur to error creating"
