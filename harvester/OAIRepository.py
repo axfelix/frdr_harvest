@@ -285,8 +285,13 @@ class OAIRepository(HarvestRepository):
 
         try:
             pdb.set_trace()
-            record["pub_date"] = dateparser.parse(record["pub_date"]).strftime("%Y-%m-%d")
+            date_object = dateparser.parse(record["pub_date"])
+            if date_object is None:
+                date_object = dateparser.parse(record["pub_date"], date_formats=['%Y%m%d'])
+            record["pub_date"] = date_object.strftime("%Y-%m-%d")
         except:
+            self.logger.debug("Something went wrong parsing the date, {} from {}", record["pub_date"]
+                              , (record["dc:source"] if record["identifier"] is None else record["identifier"]))
             return None
 
         pdb.set_trace()
