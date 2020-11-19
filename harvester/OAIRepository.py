@@ -142,7 +142,6 @@ class OAIRepository(HarvestRepository):
                 metadata['identifier'] = record.header.identifier
                 oai_record = self.unpack_oai_metadata(metadata)
                 self.domain_metadata = self.find_domain_metadata(metadata)
-                pdb.set_trace()
                 self.db.write_record(oai_record, self)
                 item_count = item_count + 1
                 if (item_count % self.update_log_after_numitems == 0):
@@ -233,10 +232,8 @@ class OAIRepository(HarvestRepository):
             if "http://datacite.org/schema/kernel-4#creatorAffiliation" in record:
                 record["affiliation"] = record.get("http://datacite.org/schema/kernel-4#creatorAffiliation")
 
-        pdb.set_trace()
         if 'identifier' not in record.keys():
             return None
-        pdb.set_trace()
         if record["pub_date"] is None:
             return None
 
@@ -248,7 +245,6 @@ class OAIRepository(HarvestRepository):
                 if "http" in idstring.lower():
                     valid_id = idstring
             record["identifier"] = valid_id
-        pdb.set_trace()
         if 'creator' not in record.keys() and 'contributor' not in record.keys() and 'publisher' not in record.keys():
             self.logger.debug("Item {} is missing creator - will not be added".format(record["identifier"]))
             return None
@@ -278,13 +274,11 @@ class OAIRepository(HarvestRepository):
         # If date is still a one-value list, make it a string
         if isinstance(record["pub_date"], list):
             record["pub_date"] = record["pub_date"][0]
-        pdb.set_trace()
         # If a date has question marks, chuck it
         if "?" in record["pub_date"]:
             return None
 
         try:
-            pdb.set_trace()
             date_object = dateparser.parse(record["pub_date"])
             if date_object is None:
                 date_object = dateparser.parse(record["pub_date"], date_formats=['%Y%m%d'])
@@ -294,7 +288,7 @@ class OAIRepository(HarvestRepository):
                               , (record["dc:source"] if record["identifier"] is None else record["identifier"]))
             return None
 
-        pdb.set_trace()
+
         if "title" not in record.keys():
             return None
 
@@ -345,7 +339,7 @@ class OAIRepository(HarvestRepository):
                 if place_name != "" and place_name.lower().islower(): # to filter out dates, confirm at least one letter
                     record["geoplaces"].append({"place_name": place_name})
 
-        pdb.set_trace()
+
         # DSpace workaround to exclude theses and non-data content
         if self.prune_non_dataset_items:
             if record["type"] and "Dataset" not in record["type"]:
