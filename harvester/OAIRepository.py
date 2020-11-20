@@ -198,13 +198,8 @@ class OAIRepository(HarvestRepository):
             if "bounding" in record.keys():
                 # Sometimes point data is hacked in as a bounding box
                 if record["westbc"] == record["eastbc"] and record["northbc"] == record["southbc"]:
-                    record["geospatial"] = {"type": "Point",
-                                            "coordinates": [[[record["northbc"][0], record["westbc"][0]]]]} # TODO remove
                     record["geopoints"] = [{"lat": record["northbc"][0], "lon": record["westbc"][0]}]
                 else:
-                    record["geospatial"] = {"type": "Polygon", "coordinates": [
-                        [[record["northbc"][0], record["westbc"][0]], [record["northbc"][0], record["eastbc"][0]],
-                         [record["southbc"][0], record["westbc"][0]], [record["southbc"][0], record["eastbc"][0]]]]} # TODO remove
                     record["geobboxes"] = [{"westLon": record["westbc"][0], "eastLon": record["eastbc"][0],
                                             "northLat": record["northbc"][0], "southLat": record["southbc"][0]}]
 
