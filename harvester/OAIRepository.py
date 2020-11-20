@@ -181,7 +181,10 @@ class OAIRepository(HarvestRepository):
             record["rights"] = record.get("copyright")
 
         if self.metadataprefix.lower() == "fgdc" or self.metadataprefix.lower() == "fgdc-std":
-            record["creator"] = record.get("origin")
+            record["creator"] = []
+            for creator in record.get("origin"):
+                if creator not in record["creator"]:
+                    record["creator"].append(creator)
             record["tags"] = record.get("themekey")
             record["description"] = record.get("abstract")
             record["publisher"] = record.get("cntorg")
