@@ -571,6 +571,12 @@ class DBInterface:
                     if eid not in new_creator_ids:
                         modified_upstream = True
                         self.delete_one_related_record("records_x_creators", eid, record["record_id"], extrawhere)
+            else:
+                extrawhere = "and is_contributor=1"
+                existing_creator_recs = self.get_multiple_records("records_x_creators", "creator_id", "record_id",
+                                                                  record["record_id"], extrawhere)
+                if existing_creator_recs:
+                    self.delete_all_related_records("records_x_creators", record["record_id"], extrawhere)
 
             if "subject" in record:
                 if not isinstance(record["subject"], list):
