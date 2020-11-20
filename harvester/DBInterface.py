@@ -276,12 +276,12 @@ class DBInterface:
                 return False
         return True
 
-    def delete_all_related_records(self, crosstable, record_id):
-        return self.delete_row_generic(crosstable, "record_id", record_id)
+    def delete_all_related_records(self, crosstable, record_id, extrawhere=""):
+        return self.delete_row_generic(crosstable, "record_id", record_id, extrawhere)
 
-    def delete_one_related_record(self, crosstable, column_value, record_id):
+    def delete_one_related_record(self, crosstable, column_value, record_id, extrawhere=""):
         columnname = self.get_table_value_column(crosstable)
-        self.delete_row_generic(crosstable, columnname, column_value, "and record_id="+str(record_id))
+        self.delete_row_generic(crosstable, columnname, column_value, "and record_id="+str(record_id) + " " + extrawhere)
 
     def delete_row_generic(self, tablename, columnname, column_value, extrawhere=""):
         con = self.getConnection()
@@ -289,7 +289,7 @@ class DBInterface:
             cur = self.getCursor(con)
             try:
                 sqlstring = "DELETE from {} where {}=? {}".format(tablename, columnname, extrawhere)
-                cur.execute(self._prep(sqlstring), column_value)
+                cur.execute(self._prep(sqlstring), (column_value,))
             except:
                 return False
         return True
