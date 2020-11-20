@@ -47,7 +47,7 @@ class DataverseJSONCreator(Exporter):
 
     # make calls back to the FRDR Harvester's db to get the needed info to generate a DV-like json for Geodisy to parse
     def _generate_dv_json(self, DictCursor, record):
-        json_representation = ""
+        json_representation = None
         con = self.db.getConnection()
         with con:
             if self.db.getType() == "sqlite":
@@ -57,8 +57,17 @@ class DataverseJSONCreator(Exporter):
             elif self.db.getType() == "postgres":
                 litecur = con.cursor(cursor_factory=None)
 
-            litecur.execute(self.db._prep("SELECT * FROM records WHERE record_id=?"),
+            litecur.execute(self.db._prep("SELECT rec.record_id, rec.record_url, rec.pub_date, rec.title, rec.item_url, rec.series FROM records WHERE record_id=?"),
                             (record["record_id"],))
+            records = []
+            for row in litecur:
+                record = (dict(zip(['id', "persistentUrl", "publicationDate", "title", "pidURL", "seriesName"], row)))
+                records.append(record)
+
+            for record in records:
+                metadata = self.getBaseMetadataFields(record)
+                metadata[self.stringed("metadataBlocks")] = self.getCitationMetadataField(record)
+
 
             # TODO _________________________________________ end of my code, need to edit below_______________________
             litecur.execute(self.db._prep("SELECT coordinate_type, lat, lon FROM geospatial WHERE record_id=?"),
@@ -212,9 +221,20 @@ class DataverseJSONCreator(Exporter):
         # Think about how to let Geodisy know there aren't any more records right now
         end = ""
 
-    def json_dict(self, type_name, multiple, type_class, value):
-        answer = ("{ " + self.json_pair("typeName", type_name) + ", " + self.json_pair("multiple", multiple) + ", "
-                  + self.json_pair("typeClass", type_class) + ", " + self.json_pair("value", value)) + " }"
+    def json_dict_primative(self, type_name, multiple, value):
+        answer = {self.stringed("typeName"): self.stringed(type_name),
+                  self.stringed("multiple"): self.stringed(multiple),
+                  self.stringed("typeClass"): self.stringed("primative"),
+                  self.stringed("value"): self.stringed(value)}
+
+        return answer
+
+    def json_dict_compound(self, type_name, multiple, value):
+        answer = {self.stringed("typeName"): self.stringed(type_name),
+                  self.stringed("multiple"): self.stringed(multiple),
+                  self.stringed("typeClass"): self.stringed("compound"),
+                  self.stringed("value"): value}
+
         return answer
 
     @staticmethod
@@ -225,9 +245,56 @@ class DataverseJSONCreator(Exporter):
         return self.stringed(type_name) + ": " + self.stringed(name)
 
     def compounded(self, list_object):
-        compounded_string = "[  "
+        compounded_string = {}
         for tupleObj in list_object:
             compounded_string = compounded_string.join(self.json_dict(tupleObj.get("name"), tupleObj.get("multiple"), tupleObj.get("typeClass"), tupleObj.get("value")))
             compounded_string = compounded_string.join(', ')
         compounded_string = compounded_string[:-2]
         return compounded_string.join(" ]")
+
+    def getBaseMetadataFields(self, record):
+        # TODO
+        con = self.db.getConnection()
+        with con:
+            if self.db.getType() == "sqlite":
+                from sqlite3 import Row
+                con.row_factory = Row
+                basecur = con.cursor()
+            elif self.db.getType() == "postgres":
+                basecur = con.cursor(cursor_factory=None)
+
+            basecur.execute(self.db._prep(
+                "SELECT rec.record_id, rec.record_url, rec.pub_date, rec.title, rec.item_url, rec.series FROM records WHERE record_id=?"),
+                            (record["record_id"],))
+            records = []
+            for row in basecur:
+                record = (dict(zip(['id', "persistentUrl", "publicationDate", "title", "pidURL", "seriesName"], row)))
+                records.append(record)
+
+    def getCitationMetadataFields(self, record):
+        # TODO
+        con = self.db.getConnection()
+        with con:
+            if self.db.getType() == "sqlite":
+                from sqlite3 import Row
+                con.row_factory = Row
+                citcur = con.cursor()
+            elif self.db.getType() == "postgres":
+                citcur = con.cursor(cursor_factory=None)
+
+            citcur.execute(self.db._prep(
+                "SELECT rec.record_id, rec.record_url, rec.pub_date, rec.title, rec.item_url, rec.series FROM records WHERE record_id=?"),
+                            (record["record_id"],))
+            records = []
+            for row in citcur:
+                record = (dict(zip(['id', "persistentUrl", "publicationDate", "title", "pidURL", "seriesName"], row)))
+                records.append(record)
+
+    def getMetadataBlocks(self, record):
+        answer = {self.stringed("citation"):self.getCitationMetadataFields(record),self.stringed("geospatial"): self.getGeospatialFields(record)}
+        if answer.get("geospatial") is None:
+            return None
+        return answer
+
+    def getGeospatialFields(self,records):
+        # TODO
