@@ -685,8 +685,6 @@ class DBInterface:
                     rights_hash = sha1.hexdigest()
                     rights_id = self.get_single_record_id("rights", rights_hash)
                     if rights_id is None:
-                        self.delete_all_related_records("records_x_rights", record[
-                            "record_id"])  # Needed for transition, can be removed once all rights rows have hashes
                         extras = {"rights": rights}
                         rights_id = self.insert_related_record("rights", rights_hash, **extras)
                         modified_upstream = True
