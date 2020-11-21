@@ -107,6 +107,7 @@ class Exporter(object):
                 elif self.db.getType() == "postgres":
                     litecur = con.cursor(cursor_factory=None)
 
+                # TODO update this to export new geospatial elements
                 litecur.execute(self.db._prep("SELECT coordinate_type, lat, lon FROM geospatial WHERE record_id=?"),
                                 (record["record_id"],))
                 geodata = litecur.fetchall()
