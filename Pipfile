@@ -22,7 +22,7 @@ flask-admin = "*"
 flask-sqlalchemy = "*"
 psycopg2-binary = "*"
 python-dateutil = "*"
-dateparser = "*"
+dateparser = "==1.0.0"
 ftfy = "*"
 
 [requires]
