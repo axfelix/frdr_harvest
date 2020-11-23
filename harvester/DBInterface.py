@@ -4,6 +4,7 @@ import sys
 import hashlib
 import json
 import re
+import pdb
 
 
 class DBInterface:
@@ -37,7 +38,8 @@ class DBInterface:
 
             # This table must always exist
             cur.execute(
-                "create table if not exists settings (setting_id INTEGER PRIMARY KEY NOT NULL, setting_name TEXT, setting_value TEXT)")
+                "create table if not exists "
+                "settings (setting_id INTEGER PRIMARY KEY NOT NULL, setting_name TEXT, setting_value TEXT)")
 
             # Determine if the database schema needs to be updated
             dbversion = self.get_setting("dbversion")
@@ -135,9 +137,11 @@ class DBInterface:
                 # Existing repo
                 try:
                     self.logger.debug("This repo already exists in the database; updating")
-                    cur.execute(self._prep("""UPDATE repositories 
-                        set repository_url=?, repository_set=?, repository_name=?, repository_type=?, repository_thumbnail=?, last_crawl_timestamp=?, item_url_pattern=?,enabled=?,
-                        abort_after_numerrors=?,max_records_updated_per_run=?,update_log_after_numitems=?,record_refresh_days=?,repo_refresh_days=?,homepage_url=?,repo_oai_name=?
+                    cur.execute(self._prep("""UPDATE repositories
+                        set repository_url=?, repository_set=?, repository_name=?, repository_type=?, 
+                        repository_thumbnail=?, last_crawl_timestamp=?, item_url_pattern=?,enabled=?,
+                        abort_after_numerrors=?,max_records_updated_per_run=?,update_log_after_numitems=?,
+                        record_refresh_days=?,repo_refresh_days=?,homepage_url=?,repo_oai_name=?
                         WHERE repository_id=?"""), (
                         self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail, time.time(),
                         self.item_url_pattern,
@@ -153,9 +157,11 @@ class DBInterface:
                 try:
                     self.logger.debug("This repo does not exist in the database; adding")
                     if self.dbtype == "postgres":
-                        cur.execute(self._prep("""INSERT INTO repositories 
-                            (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
-                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url,repo_oai_name) 
+                        cur.execute(self._prep("""INSERT INTO repositories
+                            (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, 
+                            last_crawl_timestamp, item_url_pattern, enabled,
+                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,
+                            record_refresh_days,repo_refresh_days,homepage_url,repo_oai_name)
                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING repository_id"""), (
                             self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail,
                             time.time(), self.item_url_pattern,
@@ -165,9 +171,11 @@ class DBInterface:
                         self.repo_id = int(cur.fetchone()['repository_id'])
 
                     if self.dbtype == "sqlite":
-                        cur.execute(self._prep("""INSERT INTO repositories 
-                            (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, last_crawl_timestamp, item_url_pattern, enabled,
-                            abort_after_numerrors,max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,homepage_url,repo_oai_name) 
+                        cur.execute(self._prep("""INSERT INTO repositories
+                            (repository_url, repository_set, repository_name, repository_type, repository_thumbnail, 
+                            last_crawl_timestamp, item_url_pattern, enabled, abort_after_numerrors,
+                            max_records_updated_per_run,update_log_after_numitems,record_refresh_days,repo_refresh_days,
+                            homepage_url,repo_oai_name)
                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""), (
                             self.repo_url, self.repo_set, self.repo_name, self.repo_type, self.repo_thumbnail,
                             time.time(), self.item_url_pattern,
@@ -268,12 +276,12 @@ class DBInterface:
                 return False
         return True
 
-    def delete_all_related_records(self, crosstable, record_id):
-        return self.delete_row_generic(crosstable, "record_id", record_id)
+    def delete_all_related_records(self, crosstable, record_id, extrawhere=""):
+        return self.delete_row_generic(crosstable, "record_id", record_id, extrawhere)
 
-    def delete_one_related_record(self, crosstable, column_value, record_id):
+    def delete_one_related_record(self, crosstable, column_value, record_id, extrawhere=""):
         columnname = self.get_table_value_column(crosstable)
-        self.delete_row_generic(crosstable, columnname, column_value, "and record_id="+str(record_id) )
+        self.delete_row_generic(crosstable, columnname, column_value, "and record_id="+str(record_id) + " " + extrawhere)
 
     def delete_row_generic(self, tablename, columnname, column_value, extrawhere=""):
         con = self.getConnection()
@@ -346,23 +354,28 @@ class DBInterface:
             except self.dblayer.IntegrityError as e:
                 self.logger.error("Record insertion problem: {}".format(e))
 
-    def get_multiple_records(self, tablename, columnlist, given_col, given_val, extrawhere=""):
+    def get_multiple_records(self, tablename, columnlist, given_col, given_val, extrawhere="", **kwargs):
         records = []
+        paramlist = {}
+        for key, value in kwargs.items():
+            paramlist[key] = value
+        if len(paramlist) > 0:
+            extrawhere = extrawhere + " and " + "=? and ".join(str(k) for k in list(paramlist.keys())) + "=?"
         sqlstring = "select {} from {} where {}=? {}".format(columnlist, tablename, given_col, extrawhere)
         con = self.getConnection()
         with con:
             cur = self.getCursor(con)
-            cur.execute(self._prep(sqlstring), (given_val,))
+            cur.execute(self._prep(sqlstring), [given_val] + (list(paramlist.values())))
             if cur is not None:
                 records = cur.fetchall()
 
         return records
 
-    def get_single_record_id(self, tablename, val, extrawhere=""):
+    def get_single_record_id(self, tablename, val, extrawhere="", **kwargs):
         returnvalue = None
         idcolumn = self.get_table_id_column(tablename)
         valcolumn = self.get_table_value_column(tablename)
-        records = self.get_multiple_records(tablename, idcolumn, valcolumn, val, extrawhere)
+        records = self.get_multiple_records(tablename, idcolumn, valcolumn, val, extrawhere, **kwargs)
         for record in records:
             returnvalue = int(record[idcolumn])
 
@@ -435,17 +448,19 @@ class DBInterface:
             try:
                 if self.dbtype == "postgres":
                     cur.execute(self._prep(
-                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
-                        VALUES(?,?,?,?,?,?,?,?,?,?) RETURNING record_id"""),
+                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, 
+                        deleted, local_identifier, item_url, repository_id, upstream_modified_timestamp)
+                        VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING record_id"""),
                         (rec["title"], rec["title_fr"], rec["pub_date"],  rec["series"], time.time(), source_url, 0,
-                         rec["identifier"], rec["item_url"], repo_id))
+                         rec["identifier"], rec["item_url"], repo_id, time.time()))
                     returnvalue = int(cur.fetchone()['record_id'])
                 if self.dbtype == "sqlite":
                     cur.execute(self._prep(
-                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, deleted, local_identifier, item_url, repository_id) 
-                        VALUES(?,?,?,?,?,?,?,?,?,?)"""),
+                        """INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, source_url, 
+                        deleted, local_identifier, item_url, repository_id, upstream_modified_timestamp)
+                        VALUES(?,?,?,?,?,?,?,?,?,?,?)"""),
                         (rec["title"], rec["title_fr"], rec["pub_date"], rec["series"], time.time(), source_url, 0,
-                         rec["identifier"], rec["item_url"], repo_id))
+                         rec["identifier"], rec["item_url"], repo_id, time.time()))
                     returnvalue = int(cur.lastrowid)
             except self.dblayer.IntegrityError as e:
                 self.logger.error("Record insertion problem: {}".format(e))
@@ -456,6 +471,8 @@ class DBInterface:
         repo_id = repo.repository_id
         metadata_prefix = repo.metadataprefix.lower()
         domain_metadata = repo.domain_metadata
+        modified_upstream = False # Track whether metadata changed since last crawl
+
         if record == None:
             return None
         record["record_id"] = self.get_single_record_id("records", record["identifier"],
@@ -473,12 +490,31 @@ class DBInterface:
                     source_url = record["dc:source"][0]
                 else:
                     source_url = record["dc:source"]
-
             if record["record_id"] is None:
+                modified_upstream = True # New record has new metadata
                 record["record_id"] = self.create_new_record(record, source_url, repo_id)
             else:
+                # Compare title, title_fr, pub_date, series, source_url, item_url, local_identifier for changes
+                records = self.get_multiple_records("records", "*", "record_id", record["record_id"])
+                if len(records) == 1:
+                    existing_record = records[0]
+                    if existing_record["title"] != record["title"]:
+                        modified_upstream = True
+                    elif existing_record["title_fr"] != record["title_fr"]:
+                        modified_upstream = True
+                    elif existing_record["pub_date"] != record["pub_date"]:
+                        modified_upstream = True
+                    elif existing_record["series"] != record["series"]:
+                        modified_upstream = True
+                    elif existing_record["source_url"] is None and existing_record["source_url"] != source_url:
+                        modified_upstream = True
+                    elif existing_record["item_url"] != record["item_url"]:
+                        modified_upstream = True
+                    elif existing_record["local_identifier"] != record["identifier"]:
+                        modified_upstream = True
                 cur.execute(self._prep(
-                    """UPDATE records set title=?, title_fr=?, pub_date=?, series=?, modified_timestamp=?, source_url=?, deleted=?, local_identifier=?, item_url=? 
+                    """UPDATE records set title=?, title_fr=?, pub_date=?, series=?, modified_timestamp=?, source_url=?, 
+                    deleted=?, local_identifier=?, item_url=?
                     WHERE record_id = ?"""),
                     (record["title"], record["title_fr"], record["pub_date"], record["series"], time.time(),
                      source_url, 0, record["identifier"], record["item_url"], record["record_id"]))
@@ -489,34 +525,58 @@ class DBInterface:
             if "creator" in record:
                 if not isinstance(record["creator"], list):
                     record["creator"] = [record["creator"]]
+                extrawhere = "and is_contributor=0"
                 existing_creator_recs = self.get_multiple_records("records_x_creators", "creator_id", "record_id",
-                                                                  record["record_id"])
+                                                                  record["record_id"], extrawhere)
                 existing_creator_ids = [e["creator_id"] for e in existing_creator_recs]
+                new_creator_ids = []
                 for creator in record["creator"]:
                     creator_id = self.get_single_record_id("creators", creator)
                     if creator_id is None:
                         creator_id = self.insert_related_record("creators", creator)
+                        modified_upstream = True
                     if creator_id is not None:
+                        new_creator_ids.append(creator_id)
                         if creator_id not in existing_creator_ids:
                             extras = {"is_contributor": 0}
                             self.insert_cross_record("records_x_creators", "creators", creator_id, record["record_id"],
                                                      **extras)
+                            modified_upstream = True
+                for eid in existing_creator_ids:
+                    if eid not in new_creator_ids:
+                        modified_upstream = True
+                        self.delete_one_related_record("records_x_creators", eid, record["record_id"], extrawhere)
 
             if "contributor" in record:
                 if not isinstance(record["contributor"], list):
                     record["contributor"] = [record["contributor"]]
+                extrawhere = "and is_contributor=1"
                 existing_creator_recs = self.get_multiple_records("records_x_creators", "creator_id", "record_id",
-                                                                  record["record_id"])
+                                                                  record["record_id"], extrawhere)
                 existing_creator_ids = [e["creator_id"] for e in existing_creator_recs]
+                new_creator_ids = []
                 for creator in record["contributor"]:
                     creator_id = self.get_single_record_id("creators", creator)
                     if creator_id is None:
                         creator_id = self.insert_related_record("creators", creator)
+                        modified_upstream = True
                     if creator_id is not None:
+                        new_creator_ids.append(creator_id)
                         if creator_id not in existing_creator_ids:
                             extras = {"is_contributor": 1}
                             self.insert_cross_record("records_x_creators", "creators", creator_id, record["record_id"],
                                                      **extras)
+                            modified_upstream = True
+                for eid in existing_creator_ids:
+                    if eid not in new_creator_ids:
+                        modified_upstream = True
+                        self.delete_one_related_record("records_x_creators", eid, record["record_id"], extrawhere)
+            else:
+                extrawhere = "and is_contributor=1"
+                existing_creator_recs = self.get_multiple_records("records_x_creators", "creator_id", "record_id",
+                                                                  record["record_id"], extrawhere)
+                if existing_creator_recs:
+                    self.delete_all_related_records("records_x_creators", record["record_id"], extrawhere)
 
             if "subject" in record:
                 if not isinstance(record["subject"], list):
@@ -524,14 +584,22 @@ class DBInterface:
                 existing_subject_recs = self.get_multiple_records("records_x_subjects", "subject_id", "record_id",
                                                                   record["record_id"])
                 existing_subject_ids = [e["subject_id"] for e in existing_subject_recs]
+                new_subject_ids = []
                 for subject in record["subject"]:
                     subject_id = self.get_single_record_id("subjects", subject, "and language='en'")
                     if subject_id is None:
                         extras = {"language": "en"}
                         subject_id = self.insert_related_record("subjects", subject, **extras)
+                        modified_upstream = True
                     if subject_id is not None:
+                        new_subject_ids.append(subject_id)
                         if subject_id not in existing_subject_ids:
                             self.insert_cross_record("records_x_subjects", "subjects", subject_id, record["record_id"])
+                            modified_upstream = True
+                for eid in existing_subject_ids:
+                    if eid not in new_subject_ids:
+                        modified_upstream = True
+                        self.delete_one_related_record("records_x_subjects", eid, record["record_id"])
 
             if "subject_fr" in record:
                 if not isinstance(record["subject_fr"], list):
@@ -539,14 +607,22 @@ class DBInterface:
                 existing_subject_recs = self.get_multiple_records("records_x_subjects", "subject_id", "record_id",
                                                                   record["record_id"])
                 existing_subject_ids = [e["subject_id"] for e in existing_subject_recs]
+                new_subject_ids = []
                 for subject in record["subject_fr"]:
                     subject_id = self.get_single_record_id("subjects", subject, "and language='fr'")
                     if subject_id is None:
                         extras = {"language": "fr"}
                         subject_id = self.insert_related_record("subjects", subject, **extras)
+                        modified_upstream = True
                     if subject_id is not None:
+                        new_subject_ids.append(subject_id)
                         if subject_id not in existing_subject_ids:
                             self.insert_cross_record("records_x_subjects", "subjects", subject_id, record["record_id"])
+                            modified_upstream = True
+                for eid in existing_subject_ids:
+                    if eid not in new_subject_ids:
+                        modified_upstream = True
+                        self.delete_one_related_record("records_x_subjects", eid, record["record_id"])
 
             if "publisher" in record:
                 if not isinstance(record["publisher"], list):
@@ -559,34 +635,40 @@ class DBInterface:
                     publisher_id = self.get_single_record_id("publishers", publisher)
                     if publisher_id is None:
                         publisher_id = self.insert_related_record("publishers", publisher)
+                        modified_upstream = True
                     if publisher_id is not None:
                         new_publisher_ids.append(publisher_id)
                         if publisher_id not in existing_publisher_ids:
                             self.insert_cross_record("records_x_publishers", "publishers", publisher_id,
                                                      record["record_id"])
+                            modified_upstream = True
                 for eid in existing_publisher_ids:
                     if eid not in new_publisher_ids:
+                        modified_upstream = True
                         self.delete_one_related_record("records_x_publishers", eid, record["record_id"])
 
             if "affiliation" in record:
                 if not isinstance(record["affiliation"], list):
                     record["affiliation"] = [record["affiliation"]]
-                existing_affiliation_recs = self.get_multiple_records("records_x_affiliations", "affiliation_id", "record_id",
-                                                                    record["record_id"])
+                existing_affiliation_recs = self.get_multiple_records("records_x_affiliations", "affiliation_id",
+                                                                      "record_id", record["record_id"])
                 existing_affiliation_ids = [e["affiliation_id"] for e in existing_affiliation_recs]
                 new_affiliation_ids = []
                 for affil in record["affiliation"]:
                     affiliation_id = self.get_single_record_id("affiliations", affil)
                     if affiliation_id is None:
                         affiliation_id = self.insert_related_record("affiliations", affil)
+                        modified_upstream = True
                     if affiliation_id is not None:
                         if affiliation_id not in existing_affiliation_ids and affiliation_id not in new_affiliation_ids:
                             self.insert_cross_record("records_x_affiliations", "affiliations", affiliation_id,
                                                      record["record_id"])
+                            modified_upstream = True
                         if affiliation_id not in new_affiliation_ids:
                             new_affiliation_ids.append(affiliation_id)
                 for eid in existing_affiliation_ids:
                     if eid not in new_affiliation_ids:
+                        modified_upstream = True
                         self.delete_one_related_record("records_x_affiliations", eid, record["record_id"])
 
             if "rights" in record:
@@ -603,46 +685,70 @@ class DBInterface:
                     rights_hash = sha1.hexdigest()
                     rights_id = self.get_single_record_id("rights", rights_hash)
                     if rights_id is None:
-                        self.delete_all_related_records("records_x_rights", record[
-                            "record_id"])  # Needed for transition, can be removed once all rights rows have hashes
                         extras = {"rights": rights}
                         rights_id = self.insert_related_record("rights", rights_hash, **extras)
+                        modified_upstream = True
                     if rights_id is not None:
                         new_rights_ids.append(rights_id)
                         if rights_id not in existing_rights_ids:
                             self.insert_cross_record("records_x_rights", "rights", rights_id, record["record_id"])
+                            modified_upstream = True
                 for eid in existing_rights_ids:
                     if eid not in new_rights_ids:
+                        modified_upstream = True
                         self.delete_one_related_record("records_x_rights", eid, record["record_id"])
 
             if "description" in record:
                 if not isinstance(record["description"], list):
                     record["description"] = [record["description"]]
+                existing_description_recs = self.get_multiple_records("descriptions", "description_id", "record_id",
+                                                                      record["record_id"], "and language='en'")
+                existing_description_ids = [e["description_id"] for e in existing_description_recs]
+                new_description_ids = []
                 for description in record["description"]:
                     # Use a hash for lookups so we don't need to maintain a full text index
                     if description is not None:
                         sha1 = hashlib.sha1()
                         sha1.update(description.encode('utf-8'))
                         description_hash = sha1.hexdigest()
-                        description_id = self.get_single_record_id("descriptions", description_hash, "and record_id=" + str(
-                            record["record_id"]) + " and language='en'")
+                        description_id = self.get_single_record_id("descriptions", description_hash, "and record_id=" +
+                                                                   str(record["record_id"]) + " and language='en'")
                         if description_id is None:
                             extras = {"record_id": record["record_id"], "language": "en", "description": description}
-                            self.insert_related_record("descriptions", description_hash, **extras)
+                            description_id = self.insert_related_record("descriptions", description_hash, **extras)
+                            modified_upstream = True
+                        if description_id is not None:
+                            new_description_ids.append(description_id)
+                for eid in existing_description_ids:
+                    if eid not in new_description_ids:
+                        self.delete_row_generic("descriptions", "description_id", eid)
+                        modified_upstream = True
 
             if "description_fr" in record:
                 if not isinstance(record["description_fr"], list):
                     record["description_fr"] = [record["description_fr"]]
+                existing_description_recs = self.get_multiple_records("descriptions", "description_id", "record_id",
+                                                                      record["record_id"], "and language='fr'")
+                existing_description_ids = [e["description_id"] for e in existing_description_recs]
+                new_description_ids = []
                 for description in record["description_fr"]:
                     # Use a hash for lookups so we don't need to maintain a full text index
-                    sha1 = hashlib.sha1()
-                    sha1.update(description.encode('utf-8'))
-                    description_hash = sha1.hexdigest()
-                    description_id = self.get_single_record_id("descriptions", description_hash, "and record_id=" + str(
-                        record["record_id"]) + " and language='fr'")
-                    if description_id is None:
-                        extras = {"record_id": record["record_id"], "language": "fr", "description": description}
-                        self.insert_related_record("descriptions", description_hash, **extras)
+                    if description is not None:
+                        sha1 = hashlib.sha1()
+                        sha1.update(description.encode('utf-8'))
+                        description_hash = sha1.hexdigest()
+                        description_id = self.get_single_record_id("descriptions", description_hash, "and record_id=" +
+                                                                   str(record["record_id"]) + " and language='fr'")
+                        if description_id is None:
+                            extras = {"record_id": record["record_id"], "language": "fr", "description": description}
+                            description_id = self.insert_related_record("descriptions", description_hash, **extras)
+                            modified_upstream = True
+                        if description_id is not None:
+                            new_description_ids.append(description_id)
+                for eid in existing_description_ids:
+                    if eid not in new_description_ids:
+                        self.delete_row_generic("descriptions", "description_id", eid)
+                        modified_upstream = True
 
             if "tags" in record:
                 if not isinstance(record["tags"], list):
@@ -650,14 +756,22 @@ class DBInterface:
                 existing_tag_recs = self.get_multiple_records("records_x_tags", "tag_id", "record_id",
                                                               record["record_id"])
                 existing_tag_ids = [e["tag_id"] for e in existing_tag_recs]
+                new_tag_ids = []
                 for tag in record["tags"]:
                     tag_id = self.get_single_record_id("tags", tag, "and language='en'")
                     if tag_id is None:
                         extras = {"language": "en"}
                         tag_id = self.insert_related_record("tags", tag, **extras)
+                        modified_upstream = True
                     if tag_id is not None:
+                        new_tag_ids.append(tag_id)
                         if tag_id not in existing_tag_ids:
                             self.insert_cross_record("records_x_tags", "tags", tag_id, record["record_id"])
+                            modified_upstream = True
+                for eid in existing_tag_ids:
+                    if eid not in new_tag_ids:
+                        modified_upstream = True
+                        self.delete_one_related_record("records_x_tags", eid, record["record_id"])
 
             if "tags_fr" in record:
                 if not isinstance(record["tags_fr"], list):
@@ -665,14 +779,22 @@ class DBInterface:
                 existing_tag_recs = self.get_multiple_records("records_x_tags", "tag_id", "record_id",
                                                               record["record_id"])
                 existing_tag_ids = [e["tag_id"] for e in existing_tag_recs]
+                new_tag_ids = []
                 for tag in record["tags_fr"]:
                     tag_id = self.get_single_record_id("tags", tag, "and language='fr'")
                     if tag_id is None:
                         extras = {"language": "fr"}
                         tag_id = self.insert_related_record("tags", tag, **extras)
+                        modified_upstream = True
                     if tag_id is not None:
+                        new_tag_ids.append(tag_id)
                         if tag_id not in existing_tag_ids:
                             self.insert_cross_record("records_x_tags", "tags", tag_id, record["record_id"])
+                            modified_upstream = True
+                for eid in existing_tag_ids:
+                    if eid not in new_tag_ids:
+                        modified_upstream = True
+                        self.delete_one_related_record("records_x_tags", eid, record["record_id"])
 
             if "access" in record:
                 if not isinstance(record["access"], list):
@@ -685,47 +807,147 @@ class DBInterface:
                     access_id = self.get_single_record_id("access", access)
                     if access_id is None:
                         access_id = self.insert_related_record("access", access)
+                        modified_upstream = True
                     if access_id is not None:
                         new_access_ids.append(access_id)
                         if access_id not in existing_access_ids:
                             self.insert_cross_record("records_x_access", "access", access_id, record["record_id"])
+                            modified_upstream = True
                 for eid in existing_access_ids:
                     if eid not in new_access_ids:
+                        modified_upstream = True
                         self.delete_one_related_record("records_x_access", eid, record["record_id"])
 
-            if "geospatial" in record:
-                existing_geospatial_ids = self.get_multiple_records("geospatial", "geospatial_id", "record_id",
+            if "geobboxes" in record:
+                existing_geobbox_recs = self.get_multiple_records("geobbox", "*", "record_id",
                                                                     record["record_id"])
-                if not existing_geospatial_ids:
-                    coordinates = record["geospatial"]["coordinates"][0]
-                    if isinstance(coordinates, float):
-                        if len(record["geospatial"]["coordinates"]) == 2:
-                            coordinates = [record["geospatial"]["coordinates"]]
-                    if len(coordinates) == 5:
-                        # Check if this is a sneaky bounding box
-                        lats = []
-                        longs = []
-                        for coordinate_pair in coordinates:
-                            if len(coordinate_pair) == 2:
-                                if coordinate_pair[0] not in lats:
-                                    lats.append(coordinate_pair[0])
-                                if coordinate_pair[1] not in longs:
-                                    longs.append(coordinate_pair[1])
-                        if len(lats) == 2 and len(longs) == 2:
-                            # Remove duplicate point if present
-                            unique_coordinates = []
-                            for coordinate_pair in coordinates:
-                                if coordinate_pair not in unique_coordinates:
-                                    unique_coordinates.append(coordinate_pair)
-                            if len(unique_coordinates) == 4:
-                                coordinates = unique_coordinates
-                    for coordinate_pair in coordinates:
-                        # Write each coordinate pair to geospatial table
-                        if len(coordinate_pair) == 2:
-                            extras = {"record_id": record["record_id"], "lat": coordinate_pair[0], "lon": coordinate_pair[1]}
-                            self.insert_related_record("geospatial", record["geospatial"]["type"], **extras)
+                existing_geobbox_ids = [e["geobbox_id"] for e in existing_geobbox_recs]
+                new_geobbox_ids = []
+                for geobbox in record["geobboxes"]:
+                    # Fill in any missing values
+                    if "eastLon" not in geobbox and "westLon" in geobbox:
+                        geobbox["eastLon"] = geobbox["westLon"]
+                    if "westLon" not in geobbox and "eastLon" in geobbox:
+                        geobbox["westLon"] = geobbox["eastLon"]
+                    if "northLat" not in geobbox and "southLat" in geobbox:
+                        geobbox["northLat"] = geobbox["southLat"]
+                    if "southLat" not in geobbox and "northLat" in geobbox:
+                            geobbox["southLat"] = geobbox["northLat"]
+
+                    if "westLon" in geobbox and "eastLon" in geobbox and "northLat" in geobbox and "southLat" in geobbox:
+                        try:
+                            geobbox["westLon"] = float(geobbox["westLon"])
+                            geobbox["eastLon"] = float(geobbox["eastLon"])
+                            geobbox["northLat"] = float(geobbox["northLat"])
+                            geobbox["southLat"] = float(geobbox["southLat"])
+                            if geobbox["westLon"] != geobbox["eastLon"] or geobbox["northLat"] != geobbox["southLat"]:
+                                # If west/east or north/south don't match, this is a box
+                                extras = {"westLon": geobbox["westLon"], "eastLon": geobbox["eastLon"],
+                                          "northLat": geobbox["northLat"], "southLat": geobbox["southLat"]}
+                                geobbox_id = self.get_single_record_id("geobbox", record["record_id"], **extras)
+                                if geobbox_id is None:
+                                    geobbox_id = self.insert_related_record("geobbox", record["record_id"], **extras)
+                                    modified_upstream = True
+                                if geobbox_id is not None:
+                                    new_geobbox_ids.append(geobbox_id)
+                            else:
+                                # If west/east and north/south match, this is a point
+                                if "geopoints" not in record:
+                                    record["geopoints"] = []
+                                record["geopoints"].append({"lat": geobbox["northLat"], "lon": geobbox["westLon"]})
+                        except Exception as e:
+                            self.logger.error("Unable to update geobbox for record id {}: {}".format(record['record_id'], e))
+
+                # Remove any existing boxes that aren't also in the new boxes
+                for eid in existing_geobbox_ids:
+                    if eid not in new_geobbox_ids:
+                        self.delete_row_generic("geobbox", "geobbox_id", eid)
+                        modified_upstream = True
+
+            if "geopoints" in record:
+                existing_geopoint_recs = self.get_multiple_records("geopoint", "*", "record_id",
+                                                                    record["record_id"])
+                existing_geopoint_ids = [e["geopoint_id"] for e in existing_geopoint_recs]
+                new_geopoint_ids = []
+                for geopoint in record["geopoints"]:
+                    if "lat" in geopoint and "lon" in geopoint:
+                        try:
+                            geopoint["lat"] = float(geopoint["lat"])
+                            geopoint["lon"] = float(geopoint["lon"])
+                            extras = {"lat": geopoint["lat"], "lon": geopoint["lon"]}
+                            geopoint_id = self.get_single_record_id("geopoint", record["record_id"], **extras)
+                            if geopoint_id is None:
+                                self.insert_related_record("geopoint", record["record_id"], **extras)
+                                modified_upstream = True
+                            if geopoint_id is not None:
+                                new_geopoint_ids.append(geopoint_id)
+                        except Exception as e:
+                            self.logger.error("Unable to update geopoint for record id {}: {}".format(record['record_id'], e))
+
+                # Remove any existing points that aren't also in the new points
+                for eid in existing_geopoint_ids:
+                    if eid not in new_geopoint_ids:
+                        self.delete_row_generic("geopoint", "geopoint_id", eid)
+                        modified_upstream = True
+
+            if "geoplaces" in record:
+                existing_geoplace_recs = self.get_multiple_records("records_x_geoplace", "*", "record_id",
+                                                              record["record_id"])
+                existing_geoplace_ids = [e["geoplace_id"] for e in existing_geoplace_recs]
+                new_geoplace_ids = []
+                for geoplace in record["geoplaces"]:
+                    if "country" not in geoplace:
+                        geoplace["country"] = ""
+                    if "province_state" not in geoplace:
+                        geoplace["province_state"] = ""
+                    if "city" not in geoplace:
+                        geoplace["city"] = ""
+                    if "other" not in geoplace:
+                        geoplace["other"] = ""
+                    if "place_name" not in geoplace:
+                        geoplace["place_name"] = ""
+                    extras = {"country": geoplace["country"], "province_state": geoplace["province_state"]
+                              , "city": geoplace["city"], "other": geoplace["other"]}
+                    geoplace_id = self.get_single_record_id("geoplace", geoplace["place_name"], **extras)
+
+                    if geoplace_id is None:
+                        geoplace_id = self.insert_related_record("geoplace", geoplace["place_name"], **extras)
+                    if geoplace_id is not None:
+                        new_geoplace_ids.append(geoplace_id)
+                        if geoplace_id not in existing_geoplace_ids:
+                            self.insert_cross_record("records_x_geoplace", "geoplace", geoplace_id, record["record_id"])
+
+                for eid in existing_geoplace_ids:
+                    if eid not in new_geoplace_ids:
+                        records_x_geoplace_id = \
+                            self.get_multiple_records("records_x_geoplace", "records_x_geoplace_id", "record_id",
+                                                      record["record_id"], " and geoplace_id='"
+                                                      + str(eid) + "'")[0]["records_x_geoplace_id"]
+                        self.delete_row_generic("records_x_geoplace", "records_x_geoplace_id", records_x_geoplace_id)
+                        modified_upstream = True
+
+            if "geofiles" in record:
+                existing_geofile_recs = self.get_multiple_records("geofile", "*", "record_id",
+                                                               record["record_id"])
+                existing_geofile_ids = [e["geofile_id"] for e in existing_geofile_recs]
+                new_geofile_ids = []
+                for geofile in record["geofiles"]:
+                    if "filename" in geofile and "uri" in geofile:
+                        extras = {"filename": geofile["filename"], "uri": geofile["uri"]}
+                        geofile_id = self.get_single_record_id("geofile", record["record_id"], **extras)
+                        if geofile_id is None:
+                            geofile_id = self.insert_related_record("geofile", record["record_id"], **extras)
+                            modified_upstream = True
+                        if geofile_id is not None:
+                            new_geofile_ids.append(geofile_id)
+                # Remove any existing files that aren't also in the new files
+                for eid in existing_geofile_ids:
+                    if eid not in new_geofile_ids:
+                        self.delete_row_generic("geofile", "geofile_id", eid)
+                        modified_upstream = True
 
             if len(domain_metadata) > 0:
+                # TODO Add deletion for domain metadata
                 existing_metadata_ids = self.get_multiple_records("domain_metadata", "metadata_id", "record_id",
                                                                   record["record_id"])
                 if not existing_metadata_ids:
@@ -743,6 +965,9 @@ class DBInterface:
                                       "field_value": field_value}
                             self.insert_related_record("domain_metadata", schema_id, **extras)
 
+            if modified_upstream:
+                self.update_record_upstream_modified(record)
+
         return None
 
     def get_stale_records(self, stale_timestamp, repo_id, max_records_updated_per_run):
@@ -750,10 +975,12 @@ class DBInterface:
         records = []
         with con:
             cur = self.getCursor(con)
-            cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.series, recs.modified_timestamp, 
-                recs.local_identifier, recs.item_url, repos.repository_id, repos.repository_type
+            cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.series
+                , recs.modified_timestamp, recs.local_identifier, recs.item_url
+                , repos.repository_id, repos.repository_type
                 FROM records recs, repositories repos
-                where recs.repository_id = repos.repository_id and recs.modified_timestamp < ? and repos.repository_id = ? and recs.deleted = 0
+                where recs.repository_id = repos.repository_id and recs.modified_timestamp < ? 
+                and repos.repository_id = ? and recs.deleted = 0
                 LIMIT ?"""), (stale_timestamp, repo_id, max_records_updated_per_run))
             if cur is not None:
                 records = cur.fetchall()
@@ -781,9 +1008,23 @@ class DBInterface:
                 cur = self.getCursor(con)
                 try:
                     cur.execute(self._prep(
-                        "INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, local_identifier, item_url, repository_id) VALUES(?,?,?,?,?,?,?,?)"),
-                        ("", "", "", "", 0, local_identifier, "", repo_id))
+                        "INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, local_identifier"
+                        ", item_url, repository_id, upstream_modified_timestamp) VALUES(?,?,?,?,?,?,?,?,?)"),
+                        ("", "", "", "", 0, local_identifier, "", repo_id, time.time()))
                 except self.dblayer.IntegrityError as e:
                     self.logger.error("Error creating record header: {}".format(e))
+
+        return None
+
+    def update_record_upstream_modified(self, record):
+        con = self.getConnection()
+        with con:
+            cur = self.getCursor(con)
+            try:
+                cur.execute(self._prep("UPDATE records set upstream_modified_timestamp = ?, geodisy_harvested = 0 where record_id = ?")
+                            , (time.time(), record['record_id']))
+            except self.dblayer.IntegrityError as e:
+                self.logger.error("Unable to update modified_timestamp for record id ? dur to error creating"
+                                  " record header: ?", record['record_id'], e)
 
         return None

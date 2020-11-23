@@ -32,4 +32,3 @@ CREATE TABLE geospatial_file (
 	filename TEXT NOT NULL,
     uri TEXT NOT NULL);
 CREATE INDEX  geospatial_file_by_record on   geospatial_file(record_id);
-
