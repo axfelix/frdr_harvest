@@ -835,21 +835,29 @@ class DBInterface:
                             geobbox["southLat"] = geobbox["northLat"]
 
                     if "westLon" in geobbox and "eastLon" in geobbox and "northLat" in geobbox and "southLat" in geobbox:
-                        if geobbox["westLon"] != geobbox["eastLon"] or geobbox["northLat"] != geobbox["southLat"]:
-                            # If west/east or north/south don't match, this is a box
-                            extras = {"westLon": geobbox["westLon"], "eastLon": geobbox["eastLon"],
-                                      "northLat": geobbox["northLat"], "southLat": geobbox["southLat"]}
-                            geobbox_id = self.get_single_record_id("geobbox", record["record_id"], **extras)
-                            if geobbox_id is None:
-                                geobbox_id = self.insert_related_record("geobbox", record["record_id"], **extras)
-                                modified_upstream = True
-                            if geobbox_id is not None:
-                                new_geobbox_ids.append(geobbox_id)
-                        else:
-                            # If west/east and north/south match, this is a point
-                            if "geopoints" not in record:
-                                record["geopoints"] = []
-                            record["geopoints"].append({"lat": geobbox["northLat"], "lon": geobbox["westLon"]})
+                        try:
+                            geobbox["westLon"] = float(geobbox["westLon"])
+                            geobbox["eastLon"] = float(geobbox["eastLon"])
+                            geobbox["northLat"] = float(geobbox["northLat"])
+                            geobbox["southLat"] = float(geobbox["southLat"])
+                            if geobbox["westLon"] != geobbox["eastLon"] or geobbox["northLat"] != geobbox["southLat"]:
+                                # If west/east or north/south don't match, this is a box
+                                extras = {"westLon": geobbox["westLon"], "eastLon": geobbox["eastLon"],
+                                          "northLat": geobbox["northLat"], "southLat": geobbox["southLat"]}
+                                geobbox_id = self.get_single_record_id("geobbox", record["record_id"], **extras)
+                                if geobbox_id is None:
+                                    geobbox_id = self.insert_related_record("geobbox", record["record_id"], **extras)
+                                    modified_upstream = True
+                                if geobbox_id is not None:
+                                    new_geobbox_ids.append(geobbox_id)
+                            else:
+                                # If west/east and north/south match, this is a point
+                                if "geopoints" not in record:
+                                    record["geopoints"] = []
+                                record["geopoints"].append({"lat": geobbox["northLat"], "lon": geobbox["westLon"]})
+                        except Exception as e:
+                            self.logger.error("Unable to update geobbox for record id {}: {}".format(record['record_id'], e))
+
                 # Remove any existing boxes that aren't also in the new boxes
                 for eid in existing_geobbox_ids:
                     if eid not in new_geobbox_ids:
@@ -863,13 +871,19 @@ class DBInterface:
                 new_geopoint_ids = []
                 for geopoint in record["geopoints"]:
                     if "lat" in geopoint and "lon" in geopoint:
-                        extras = {"lat": geopoint["lat"], "lon": geopoint["lon"]}
-                        geopoint_id = self.get_single_record_id("geopoint", record["record_id"], **extras)
-                        if geopoint_id is None:
-                            self.insert_related_record("geopoint", record["record_id"], **extras)
-                            modified_upstream = True
-                        if geopoint_id is not None:
-                            new_geopoint_ids.append(geopoint_id)
+                        try:
+                            geopoint["lat"] = float(geopoint["lat"])
+                            geopoint["lon"] = float(geopoint["lon"])
+                            extras = {"lat": geopoint["lat"], "lon": geopoint["lon"]}
+                            geopoint_id = self.get_single_record_id("geopoint", record["record_id"], **extras)
+                            if geopoint_id is None:
+                                self.insert_related_record("geopoint", record["record_id"], **extras)
+                                modified_upstream = True
+                            if geopoint_id is not None:
+                                new_geopoint_ids.append(geopoint_id)
+                        except Exception as e:
+                            self.logger.error("Unable to update geopoint for record id {}: {}".format(record['record_id'], e))
+
                 # Remove any existing points that aren't also in the new points
                 for eid in existing_geopoint_ids:
                     if eid not in new_geopoint_ids:
