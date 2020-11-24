@@ -67,39 +67,6 @@ class DataverseJSONCreator(Exporter):
         with open('data.txt', 'w') as outfile:
             json.dump(data, outfile)
 
-    def json_dict_simple(self, type_name, multiple, type_class, value):
-        answer = {self.stringed("typeName"): self.stringed(type_name),
-                  self.stringed("multiple"): multiple,
-                  self.stringed("typeClass"): self.stringed(type_class),
-                  self.stringed("value"): self.stringed(value)}
-
-        return answer
-
-    def json_dict_compound(self, type_name, multiple, value):
-        answer = {self.stringed("typeName"): self.stringed(type_name),
-                  self.stringed("multiple"): multiple,
-                  self.stringed("typeClass"): self.stringed("compound"),
-                  self.stringed("value"): value}
-
-        return answer
-
-    @staticmethod
-    def stringed(val):
-        return "\"" + val + "\""
-
-    def json_pair(self, type_name, name):
-        return self.stringed(type_name) + ": " + self.stringed(name)
-
-    def compounded(self, list_object):
-        compounded_string = {}
-        for tupleObj in list_object:
-            compounded_string = compounded_string.join(
-                self.json_dict(tupleObj.get("name"), tupleObj.get("multiple"), tupleObj.get("typeClass"),
-                               tupleObj.get("value")))
-            compounded_string = compounded_string.join(', ')
-        compounded_string = compounded_string[:-2]
-        return compounded_string.join(" ]")
-
     def get_base_metadata_fields(self, record):
         # TODO
         con = self.db.getConnection()
@@ -132,32 +99,6 @@ class DataverseJSONCreator(Exporter):
         if answer["geospatial"] is None:
             return None
         return answer
-
-    def get_record_x_field(self, record_id, table_name, field_name):
-        con = self.db.getConnection()
-        with con:
-            citcur = self.get_connection(con)
-            citcur.execute(self.db._prep(
-                "SELECT ? FROM ? WHERE record_id=?"),
-                (field_name, table_name, record_id))
-            ids = []
-            for row in citcur:
-                record = (dict(zip([field_name], row)))
-                ids.append(record)
-        return ids
-
-    def get_record_x_creator(self, record_id):
-        con = self.db.getConnection()
-        with con:
-            citcur = self.get_connection(con)
-            citcur.execute(self.db._prep(
-                "SELECT creator_id FROM records_x_creators WHERE record_id=? AND is_contributor = O"),
-                record_id)
-            ids = []
-            for row in citcur:
-                record = (dict(zip(["creator_id"], row)))
-                ids.append(record)
-        return ids
 
     def get_authors(self, record):
         con = self.db.getConnection()
@@ -224,17 +165,6 @@ class DataverseJSONCreator(Exporter):
         id = ids[0]
         return self.get_single_value_from_table("access", "access", "access_id", id["access_id"])
 
-    def get_single_value_from_table(self, table, field, id_field, id_field_value):
-        con = self.db.getConnection()
-        with con:
-            citcur = self.get_connection(con)
-            citcur.execute(self.db._prep(
-                "SELECT ? FROM ? WHERE ?=?"), (
-                field, table, id_field, id_field_value))
-            for row in citcur:
-                val = (dict(zip([field], row)))
-        return val[field]
-
     def get_geospatial_metadata(self, record):
         geospatial = {}
         geographic_coverage = {self.json_dict_compound("geographicCoverage", "true", self.get_geo_coverage(record))}
@@ -296,16 +226,6 @@ class DataverseJSONCreator(Exporter):
                     self.json_dict_simple("southLatitude", "false", "primative", bbox_dict["southLat"])
                 }
 
-    def get_connection(self, con):
-        if self.db.getType() == "sqlite":
-            from sqlite3 import Row
-            con.row_factory = Row
-            cur = con.cursor()
-        elif self.db.getType() == "postgres":
-            cur = con.cursor(cursor_factory=None)
-
-        return cur
-
     def get_files(self, record):
         con = self.db.getConnection()
         with con:
@@ -322,3 +242,84 @@ class DataverseJSONCreator(Exporter):
 
     def get_file_info(self, filename, record):
         return {"label": filename, "id": record["id"], "pidURL": record["item_url"], "filename": filename}
+
+    # Utility Functions____________________________________________
+    @staticmethod
+    def stringed(val):
+        return "\"" + val + "\""
+
+    def get_connection(self, con):
+        if self.db.getType() == "sqlite":
+            from sqlite3 import Row
+            con.row_factory = Row
+            cur = con.cursor()
+        elif self.db.getType() == "postgres":
+            cur = con.cursor(cursor_factory=None)
+
+        return cur
+
+    def get_record_x_field(self, record_id, table_name, field_name):
+        con = self.db.getConnection()
+        with con:
+            citcur = self.get_connection(con)
+            citcur.execute(self.db._prep(
+                "SELECT ? FROM ? WHERE record_id=?"),
+                (field_name, table_name, record_id))
+            ids = []
+            for row in citcur:
+                record = (dict(zip([field_name], row)))
+                ids.append(record)
+        return ids
+
+    def get_record_x_creator(self, record_id):
+        con = self.db.getConnection()
+        with con:
+            citcur = self.get_connection(con)
+            citcur.execute(self.db._prep(
+                "SELECT creator_id FROM records_x_creators WHERE record_id=? AND is_contributor = O"),
+                record_id)
+            ids = []
+            for row in citcur:
+                record = (dict(zip(["creator_id"], row)))
+                ids.append(record)
+        return ids
+
+    def json_dict_simple(self, type_name, multiple, type_class, value):
+        answer = {self.stringed("typeName"): self.stringed(type_name),
+                  self.stringed("multiple"): multiple,
+                  self.stringed("typeClass"): self.stringed(type_class),
+                  self.stringed("value"): self.stringed(value)}
+
+        return answer
+
+    def json_dict_compound(self, type_name, multiple, value):
+        answer = {self.stringed("typeName"): self.stringed(type_name),
+                  self.stringed("multiple"): multiple,
+                  self.stringed("typeClass"): self.stringed("compound"),
+                  self.stringed("value"): value}
+
+        return answer
+
+    def json_pair(self, type_name, name):
+        return self.stringed(type_name) + ": " + self.stringed(name)
+
+    def compounded(self, list_object):
+        compounded_string = {}
+        for tupleObj in list_object:
+            compounded_string = compounded_string.join(
+                self.json_dict(tupleObj.get("name"), tupleObj.get("multiple"), tupleObj.get("typeClass"),
+                               tupleObj.get("value")))
+            compounded_string = compounded_string.join(', ')
+        compounded_string = compounded_string[:-2]
+        return compounded_string.join(" ]")
+
+    def get_single_value_from_table(self, table, field, id_field, id_field_value):
+        con = self.db.getConnection()
+        with con:
+            citcur = self.get_connection(con)
+            citcur.execute(self.db._prep(
+                "SELECT ? FROM ? WHERE ?=?"), (
+                field, table, id_field, id_field_value))
+            for row in citcur:
+                val = (dict(zip([field], row)))
+        return val[field]
