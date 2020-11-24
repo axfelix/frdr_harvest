@@ -181,7 +181,10 @@ class OAIRepository(HarvestRepository):
             record["rights"] = record.get("copyright")
 
         if self.metadataprefix.lower() == "fgdc" or self.metadataprefix.lower() == "fgdc-std":
-            record["creator"] = record.get("origin")
+            record["creator"] = []
+            for creator in record.get("origin"):
+                if creator not in record["creator"]:
+                    record["creator"].append(creator)
             record["tags"] = record.get("themekey")
             record["description"] = record.get("abstract")
             record["publisher"] = record.get("cntorg")
@@ -196,17 +199,8 @@ class OAIRepository(HarvestRepository):
                 record["coverage"] = record["placekt"]
 
             if "bounding" in record.keys():
-                # Sometimes point data is hacked in as a bounding box
-                if record["westbc"] == record["eastbc"] and record["northbc"] == record["southbc"]:
-                    record["geospatial"] = {"type": "Point",
-                                            "coordinates": [[[record["northbc"][0], record["westbc"][0]]]]} # TODO remove
-                    record["geopoints"] = [{"lat": record["northbc"][0], "lon": record["westbc"][0]}]
-                else:
-                    record["geospatial"] = {"type": "Polygon", "coordinates": [
-                        [[record["northbc"][0], record["westbc"][0]], [record["northbc"][0], record["eastbc"][0]],
-                         [record["southbc"][0], record["westbc"][0]], [record["southbc"][0], record["eastbc"][0]]]]} # TODO remove
-                    record["geobboxes"] = [{"westLon": record["westbc"][0], "eastLon": record["eastbc"][0],
-                                            "northLat": record["northbc"][0], "southLat": record["southbc"][0]}]
+                record["geobboxes"] = [{"westLon": record["westbc"][0], "eastLon": record["eastbc"][0],
+                                        "northLat": record["northbc"][0], "southLat": record["southbc"][0]}]
 
         # Parse FRDR records
         if self.metadataprefix.lower() == "frdr":
