@@ -3,6 +3,8 @@ import harvester.Exporter as Exporter
 
 
 class DataverseJSONCreator(Exporter):
+    def __init__(self, db, log, finalconfig):
+        super().__init__(db, log, finalconfig)
 
     # function gets all the records that are labeled as still needing Geodisy to harvest them
     def get_updated_records(self, export_filepath, temp_filepath, start_time, DictCursor):
