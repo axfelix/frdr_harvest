@@ -240,8 +240,8 @@ class DBInterface:
             cur = self.getCursor(con)
 
             try:
-                cur.execute(self._prep("UPDATE records set deleted = 1, modified_timestamp = ? where record_id=?"),
-                            (time.time(), record['record_id']))
+                cur.execute(self._prep("UPDATE records set deleted = 1, modified_timestamp = ?, upstream_modified_timestamp = ? where record_id=?"),
+                            (time.time(), time.time(), record['record_id']))
             except:
                 self.logger.error("Unable to mark as deleted record {}".format(record['local_identifier']))
                 return False
