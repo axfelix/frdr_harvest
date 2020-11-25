@@ -98,6 +98,18 @@ class RepoList(Resource):
         return CACHE["repositories"]
 
 
+# Shows a single record
+class Record(Resource):
+    def get(self, record_id):
+        record_id = int(record_id)
+        get_log().debug("{} GET /records/{}".format(request.remote_addr, record_id))
+        #check_cache("records")
+       # for rec in CACHE["records"]["records"]:
+       #     if int(rec["record_id"]) == record_id:
+       #         return rec
+        abort(404, message="Record {} doesn't exist".format(record_id))
+
+
 # Default response
 class Default(Resource):
     def get(self):
@@ -109,6 +121,8 @@ class Default(Resource):
 
 api.add_resource(RepoList, '/repos')
 api.add_resource(Repo, '/repos/<repo_id>')
+#api.add_resource(RecordList, '/records')
+api.add_resource(Record, '/records/<record_id>')
 api.add_resource(Default, '/')
 
 if __name__ == '__main__':
