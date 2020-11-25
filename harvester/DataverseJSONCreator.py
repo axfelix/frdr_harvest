@@ -3,56 +3,50 @@ import harvester.Exporter as Exporter
 
 
 class DataverseJSONCreator(Exporter):
+    records_at_a_time = 500
+
     def __init__(self, db, log, finalconfig):
         super().__init__(db, log, finalconfig)
 
     # function gets all the records that are labeled as still needing Geodisy to harvest them
-    def get_updated_records(self, export_filepath, temp_filepath, start_time, DictCursor):
+    def get_updated_records(self):
         self.logger.info("Exporter: generate_dv_json called")
-        self.output_buffer = []
 
         records_con = self.db.getConnection()
         with records_con:
             records_cursor = records_con.cursor()
 
-        records_sql = """SELECT record_id FROM records WHERE geodisy_harvested = 0"""
-        records_cursor.execute(self.db._prep(records_sql))
+        records_sql = """SELECT record_id FROM records WHERE geodisy_harvested = 0 LIMIT {}"""
+        records_cursor.execute(self.db._prep(records_sql), self.records_at_a_time+1)
 
-        buffer_limit = int(self.export_limit) * 1024 * 1024
-        self.logger.info("Exporter: output file size limited to {} MB each".format(int(self.export_limit)))
-
-        records_assembled = 0
-        self.batch_number = 1
-        self.buffer_size = 0
         records = []
         for row in records_cursor:
-            if self.buffer_size > buffer_limit:
-                self._write_batch(export_filepath, temp_filepath, start_time)
-
             record = (dict(zip(['record_id'], row)))
             records.append(record)
-        self.get_batch_record_metadata(0, len(records), records, DictCursor)
+        self.get_batch_record_metadata(0, len(records), records)
 
     # create json with batches of 500 records max
-    def get_batch_record_metadata(self, start, last_rec_num, records, DictCursor):
+    def get_batch_record_metadata(self, start, last_rec_num, records):
         json_output = []
         current = start
-        stop = (start + 500) if (start + 500 < last_rec_num) else last_rec_num  # max 500 records per batch
+        rec_nums = self.records_at_a_time
+        # max self.records_at_a_time records per batch
+        stop = (start + rec_nums) if (start + rec_nums < last_rec_num) else last_rec_num
         while current <= stop:
-            json_output.append(self._generate_dv_json(DictCursor, records[current]))
+            json_output.append(self._generate_dv_json(records[current]))
             current += 1
 
         done = current == last_rec_num
         self.send_json(json_output, done)  # send the json to Geodisy
 
     # make calls back to the FRDR Harvester's db to get the needed info to generate a DV-like json for Geodisy to parse
-    def _generate_dv_json(self, DictCursor, record):
+    def _generate_dv_json(self, record):
         json_representation = {}
         record = self.get_base_metadata_fields(record)
-        json_representation["id"] = record["id"]
-        json_representation["persistentUrl"] = record["item_url"]
-        json_representation["publicationDate"] = record["pub_date"]
-        json_representation["license"] = self.get_license(record)
+        json_representation[self.stringed("id")] = record["id"]
+        json_representation[self.stringed("persistentUrl")] = self.stringed(record["item_url"])
+        json_representation[self.stringed("publicationDate")] = self.stringed(record["pub_date"])
+        json_representation[self.stringed("license")] = self.stringed(self.get_license(record))
         json_representation["repo_base_url"] = self.get_base_url(record)
         metadata = {}
         metadata_blocks = {self.stringed("citation"): self.get_citation_metadata_field(record),
