@@ -22,7 +22,7 @@ log.disabled = True
 
 api = Api(app)
 
-CACHE = {"repositories": {"count": 0, "repositories": [], "timestamp": 0}}
+CACHE = {"repositories": {"count": 0, "repositories": [], "timestamp": 0},"records": {"count": 0, "records": [], "timestamp": 0},}
 CONFIG = {"restapi": None, "db": None, "handles": {}}
 
 
@@ -103,11 +103,11 @@ class Record(Resource):
     def get(self, record_id):
         record_id = int(record_id)
         get_log().debug("{} GET /records/{}".format(request.remote_addr, record_id))
-        #check_cache("records")
-       # for rec in CACHE["records"]["records"]:
-       #     if int(rec["record_id"]) == record_id:
-       #         return rec
-        abort(404, message="Record {} doesn't exist".format(record_id))
+        rec = get_db().get_single_record_id("records", record_id) 
+        if rec == None:
+            abort(404, message="Record {} doesn't exist".format(record_id))
+        else:
+            return rec
 
 
 # Default response
