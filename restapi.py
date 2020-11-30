@@ -22,12 +22,6 @@ log.disabled = True
 
 api = Api(app)
 
-#def log_exception(sender, exception, **extra):
-#    get_log().debug("{}", exception)
-#
-#
-#got_request_exception.connect(log_exception, app)
-
 CACHE = {"repositories": {"count": 0, "repositories": [], "timestamp": 0}}
 CONFIG = {"restapi": None, "db": None, "handles": {}}
 
