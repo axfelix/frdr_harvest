@@ -11,6 +11,7 @@ import dateparser
 import os.path
 import time
 import json
+import pdb
 
 
 # import dateparser
@@ -141,7 +142,6 @@ class OAIRepository(HarvestRepository):
                 metadata['identifier'] = record.header.identifier
                 oai_record = self.unpack_oai_metadata(metadata)
                 self.domain_metadata = self.find_domain_metadata(metadata)
-
                 self.db.write_record(oai_record, self)
                 item_count = item_count + 1
                 if (item_count % self.update_log_after_numitems == 0):
@@ -180,15 +180,11 @@ class OAIRepository(HarvestRepository):
             record["identifier"] = record.get("IDNo")
             record["rights"] = record.get("copyright")
 
-            if "northBL" in record.keys():
-                # This record has geoSpatial bounding lines
-                # Convert into an array of closed bounding box points (clockwise polygon)
-                record["geospatial"] = {"type": "Polygon", "coordinates": [
-                    [[record["northBL"][0], record["westBL"][0]], [record["northBL"][0], record["eastBL"][0]],
-                     [record["southBL"][0], record["westBL"][0]], [record["southBL"][0], record["eastBL"][0]]]]}
-
         if self.metadataprefix.lower() == "fgdc" or self.metadataprefix.lower() == "fgdc-std":
-            record["creator"] = record.get("origin")
+            record["creator"] = []
+            for creator in record.get("origin"):
+                if creator not in record["creator"]:
+                    record["creator"].append(creator)
             record["tags"] = record.get("themekey")
             record["description"] = record.get("abstract")
             record["publisher"] = record.get("cntorg")
@@ -199,35 +195,39 @@ class OAIRepository(HarvestRepository):
             record["rights"] = record.get("distliab")
             record["access"] = record.get("accconst")
 
+            if "placekt" in record.keys():
+                record["coverage"] = record["placekt"]
+
             if "bounding" in record.keys():
-                # Sometimes point data is hacked in as a bounding box
-                if record["westbc"] == record["eastbc"] and record["northbc"] == record["southbc"]:
-                    record["geospatial"] = {"type": "Point",
-                                            "coordinates": [[[record["northbc"][0], record["westbc"][0]]]]}
-                else:
-                    record["geospatial"] = {"type": "Polygon", "coordinates": [
-                        [[record["northbc"][0], record["westbc"][0]], [record["northbc"][0], record["eastbc"][0]],
-                         [record["southbc"][0], record["westbc"][0]], [record["southbc"][0], record["eastbc"][0]]]]}
+                record["geobboxes"] = [{"westLon": record["westbc"][0], "eastLon": record["eastbc"][0],
+                                        "northLat": record["northbc"][0], "southLat": record["southbc"][0]}]
 
         # Parse FRDR records
         if self.metadataprefix.lower() == "frdr":
-            record["coverage"] = record.get("geolocationPlace")
+            if "http://datacite.org/schema/kernel-4#geolocationPlace" in record.keys():
+                record["coverage"] = record.get("http://datacite.org/schema/kernel-4#geolocationPlace")
 
-            if "geolocationPoint" in record.keys():
-                point_split = re.compile(",? ").split(record["geolocationPoint"][0])
-                record["geospatial"] = {"type": "Point", "coordinates": [[point_split]]}
+            if "http://datacite.org/schema/kernel-4#geolocationPoint" in record.keys():
+                record["geopoints"] = []
+                for geopoint in record["http://datacite.org/schema/kernel-4#geolocationPoint"]:
+                    point_split = re.compile(",? ").split(geopoint)
+                    if len(point_split) == 2:
+                        record["geopoints"].append({"lat": point_split[0], "lon": point_split[1]})
 
-            if "geolocationBox" in record.keys():
-                boxcoordinates = record["geolocationBox"][0].split()
-                record["geospatial"] = {"type": "Polygon", "coordinates": [
-                    [boxcoordinates[x:x + 2] for x in range(0, len(boxcoordinates), 2)]]}
+            if "http://datacite.org/schema/kernel-4#geolocationBox" in record.keys():
+                record["geobboxes"] = []
+                for geobbox in record["http://datacite.org/schema/kernel-4#geolocationBox"]:
+                    boxcoordinates = geobbox.split()
+                    if len(boxcoordinates) == 4:
+                        record["geobboxes"].append({"southLat": boxcoordinates[0], "westLon": boxcoordinates[1],
+                                                    "northLat": boxcoordinates[2], "eastLon": boxcoordinates[3]})
+
             # Look for datacite.creatorAffiliation
             if "http://datacite.org/schema/kernel-4#creatorAffiliation" in record:
                 record["affiliation"] = record.get("http://datacite.org/schema/kernel-4#creatorAffiliation")
 
         if 'identifier' not in record.keys():
             return None
-
         if record["pub_date"] is None:
             return None
 
@@ -239,7 +239,6 @@ class OAIRepository(HarvestRepository):
                 if "http" in idstring.lower():
                     valid_id = idstring
             record["identifier"] = valid_id
-
         if 'creator' not in record.keys() and 'contributor' not in record.keys() and 'publisher' not in record.keys():
             self.logger.debug("Item {} is missing creator - will not be added".format(record["identifier"]))
             return None
@@ -269,14 +268,18 @@ class OAIRepository(HarvestRepository):
         # If date is still a one-value list, make it a string
         if isinstance(record["pub_date"], list):
             record["pub_date"] = record["pub_date"][0]
-
         # If a date has question marks, chuck it
         if "?" in record["pub_date"]:
             return None
 
         try:
-            record["pub_date"] = dateparser.parse(record["pub_date"]).strftime("%Y-%m-%d")
+            date_object = dateparser.parse(record["pub_date"])
+            if date_object is None:
+                date_object = dateparser.parse(record["pub_date"], date_formats=['%Y%m%d'])
+            record["pub_date"] = date_object.strftime("%Y-%m-%d")
         except:
+            self.logger.debug("Something went wrong parsing the date, {} from {}", record["pub_date"]
+                              , (record["dc:source"] if record["identifier"] is None else record["identifier"]))
             return None
 
 
@@ -319,6 +322,17 @@ class OAIRepository(HarvestRepository):
 
         if "series" not in record.keys():
             record["series"] = ""
+
+        if "coverage" in record.keys():
+            record["geoplaces"] = []
+            if self.name == "SFU Radar":
+                record["coverage"] = [x.strip() for x in record["coverage"][0].split(";")]
+            if not isinstance(record["coverage"], list):
+                record["coverage"] = [record["coverage"]]
+            for place_name in record["coverage"]:
+                if place_name != "" and place_name.lower().islower(): # to filter out dates, confirm at least one letter
+                    record["geoplaces"].append({"place_name": place_name})
+
 
         # DSpace workaround to exclude theses and non-data content
         if self.prune_non_dataset_items:

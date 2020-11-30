@@ -82,6 +82,21 @@ class CSWRepository(HarvestRepository):
         record["creator"] = self.name
         record["series"] = ""
 
+        if csw_record.bbox:
+            if float(csw_record.bbox.minx) > float(csw_record.bbox.maxx):
+                # longitude values (minx and maxx) are switched by oswlib; switch them back
+                record["geobboxes"] = [{"southLat": csw_record.bbox.miny, "westLon": csw_record.bbox.maxx,
+                                        "northLat": csw_record.bbox.maxy, "eastLon": csw_record.bbox.minx}]
+            elif float(csw_record.bbox.miny) > float(csw_record.bbox.maxy):
+                # sometimes x and y values are switched, so the lats are longs and vice versa
+                # we can look for the same discrepancy that happens in the longs, except it's in the y values now
+                record["geobboxes"] = [{"southLat": csw_record.bbox.minx, "westLon": csw_record.bbox.maxy,
+                                       "northLat": csw_record.bbox.maxx, "eastLon": csw_record.bbox.miny}]
+            else:
+                # default if nothing is wrong (this code isn't executed currently)
+                record["geobboxes"] = [{"southLat": csw_record.bbox.miny, "westLon": csw_record.bbox.minx,
+                                        "northLat": csw_record.bbox.maxy, "eastLon": csw_record.bbox.maxx}]
+
         return record
 
     @rate_limited(5)

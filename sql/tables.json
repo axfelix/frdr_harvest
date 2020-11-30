@@ -19,5 +19,10 @@
 	"rights":                 { "idcol": "rights_id",                 "valcol": "rights_hash" },
 	"settings":               { "idcol": "setting_id",                "valcol": "" },
 	"subjects":               { "idcol": "subject_id",                "valcol": "subject" },
-	"tags":                   { "idcol": "tag_id",                    "valcol": "tag" }
+	"tags":                   { "idcol": "tag_id",                    "valcol": "tag" },
+	"geobbox":								{ "idcol": "geobbox_id",								"valcol": "record_id"},
+	"geopoint":								{ "idcol": "geopoint_id",								"valcol": "record_id"},
+	"geoplace":								{ "idcol": "geoplace_id",								"valcol": "place_name"},
+	"geofile":								{ "idcol": "geofile_id",								"valcol": "record_id"},
+	"records_x_geoplace":			{ "idcol": "records_x_geoplace_id",			"valcol": "" }
 }
