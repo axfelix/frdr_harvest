@@ -216,6 +216,26 @@ class DBInterface:
             for rec in records:
                 repos[i]["item_count"] = int(rec["cnt"])
         return repos
+    
+    # The only requirement is to update the 'geodisy_harvested' field of the 
+    # record, but was attempting to write this so that we could update other fields
+    # if needed easily in the future
+    def update_record(self, record_id, **fields): 
+        update_record_sql = "update records set "
+        update_cols = []
+        update_vals = []
+        for key,value in fields.items():
+            update_cols.append("{} = ?".format(key)) 
+            update_vals.append(value)
+
+        update_record_sql += ", ".join(update_cols)
+        update_record_sql += " where record_id = ?"
+
+        con = self.getConnection()
+        with con:
+            cur = self.getCursor(con)
+            cur.execute(self._prep(update_record_sql),
+                        update_vals, record_id)
 
     def update_last_crawl(self, repo_id):
         con = self.getConnection()
@@ -345,6 +365,9 @@ class DBInterface:
                     cross_table_id = int(cur.lastrowid)
             except self.dblayer.IntegrityError as e:
                 self.logger.error("Record insertion problem: {}".format(e))
+
+    #def get_record(self, tablename, column, columnlist, given_col, given_val, extrawhere=""):
+        
 
     def get_multiple_records(self, tablename, columnlist, given_col, given_val, extrawhere=""):
         records = []

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from flask import Flask, request
+from flask import Flask, request, got_request_exception
 from flask_restful import reqparse, abort, Api, Resource
 import configparser
 import logging
@@ -22,7 +22,13 @@ log.disabled = True
 
 api = Api(app)
 
-CACHE = {"repositories": {"count": 0, "repositories": [], "timestamp": 0},"records": {"count": 0, "records": [], "timestamp": 0},}
+#def log_exception(sender, exception, **extra):
+#    get_log().debug("{}", exception)
+#
+#
+#got_request_exception.connect(log_exception, app)
+
+CACHE = {"repositories": {"count": 0, "repositories": [], "timestamp": 0}}
 CONFIG = {"restapi": None, "db": None, "handles": {}}
 
 
@@ -38,7 +44,6 @@ def get_db():
     if "db" not in CONFIG["handles"]:
         CONFIG["handles"]["db"] = DBInterface(CONFIG['db'])
     return CONFIG["handles"]["db"]
-
 
 def check_cache(objname):
     if objname in CACHE:
@@ -100,15 +105,43 @@ class RepoList(Resource):
 
 # Shows a single record
 class Record(Resource):
+
+    editable_fields = ["geodisy_harvested"]
+
     def get(self, record_id):
         record_id = int(record_id)
         get_log().debug("{} GET /records/{}".format(request.remote_addr, record_id))
-        rec = get_db().get_single_record_id("records", record_id) 
-        if rec == None:
-            abort(404, message="Record {} doesn't exist".format(record_id))
-        else:
-            return rec
 
+        ## Add records to the cache as is done for repos above?
+        #
+        #check_cache("records")
+        # for rec in CACHE["records"]["records"]:
+        #     if int(rec["record_id"]) == record_id:
+        #         return rec
+
+        recs = get_db().get_multiple_records("records", "*", "record_id", record_id) 
+        
+        if len(recs) == 0:
+            abort(404, message="Record {} doesn't exist".format(record_id))
+        else if len(recs) == 1:
+            # Return the record
+        
+
+    def patch(self, record_id):
+        record_id = int(record_id)
+        body = request.json
+        get_log().debug("{} PATCH /records/{} - {}".format(request.remote_addr, record_id, request.json))
+
+        # filter the json body passed in to only allow fields with keys in the 
+        # self.editable_fields
+        filtered_body = {k:v for k,v in body.items() if k in self.editable_fields}
+
+        try:
+            ret = get_db().update_record(record_id, filtered_body)
+        except Exception as e:
+            get_log().debug("{}", e)
+
+        return # Updated record or some indication of success
 
 # Default response
 class Default(Resource):
@@ -117,7 +150,7 @@ class Default(Resource):
         return {}
 
 
-## API resource routing
+# API resource routing
 
 api.add_resource(RepoList, '/repos')
 api.add_resource(Repo, '/repos/<repo_id>')
