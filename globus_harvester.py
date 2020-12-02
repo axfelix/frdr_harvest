@@ -38,6 +38,8 @@ from harvester.HarvestLogger import HarvestLogger
 from harvester.TimeFormatter import TimeFormatter
 from harvester.Lock import Lock
 from harvester.Exporter import Exporter
+from harvester.ExporterGmeta import ExporterGmeta
+from harvester.ExporterDataverse import ExporterDataverse
 
 
 def get_config_json(repos_json="conf/repos.json"):
@@ -153,24 +155,31 @@ if __name__ == "__main__":
                 main_log.restoreErrorsToEmail()
 
     if run_export:
-        # Export the database contents out to files
+        # Default output format is gmeta
+        export_format = "gmeta"
+        exporter = None
+        destination = "file"
         if arguments["--export-format"]:
-            final_config['export_format'] = arguments["--export-format"]
+            export_format = arguments["--export-format"]
         if arguments["--export-filepath"]:
             final_config['export_filepath'] = arguments["--export-filepath"]
         if arguments["--repository-id"]:
             final_config['repository_id'] = arguments["--repository-id"]
-        exporter = Exporter(dbh, main_log, final_config)
+
+        if export_format == "gmeta":
+            exporter = ExporterGmeta(dbh, main_log, final_config)
+        elif export_format == "dataverse":
+            exporter = ExporterDataverse(dbh, main_log, final_config)
         kwargs = {
-            "export_format": final_config['export_format'],
             "export_filepath": final_config['export_filepath'],
             "only_new_records": False,
             "temp_filepath": final_config['temp_filepath'],
-            "export_repository_id": final_config['repository_id']
+            "export_repository_id": final_config['repository_id'],
+            "destination": destination
         }
         if arguments["--only-new-records"] == True:
             kwargs["only_new_records"] = True
-        exporter.export_to_file(**kwargs)
+        exporter.export(**kwargs)
 
     formatter = TimeFormatter()
     dbh.set_setting("last_run_timestamp", tstart)
