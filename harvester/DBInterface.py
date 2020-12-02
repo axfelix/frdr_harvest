@@ -224,6 +224,23 @@ class DBInterface:
             for rec in records:
                 repos[i]["item_count"] = int(rec["cnt"])
         return repos
+    
+    def update_record(self, record_id, fields):
+        update_record_sql = "update records set "
+        update_cols = []
+        update_vals = []
+        for key,value in fields.items():
+            update_cols.append("{} = ?".format(key)) 
+            update_vals.append(value)
+        update_record_sql += ", ".join(update_cols)
+        update_record_sql += " where record_id = ?"
+        update_vals.append(record_id)
+
+        con = self.getConnection()
+        with con:
+            cur = self.getCursor(con)
+            cur.execute(self._prep(update_record_sql),
+                        update_vals)
 
     def update_last_crawl(self, repo_id):
         con = self.getConnection()
@@ -240,8 +257,8 @@ class DBInterface:
             cur = self.getCursor(con)
 
             try:
-                cur.execute(self._prep("UPDATE records set deleted = 1, modified_timestamp = ? where record_id=?"),
-                            (time.time(), record['record_id']))
+                cur.execute(self._prep("UPDATE records set deleted = 1, modified_timestamp = ?, upstream_modified_timestamp = ? where record_id=?"),
+                            (time.time(), time.time(), record['record_id']))
             except:
                 self.logger.error("Unable to mark as deleted record {}".format(record['local_identifier']))
                 return False
@@ -353,6 +370,7 @@ class DBInterface:
                     cross_table_id = int(cur.lastrowid)
             except self.dblayer.IntegrityError as e:
                 self.logger.error("Record insertion problem: {}".format(e))
+
 
     def get_multiple_records(self, tablename, columnlist, given_col, given_val, extrawhere="", **kwargs):
         records = []
