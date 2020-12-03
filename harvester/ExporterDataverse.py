@@ -95,13 +95,14 @@ class ExporterDataverse(Exporter.Exporter):
             return answer
 
     def get_authors(self, record):
-        con = self.db.getConnection()
         cur = self.db.getLambdaCursor()
         retlist = []
         try:
             cur.execute(self.db._prep("""SELECT creators.creator FROM creators JOIN records_x_creators on records_x_creators.creator_id = creators.creator_id
                 WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=0 order by records_x_creators_id asc"""),
                             (record["record_id"],))
+            if cur.rowcount == -1:
+                return
             vals = self._rows_to_list(cur)
             for val in vals:
                 retlist.append(self.json_dv_dict("authorName", "false", "primary", val))
@@ -110,13 +111,14 @@ class ExporterDataverse(Exporter.Exporter):
         return retlist
 
     def get_descriptions(self, record):
-        con = self.db.getConnection()
         cur = self.db.getLambdaCursor()
         retlist = []
         try:
             cur.execute(
                 self.db._prep("SELECT description FROM descriptions WHERE record_id=? and language='en' "),
                 (record["record_id"],))
+            if cur.rowcount == -1:
+                return
             vals = self._rows_to_list(cur)
             for val in vals:
                 retlist.append(self.json_dv_dict("dsDescriptionValue", "false", "primary", val))
@@ -125,12 +127,13 @@ class ExporterDataverse(Exporter.Exporter):
         return retlist
 
     def get_subjects(self, record):
-        con = self.db.getConnection()
         cur = self.db.getLambdaCursor()
         retlist = []
         try:
             cur.execute(self.db._prep("""SELECT subjects.subject FROM subjects JOIN records_x_subjects on records_x_subjects.subject_id = subjects.subject_id
                 WHERE records_x_subjects.record_id=? and subjects.language='en'"""), (record["record_id"],))
+            if cur.rowcount == -1:
+                return
             vals = self._rows_to_list(cur)
             for val in vals:
                 retlist.append(val)
@@ -139,12 +142,13 @@ class ExporterDataverse(Exporter.Exporter):
         return retlist
 
     def get_keywords(self, record):
-        con = self.db.getConnection()
         cur = self.db.getLambdaCursor()
         retlist = []
         try:
             cur.execute(self.db._prep("""SELECT tags.tag FROM tags JOIN records_x_tags on records_x_tags.tag_id = tags.tag_id
                 WHERE records_x_tags.record_id=? and tags.language = 'en' """), (record["record_id"],))
+            if cur.rowcount == -1:
+                return
             vals = self._rows_to_list(cur)
             for val in vals:
                 retlist.append(self.json_dv_dict("keywordValue", "false", "primary", val))
@@ -153,12 +157,13 @@ class ExporterDataverse(Exporter.Exporter):
         return retlist
 
     def get_license(self, record):
-        con = self.db.getConnection()
         cur = self.db.getLambdaCursor()
         retval = ""
         try:
             cur.execute(self.db._prep("""SELECT access.access FROM access JOIN records_x_access on records_x_access.access_id = access.access_id
                 WHERE records_x_access.record_id=?"""), (record["record_id"],))
+            if cur.rowcount == -1:
+                return
             vals = self._rows_to_list(cur)
             if vals:
                 retval = vals[0]
@@ -181,8 +186,6 @@ class ExporterDataverse(Exporter.Exporter):
             return geospatial
 
     def get_geo_coverage(self, record):
-        con = self.db.getConnection()
-        pdb.set_trace()
         try:
             with con:
                 geocur = self.db.getDictCursor()
@@ -214,7 +217,6 @@ class ExporterDataverse(Exporter.Exporter):
             self.logger.error("Unable to get geocoverage metadata fields for creating json for Geodisy")
 
     def get_geo_bbox(self, record):
-        con = self.db.getConnection()
         try:
             with con:
                 cur = self.db.getDictCursor()
@@ -240,7 +242,6 @@ class ExporterDataverse(Exporter.Exporter):
         }
 
     def get_files(self, record):
-        con = self.db.getConnection()
         try:
             with con:
                 cur = self.db.getDictCursor()
