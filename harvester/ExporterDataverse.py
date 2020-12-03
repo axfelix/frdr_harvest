@@ -187,18 +187,20 @@ class ExporterDataverse(Exporter.Exporter):
             with con:
                 geocur = self.db.getDictCursor()
                 geocur.execute(self.db._prep(
-                    "SELECT country, province, city, other, place_name FROM geoplace WHERE record_id=?"),
+                    "SELECT country, province_state, city, other, place_name FROM geoplace WHERE record_id=?"),
                     record["record_id"])
                 vals = []
+                if len(geocur) == 0:
+                    return
                 for row in geocur:
-                    val = (dict(zip(["country, province, city, other, place_name"], row)))
+                    val = (dict(zip(["country, province_state, city, other, place_name"], row)))
                     vals.append(val)
                 geos_coverage = []
                 for row_val in vals:
                     country = {}
                     country_deets = self.json_dv_dict("country", "false", "controlledVocabulary", row_val["country"])
                     country["country"] = country_deets
-                    province_deets = self.json_dv_dict("state", "false", "primative", row_val["province"])
+                    province_deets = self.json_dv_dict("state", "false", "primative", row_val["province_state"])
                     province = {"state": province_deets}
                     city_deets = self.json_dv_dict("city", "false", "primative", row_val["city"])
                     city = {"city": city_deets}
@@ -216,6 +218,7 @@ class ExporterDataverse(Exporter.Exporter):
         try:
             with con:
                 cur = self.db.getDictCursor()
+                pdb.set_trace()
                 cur.execute(self.db._prep(
                     "SELECT westLon, eastLon, northLat, southLat FROM geobbox WHERE record_id=?"),
                     record["record_id"])
