@@ -1,5 +1,6 @@
 import json
 import harvester.Exporter as Exporter
+import pdb
 
 
 class ExporterDataverse(Exporter.Exporter):
@@ -151,7 +152,6 @@ class ExporterDataverse(Exporter.Exporter):
             self.logger.error("Unable to get keyword metadata field for creating Dataverse JSON")
         return retlist
 
-
     def get_license(self, record):
         con = self.db.getConnection()
         cur = self.db.getLambdaCursor()
@@ -182,6 +182,7 @@ class ExporterDataverse(Exporter.Exporter):
 
     def get_geo_coverage(self, record):
         con = self.db.getConnection()
+        pdb.set_trace()
         try:
             with con:
                 geocur = self.db.getDictCursor()
