@@ -186,50 +186,49 @@ class ExporterDataverse(Exporter.Exporter):
             return geospatial
 
     def get_geo_coverage(self, record):
+        geocur = self.db.getLambdaCursor()
         try:
-            with con:
-                geocur = self.db.getDictCursor()
-                geocur.execute(self.db._prep(
-                    "SELECT country, province_state, city, other, place_name FROM geoplace WHERE record_id=?"),
-                    record["record_id"])
-                vals = []
-                if len(geocur) == 0:
-                    return
-                for row in geocur:
-                    val = (dict(zip(["country, province_state, city, other, place_name"], row)))
-                    vals.append(val)
-                geos_coverage = []
-                for row_val in vals:
-                    country = {}
-                    country_deets = self.json_dv_dict("country", "false", "controlledVocabulary", row_val["country"])
-                    country["country"] = country_deets
-                    province_deets = self.json_dv_dict("state", "false", "primative", row_val["province_state"])
-                    province = {"state": province_deets}
-                    city_deets = self.json_dv_dict("city", "false", "primative", row_val["city"])
-                    city = {"city": city_deets}
-                    other_deets = self.json_dv_dict("other", "false", "primative", row_val["other"])
-                    other = {"other": other_deets}
-                    location = {country, province, city, other}
-                    geos_coverage.append(location)
-                if geos_coverage:
-                    return geos_coverage
+            geocur.execute(self.db._prep(
+                """SELECT geoplace.country, geoplace.province_state, geoplace.city, geoplace.other, geoplace.place_name FROM geoplace JOIN records_x_geoplace on records_x_geoplace.geoplace_id = geoplace.geoplace_id WHERE records_x_geoplace.record_id=?"""),
+                           (record["record_id"],))
+            if geocur.rowcount == -1:
+                return
+            vals = []
+            for row in geocur:
+                val = (dict(zip(["country, province_state, city, other, place_name"], row)))
+                vals.append(val)
+            geos_coverage = []
+            for row_val in vals:
+                country = {}
+                country_deets = self.json_dv_dict("country", "false", "controlledVocabulary", row_val["country"])
+                country["country"] = country_deets
+                province_deets = self.json_dv_dict("state", "false", "primative", row_val["province_state"])
+                province = {"state": province_deets}
+                city_deets = self.json_dv_dict("city", "false", "primative", row_val["city"])
+                city = {"city": city_deets}
+                other_deets = self.json_dv_dict("other", "false", "primative", row_val["other"])
+                other = {"other": other_deets}
+                location = {country, province, city, other}
+                geos_coverage.append(location)
+            if geos_coverage:
+                return geos_coverage
         except:
             self.logger.error("Unable to get geocoverage metadata fields for creating json for Geodisy")
 
     def get_geo_bbox(self, record):
+        cur = self.db.getLambdaCursor()
         try:
-            with con:
-                cur = self.db.getDictCursor()
-                pdb.set_trace()
-                cur.execute(self.db._prep(
-                    "SELECT westLon, eastLon, northLat, southLat FROM geobbox WHERE record_id=?"),
-                    record["record_id"])
-                coords = []
-                for row in cur:
-                    val = (dict(zip(["westLon, eastLon, northLat, southLat"], row)))
-                    coords.append(self.get_bbox(val))
-                if coords:
-                    return self.json_dv_dict("geographicBoundingBox", "true", "compound", coords)
+            cur.execute(self.db._prep(
+                """SELECT westLon, eastLon, northLat, southLat FROM geobbox WHERE record_id=?"""),
+                (record["record_id"],))
+            if cur.rowcount == -1:
+                return
+            coords = []
+            for row in cur:
+                val = (dict(zip(["westLon, eastLon, northLat, southLat"], row)))
+                coords.append(self.get_bbox(val))
+            if coords:
+                return self.json_dv_dict("geographicBoundingBox", "true", "compound", coords)
         except:
             self.logger.error("Unable to get geobbox metadata fields for creating json for Geodisy")
 
@@ -242,18 +241,18 @@ class ExporterDataverse(Exporter.Exporter):
         }
 
     def get_files(self, record):
+        cur = self.db.getLambdaCursor()
         try:
-            with con:
-                cur = self.db.getDictCursor()
-                cur.execute(self.db._prep(
-                    "SELECT filename, uri FROM geofile WHERE record_id=?"),
-                    record["record_id"])
-                files = []
-                for row in cur:
-                    val = (dict(zip(["filename", "uri"], row)))
-                    files.append(self.get_file_info(val, record))
-                if files:
-                    return {"files": files}
+            cur.execute(self.db._prep(
+                    """SELECT filename, uri FROM geofile WHERE record_id=?"""),(record["record_id"],))
+            if cur.rowcount == -1:
+                return
+            files = []
+            for row in cur:
+                val = (dict(zip(["filename", "uri"], row)))
+                files.append(self.get_file_info(val, record))
+            if files:
+                return {"files": files}
         except:
             self.logger.error("Unable to get geo file metadata fields for creating json for Geodisy")
 
