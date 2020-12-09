@@ -88,7 +88,6 @@ class MarkLogicRepository(HarvestRepository):
         record["publisher"] = self.publisher
         record["series"] = ""
         record["title_fr"] = ""
-
         record["creator"] = list(set(record["creator"]))
         record["affiliation"] = list(set(record["affiliation"]))
         return record

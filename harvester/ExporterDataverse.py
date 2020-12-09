@@ -105,7 +105,8 @@ class ExporterDataverse(Exporter.Exporter):
                 return
             vals = self._rows_to_list(cur)
             for val in vals:
-                retlist.append(self.json_dv_dict("authorName", "false", "primary", val))
+                auth_info = {}
+                retlist.append({"authorName": self.json_dv_dict("authorName", "false", "primary", val)})
         except:
             self.logger.error("Unable to get author metadata field for creating Dataverse JSON")
         return retlist
@@ -121,7 +122,7 @@ class ExporterDataverse(Exporter.Exporter):
                 return
             vals = self._rows_to_list(cur)
             for val in vals:
-                retlist.append(self.json_dv_dict("dsDescriptionValue", "false", "primary", val))
+                retlist.append({"dsDescriptionValue": self.json_dv_dict("dsDescriptionValue", "false", "primary", val)})
         except:
             self.logger.error("Unable to get description metadata field for creating Dataverse JSON")
         return retlist
@@ -151,7 +152,7 @@ class ExporterDataverse(Exporter.Exporter):
                 return
             vals = self._rows_to_list(cur)
             for val in vals:
-                retlist.append(self.json_dv_dict("keywordValue", "false", "primary", val))
+                retlist.append({"keywordValue": self.json_dv_dict("keywordValue", "false", "primary", val)})
         except:
             self.logger.error("Unable to get keyword metadata field for creating Dataverse JSON")
         return retlist
