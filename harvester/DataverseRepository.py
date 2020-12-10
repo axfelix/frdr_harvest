@@ -209,13 +209,17 @@ class DataverseRepository(HarvestRepository):
                         for geographicBoundingBox in geospatial_field["value"]:
                             geolocationBox = {}
                             if "westLongitude" in geographicBoundingBox:
-                                geolocationBox["westLon"] = geographicBoundingBox["westLongitude"]["value"]
+                                geolocationBox["westLon"] = \
+                                    self.check_for_dms(geographicBoundingBox["westLongitude"]["value"])
                             if "eastLongitude" in geographicBoundingBox:
-                                geolocationBox["eastLon"] = geographicBoundingBox["eastLongitude"]["value"]
+                                geolocationBox["eastLon"] = \
+                                    self.check_for_dms(geographicBoundingBox["eastLongitude"]["value"])
                             if "northLongitude" in geographicBoundingBox:
-                                geolocationBox["northLat"] = geographicBoundingBox["northLongitude"]["value"]
+                                geolocationBox["northLat"] = \
+                                    self.check_for_dms(geographicBoundingBox["northLongitude"]["value"])
                             if "southLongitude" in geographicBoundingBox:
-                                geolocationBox["southLat"] = geographicBoundingBox["southLongitude"]["value"]
+                                geolocationBox["southLat"] = \
+                                    self.check_for_dms(geographicBoundingBox["southLongitude"]["value"])
                             geolocationBoxes.append(geolocationBox)
                         record["geobboxes"] = geolocationBoxes
 
@@ -277,4 +281,6 @@ class DataverseRepository(HarvestRepository):
                 return True
 
         return False
+
+
 

@@ -123,3 +123,26 @@ class HarvestRepository(object):
 
         self.logger.info("Updated {} items in {} ({:.1f} items/sec)".format(record_count, self.formatter.humanize(
             time.time() - tstart), record_count / (time.time() - tstart + 0.1)))
+
+    def check_for_dms(self, coordinate):
+        lowercase = coordinate.lower()
+        if "west" in lowercase or "w" in lowercase or "south" in lowercase or "s" in lowercase:
+            return self.convert_DMS_2_DD(lowercase, False)
+        elif "east" in lowercase or "e" in lowercase or "north" in lowercase or "n" in lowercase:
+            return self.convert_DMS_2_DD(lowercase, True)
+        else:
+            return coordinate
+
+    def convert_dms_2_dd(self, lowercase, positive):
+        parts = re.split('[°\'"]+', lowercase)
+        coord = self.dms2dd(parts[0], parts[1], parts[2], positive)
+        return str(coord) if coord != 3600 else ""
+
+    def dms2dd(self, degrees, minutes, secs, positive):
+        try:
+            dd = float(degrees) + float(minutes) / 60 + float(secs) / (60 * 60);
+            if not positive:
+                dd *= -1
+            return dd
+        except ValueError:
+            return 3600
