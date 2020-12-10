@@ -23,6 +23,7 @@ class ExporterDataverse(Exporter.Exporter):
             FROM records recs
             JOIN repositories reps on reps.repository_id = recs.repository_id
             WHERE geodisy_harvested = 0 LIMIT ?"""
+        pdb.set_trace()
         records_cursor.execute(self.db._prep(records_sql), (self.records_per_loop,))
 
         records = []
