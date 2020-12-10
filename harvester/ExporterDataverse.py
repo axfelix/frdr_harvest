@@ -23,7 +23,6 @@ class ExporterDataverse(Exporter.Exporter):
             FROM records recs
             JOIN repositories reps on reps.repository_id = recs.repository_id
             WHERE geodisy_harvested = 0 LIMIT ?"""
-        pdb.set_trace()
         records_cursor.execute(self.db._prep(records_sql), (self.records_per_loop,))
 
         records = []
@@ -102,11 +101,8 @@ class ExporterDataverse(Exporter.Exporter):
             cur.execute(self.db._prep("""SELECT creators.creator FROM creators JOIN records_x_creators on records_x_creators.creator_id = creators.creator_id
                 WHERE records_x_creators.record_id=? AND records_x_creators.is_contributor=0 order by records_x_creators_id asc"""),
                             (record["record_id"],))
-            if cur.rowcount == -1:
-                return
             vals = self._rows_to_list(cur)
             for val in vals:
-                auth_info = {}
                 retlist.append({"authorName": self.json_dv_dict("authorName", "false", "primary", val)})
         except:
             self.logger.error("Unable to get author metadata field for creating Dataverse JSON")
@@ -119,8 +115,6 @@ class ExporterDataverse(Exporter.Exporter):
             cur.execute(
                 self.db._prep("SELECT description FROM descriptions WHERE record_id=? and language='en' "),
                 (record["record_id"],))
-            if cur.rowcount == -1:
-                return
             vals = self._rows_to_list(cur)
             for val in vals:
                 retlist.append({"dsDescriptionValue": self.json_dv_dict("dsDescriptionValue", "false", "primary", val)})
@@ -134,8 +128,6 @@ class ExporterDataverse(Exporter.Exporter):
         try:
             cur.execute(self.db._prep("""SELECT subjects.subject FROM subjects JOIN records_x_subjects on records_x_subjects.subject_id = subjects.subject_id
                 WHERE records_x_subjects.record_id=? and subjects.language='en'"""), (record["record_id"],))
-            if cur.rowcount == -1:
-                return
             vals = self._rows_to_list(cur)
             for val in vals:
                 retlist.append(val)
@@ -149,8 +141,6 @@ class ExporterDataverse(Exporter.Exporter):
         try:
             cur.execute(self.db._prep("""SELECT tags.tag FROM tags JOIN records_x_tags on records_x_tags.tag_id = tags.tag_id
                 WHERE records_x_tags.record_id=? and tags.language = 'en' """), (record["record_id"],))
-            if cur.rowcount == -1:
-                return
             vals = self._rows_to_list(cur)
             for val in vals:
                 retlist.append({"keywordValue": self.json_dv_dict("keywordValue", "false", "primary", val)})
@@ -164,8 +154,6 @@ class ExporterDataverse(Exporter.Exporter):
         try:
             cur.execute(self.db._prep("""SELECT access.access FROM access JOIN records_x_access on records_x_access.access_id = access.access_id
                 WHERE records_x_access.record_id=?"""), (record["record_id"],))
-            if cur.rowcount == -1:
-                return
             vals = self._rows_to_list(cur)
             if vals:
                 retval = vals[0]
@@ -193,8 +181,6 @@ class ExporterDataverse(Exporter.Exporter):
             geocur.execute(self.db._prep(
                 """SELECT geoplace.country, geoplace.province_state, geoplace.city, geoplace.other, geoplace.place_name FROM geoplace JOIN records_x_geoplace on records_x_geoplace.geoplace_id = geoplace.geoplace_id WHERE records_x_geoplace.record_id=?"""),
                            (record["record_id"],))
-            if geocur.rowcount == -1:
-                return
             vals = []
             for row in geocur:
                 val = (dict(zip(["country, province_state, city, other, place_name"], row)))
@@ -223,8 +209,6 @@ class ExporterDataverse(Exporter.Exporter):
             cur.execute(self.db._prep(
                 """SELECT westLon, eastLon, northLat, southLat FROM geobbox WHERE record_id=?"""),
                 (record["record_id"],))
-            if cur.rowcount == -1:
-                return
             coords = []
             for row in cur:
                 val = (dict(zip(["westLon, eastLon, northLat, southLat"], row)))
@@ -247,8 +231,6 @@ class ExporterDataverse(Exporter.Exporter):
         try:
             cur.execute(self.db._prep(
                     """SELECT filename, uri FROM geofile WHERE record_id=?"""),(record["record_id"],))
-            if cur.rowcount == -1:
-                return
             files = []
             for row in cur:
                 val = (dict(zip(["filename", "uri"], row)))
