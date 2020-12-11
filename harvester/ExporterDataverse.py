@@ -176,14 +176,17 @@ class ExporterDataverse(Exporter.Exporter):
             return geospatial
 
     def get_geo_coverage(self, record):
-        geocur = self.db.getLambdaCursor()
         try:
-            geocur.execute(self.db._prep(
-                """SELECT geoplace.country, geoplace.province_state, geoplace.city, geoplace.other, geoplace.place_name FROM geoplace JOIN records_x_geoplace on records_x_geoplace.geoplace_id = geoplace.geoplace_id WHERE records_x_geoplace.record_id=?"""),
-                           (record["record_id"],))
+            geocur = self.db.getLambdaCursor()
+            geo_places_sql = """SELECT geoplace.country, geoplace.province_state, geoplace.city, geoplace.other, geoplace.place_name 
+                FROM geoplace
+                JOIN records_x_geoplace ON geoplace.geoplace_id = records_x_geoplace.geoplace_id
+                WHERE records_x_geoplace.record_id=?"""
+            geocur.execute(self.db._prep(geo_places_sql), (record["record_id"],))
             vals = []
             for row in geocur:
-                val = (dict(zip(["country, province_state, city, other, place_name"], row)))
+                s = json.dumps(row)
+                val = (dict(zip(['country', 'province_state', 'city', 'other', 'place_name'], row)))
                 vals.append(val)
             geos_coverage = []
             for row_val in vals:
