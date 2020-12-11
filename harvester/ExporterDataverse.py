@@ -211,7 +211,7 @@ class ExporterDataverse(Exporter.Exporter):
                 (record["record_id"],))
             coords = []
             for row in cur:
-                val = (dict(zip(["westLon, eastLon, northLat, southLat"], row)))
+                val = (dict(zip(["westLon", "eastLon", "northLat", "southLat"], row)))
                 coords.append(self.get_bbox(val))
             if coords:
                 return self.json_dv_dict("geographicBoundingBox", "true", "compound", coords)
