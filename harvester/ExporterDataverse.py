@@ -88,12 +88,6 @@ class ExporterDataverse(Exporter.Exporter):
             citations["fields"] = fields
             return citations
 
-    def get_metadata_blocks(self, record):
-        answer = {"citation": self.getCitationMetadataFields(record),
-                  "geospatial": self.get_geospatial_metadata(record)}
-        if answer["geospatial"] is not None and answer["citation"] is not None:
-            return answer
-
     def get_authors(self, record):
         cur = self.db.getLambdaCursor()
         retlist = []
@@ -176,35 +170,32 @@ class ExporterDataverse(Exporter.Exporter):
             return geospatial
 
     def get_geo_coverage(self, record):
+        geos_coverage = []
+
         try:
-            geocur = self.db.getLambdaCursor()
-            geo_places_sql = """SELECT geoplace.country, geoplace.province_state, geoplace.city, geoplace.other, geoplace.place_name 
-                FROM geoplace
-                JOIN records_x_geoplace ON geoplace.geoplace_id = records_x_geoplace.geoplace_id
-                WHERE records_x_geoplace.record_id=?"""
+            print("Getting geoplace data for record {}".format(record["record_id"]))
+            geocur = self.db.getDictCursor()
+            geo_places_sql = """SELECT gp.country, gp.province_state, gp.city, gp.other, gp.place_name 
+                FROM geoplace gp
+                JOIN records_x_geoplace rxg ON rxg.geoplace_id = gp.geoplace_id
+                WHERE rxg.record_id=?"""
             geocur.execute(self.db._prep(geo_places_sql), (record["record_id"],))
-            vals = []
+
             for row in geocur:
-                s = json.dumps(row)
                 val = (dict(zip(['country', 'province_state', 'city', 'other', 'place_name'], row)))
-                vals.append(val)
-            geos_coverage = []
-            for row_val in vals:
-                country = {}
-                country_deets = self.json_dv_dict("country", "false", "controlledVocabulary", row_val["country"])
-                country["country"] = country_deets
-                province_deets = self.json_dv_dict("state", "false", "primative", row_val["province_state"])
-                province = {"state": province_deets}
-                city_deets = self.json_dv_dict("city", "false", "primative", row_val["city"])
-                city = {"city": city_deets}
-                other_deets = self.json_dv_dict("other", "false", "primative", row_val["other"])
-                other = {"other": other_deets}
-                location = {country, province, city, other}
+                print("val: {}".format(json.dumps(val)))
+                # What happened to place_name? It does not appear in the location dict below
+                location = {
+                    "country": self.json_dv_dict("country", "false", "controlledVocabulary", row["country"]), 
+                    "state":   self.json_dv_dict("state", "false", "primative", row["province_state"]), 
+                    "city":    self.json_dv_dict("city", "false", "primative", row["city"]), 
+                    "other":   self.json_dv_dict("other", "false", "primative", row["other"])
+                }
                 geos_coverage.append(location)
-            if geos_coverage:
-                return geos_coverage
         except:
-            self.logger.error("Unable to get geocoverage metadata fields for creating json for Geodisy")
+            self.logger.error("Unable to get geoplace metadata fields for record: {}".format(record["record_id"]))
+
+        return geos_coverage
 
     def get_geo_bbox(self, record):
         cur = self.db.getLambdaCursor()
