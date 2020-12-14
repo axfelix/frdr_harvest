@@ -99,7 +99,7 @@ class Exporter(object):
             self.logger.error("Unable to write output data to temporary file: {}".format(temp_filename))
 
         try:
-            os.remove(export_filepath)
+            os.remove(os.path.join(export_filepath, export_basename))
         except:
             pass
 
