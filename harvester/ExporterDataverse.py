@@ -196,7 +196,7 @@ class ExporterDataverse(Exporter.Exporter):
         return geos_coverage
 
     def get_geo_bbox(self, record):
-        cur = self.db.getLambdaCursor()
+        cur = self.db.getDictCursor()
         try:
             cur.execute(self.db._prep(
                 """SELECT westLon, eastLon, northLat, southLat FROM geobbox WHERE record_id=?"""),
