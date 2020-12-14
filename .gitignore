@@ -4,4 +4,4 @@ lockfile
 *.pyc
 venv/
 .idea/
-temp/dv_1.json
+temp/
