@@ -173,7 +173,6 @@ class ExporterDataverse(Exporter.Exporter):
         geos_coverage = []
 
         try:
-            print("Getting geoplace data for record {}".format(record["record_id"]))
             geocur = self.db.getDictCursor()
             geo_places_sql = """SELECT gp.country, gp.province_state, gp.city, gp.other, gp.place_name 
                 FROM geoplace gp
@@ -183,7 +182,6 @@ class ExporterDataverse(Exporter.Exporter):
 
             for row in geocur:
                 val = (dict(zip(['country', 'province_state', 'city', 'other', 'place_name'], row)))
-                print("val: {}".format(json.dumps(val)))
                 # What happened to place_name? It does not appear in the location dict below
                 location = {
                     "country": self.json_dv_dict("country", "false", "controlledVocabulary", row["country"]), 
