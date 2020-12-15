@@ -77,12 +77,12 @@ class ExporterDataverse(Exporter.Exporter):
 
     def get_citation_metadata_field(self, record):
         citations = {"displayName": "Citation Metadata"}
-        fields = [self.json_dv_dict("title", "false", "primary", record["title"]),
+        fields = [self.json_dv_dict("title", "false", "primitive", record["title"]),
                   self.json_dv_dict("author", "true", "compound", self.get_authors(record)),
                   self.json_dv_dict("dsDescription", "true", "compound", self.get_descriptions(record)),
                   self.json_dv_dict("subject", "true", "compound", self.get_subjects(record)),
                   self.json_dv_dict("keyword", "true", "compound", self.get_keywords(record)),
-                  self.json_dv_dict("series", "false", "compound", [record["series"]])]
+                  self.json_dv_dict("series", "false", "compound", self.get_series(record))]
 
         if fields:
             citations["fields"] = fields
@@ -97,7 +97,7 @@ class ExporterDataverse(Exporter.Exporter):
                             (record["record_id"],))
             vals = self._rows_to_list(cur)
             for val in vals:
-                retlist.append({"authorName": self.json_dv_dict("authorName", "false", "primary", val)})
+                retlist.append({"authorName": self.json_dv_dict("authorName", "false", "primitive", val)})
         except:
             self.logger.error("Unable to get author metadata field for creating Dataverse JSON")
         return retlist
@@ -111,7 +111,7 @@ class ExporterDataverse(Exporter.Exporter):
                 (record["record_id"],))
             vals = self._rows_to_list(cur)
             for val in vals:
-                retlist.append({"dsDescriptionValue": self.json_dv_dict("dsDescriptionValue", "false", "primary", val)})
+                retlist.append({"dsDescriptionValue": self.json_dv_dict("dsDescriptionValue", "false", "primitive", val)})
         except:
             self.logger.error("Unable to get description metadata field for creating Dataverse JSON")
         return retlist
@@ -137,10 +137,14 @@ class ExporterDataverse(Exporter.Exporter):
                 WHERE records_x_tags.record_id=? and tags.language = 'en' """), (record["record_id"],))
             vals = self._rows_to_list(cur)
             for val in vals:
-                retlist.append({"keywordValue": self.json_dv_dict("keywordValue", "false", "primary", val)})
+                retlist.append({"keywordValue": self.json_dv_dict("keywordValue", "false", "primitive", val)})
         except:
             self.logger.error("Unable to get keyword metadata field for creating Dataverse JSON")
         return retlist
+
+    def get_series(self, record):
+        return {"seriesName": self.json_dv_dict("seriesName", "false", "primitive", record["series"])}
+
 
     def get_license(self, record):
         cur = self.db.getLambdaCursor()
