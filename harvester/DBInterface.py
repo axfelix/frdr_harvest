@@ -601,7 +601,7 @@ class DBInterface:
                         if subject_id not in existing_subject_ids:
                             self.insert_cross_record("records_x_subjects", "subjects", subject_id, record["record_id"])
                             modified_upstream = True
-                for eid in existing_subject_ids:  # FIXME this deletes French subjects
+                for eid in existing_subject_ids:
                     if eid not in new_subject_ids:
                         modified_upstream = True
                         self.delete_one_related_record("records_x_subjects", eid, record["record_id"])
@@ -629,7 +629,7 @@ class DBInterface:
                         if subject_id not in existing_subject_ids:
                             self.insert_cross_record("records_x_subjects", "subjects", subject_id, record["record_id"])
                             modified_upstream = True
-                for eid in existing_subject_ids: # FIXME this deletes English subjects
+                for eid in existing_subject_ids:
                     if eid not in new_subject_ids:
                         modified_upstream = True
                         self.delete_one_related_record("records_x_subjects", eid, record["record_id"])
