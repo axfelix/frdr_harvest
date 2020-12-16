@@ -12,6 +12,7 @@ from lockfile.pidlockfile import PIDLockFile
 
 from harvester.DBInterface import DBInterface
 from harvester.HarvestLogger import HarvestLogger
+from harvester.ExporterDataverse import ExporterDataverse
 
 app = Flask(__name__)
 
@@ -152,6 +153,12 @@ class Record(Resource):
         response = self.get(record_id)
         return response
 
+
+class GeoExporter(Resource):
+    
+    def get(self):
+        
+
 # Default response
 class Default(Resource):
     def get(self):
@@ -164,6 +171,7 @@ class Default(Resource):
 api.add_resource(RepoList, '/repos')
 api.add_resource(Repo, '/repos/<repo_id>')
 api.add_resource(Record, '/records/<record_id>')
+api.add_resource(GeoExporter, '/geoexporter')
 api.add_resource(Default, '/')
 
 if __name__ == '__main__':
@@ -177,4 +185,5 @@ if __name__ == '__main__':
     with daemon.DaemonContext(pidfile=PIDLockFile(CONFIG["restapi"]["api"]["pidfile"]), working_directory=os.getcwd()):
         atexit.register(log_shutdown)
         get_log()
-        app.run(host='0.0.0.0', debug=False, port=int(CONFIG["restapi"]["api"]["listen_port"]))
+        #app.run(host='0.0.0.0', debug=False, port=int(CONFIG["restapi"]["api"]["listen_port"]))
+        app.run(host='0.0.0.0', debug=True, port=int(CONFIG["restapi"]["api"]["listen_port"]))
