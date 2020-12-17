@@ -6,6 +6,8 @@ import json
 import re
 import pdb
 
+import psycopg2
+from psycopg2.extras import DictCursor, RealDictCursor
 
 class DBInterface:
     def __init__(self, params):
