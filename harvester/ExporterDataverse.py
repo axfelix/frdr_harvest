@@ -29,7 +29,9 @@ class ExporterDataverse(Exporter.Exporter):
         for row in records_cursor:
             record = (dict(zip(['record_id','item_url','pub_date','title','item_url','series','repository_id','repository_url'], row)))
             records.append(record)
-        self.get_batch_record_metadata(0, len(records), records)
+        #self.get_batch_record_metadata(0, len(records), records)
+        return self.get_batch_record_metadata(0, len(records), records)
+        
 
     # create json in batches
     def get_batch_record_metadata(self, start, last_rec_num, records):
@@ -42,7 +44,8 @@ class ExporterDataverse(Exporter.Exporter):
             self.output_buffer.append(self._generate_dv_json(records[current]))
             current += 1
         done = current == last_rec_num
-        self._write_batch(done)
+        #self._write_batch(done)
+        return self._write_batch(done)
 
     # make calls back to the FRDR Harvester's db to get the needed info to generate a DV-like json for Geodisy to parse
     def _generate_dv_json(self, record):
@@ -173,7 +176,7 @@ class ExporterDataverse(Exporter.Exporter):
         geos_coverage = []
 
         try:
-            print("Getting geoplace data for record {}".format(record["record_id"]))
+            #print("Getting geoplace data for record {}".format(record["record_id"]))
             geocur = self.db.getDictCursor()
             geo_places_sql = """SELECT gp.country, gp.province_state, gp.city, gp.other, gp.place_name 
                 FROM geoplace gp
@@ -182,8 +185,9 @@ class ExporterDataverse(Exporter.Exporter):
             geocur.execute(self.db._prep(geo_places_sql), (record["record_id"],))
 
             for row in geocur:
-                val = (dict(zip(['country', 'province_state', 'city', 'other', 'place_name'], row)))
-                print("val: {}".format(json.dumps(val)))
+                #val = (dict(zip(['country', 'province_state', 'city', 'other', 'place_name'], row)))
+                #print(dict(row))
+                #print("val: {}".format(json.dumps(val)))
                 # What happened to place_name? It does not appear in the location dict below
                 location = {
                     "country": self.json_dv_dict("country", "false", "controlledVocabulary", row["country"]), 
@@ -214,10 +218,15 @@ class ExporterDataverse(Exporter.Exporter):
 
     def get_bbox(self, bbox_dict):
         return {
-            "westLongitude": self.json_dv_dict("westLongitude", "false", "primative", bbox_dict["westLon"]),
-            "eastLongitude": self.json_dv_dict("eastLongitude", "false", "primative", bbox_dict["eastLon"]),
-            "northLatitude": self.json_dv_dict("northLatitude", "false", "primative", bbox_dict["northLat"]),
-            "southLatitude": self.json_dv_dict("southLatitude", "false", "primative", bbox_dict["southLat"])
+            #"westLongitude": self.json_dv_dict("westLongitude", "false", "primative", bbox_dict["westLon"]),
+            #"eastLongitude": self.json_dv_dict("eastLongitude", "false", "primative", bbox_dict["eastLon"]),
+            #"northLatitude": self.json_dv_dict("northLatitude", "false", "primative", bbox_dict["northLat"]),
+            #"southLatitude": self.json_dv_dict("southLatitude", "false", "primative", bbox_dict["southLat"])
+            "westLongitude": self.json_dv_dict("westLongitude", "false", "primative", str(bbox_dict["westLon"])),
+            "eastLongitude": self.json_dv_dict("eastLongitude", "false", "primative", str(bbox_dict["eastLon"])),
+            "northLatitude": self.json_dv_dict("northLatitude", "false", "primative", str(bbox_dict["northLat"])),
+            "southLatitude": self.json_dv_dict("southLatitude", "false", "primative", str(bbox_dict["southLat"]))
+
         }
 
     def get_files(self, record):

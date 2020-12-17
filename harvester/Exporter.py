@@ -62,13 +62,15 @@ class Exporter(object):
                                  "ingest_data": {"@datatype": "GMetaList", "@version": "2016-11-09",
                                                  "gmeta": self.output_buffer}})
         elif self.export_format == "dataverse":
+            #print(self.output_buffer)
             output = json.dumps({"records": self.output_buffer, "finished": finished})
         if output and self.destination == "file":
-                self._write_to_file(output, self.export_filepath, self.temp_filepath)
+            self._write_to_file(output, self.export_filepath, self.temp_filepath)
         self.output_buffer = []
         self.batch_number += 1
         self.buffer_size = 0
         if output and self.destination == "stream":
+            #print(output)
             return output
 
     def _write_to_file(self, output, export_filepath, temp_filepath):

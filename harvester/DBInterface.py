@@ -98,8 +98,8 @@ class DBInterface:
         if self.dbtype == "sqlite":
             self.getConnection().row_factory = lambda cursor, row: row[0]
             cur = self.getConnection().cursor()
-        elif self.db.getType() == "postgres":
-            cur = con.cursor(cursor_factory=DictCursor)
+        elif self.dbtype == "postgres":
+            cur = self.getConnection().cursor(cursor_factory=DictCursor)
         return cur
 
     def getType(self):
