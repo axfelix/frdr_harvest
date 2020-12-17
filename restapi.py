@@ -194,10 +194,9 @@ if __name__ == '__main__':
 
     # For debugging use this line and comment out the daemon block below
     # and then run the API with 'python3 restapi.py', view at http://localhost:listen_port
-    app.run(host='0.0.0.0', debug=True, port=int(CONFIG["restapi"]["api"]["listen_port"]))
+    #app.run(host='0.0.0.0', debug=True, port=int(CONFIG["restapi"]["api"]["listen_port"]))
 
-#    with daemon.DaemonContext(pidfile=PIDLockFile(CONFIG["restapi"]["api"]["pidfile"]), working_directory=os.getcwd()):
-#        atexit.register(log_shutdown)
-#        get_log()
-#        #app.run(host='0.0.0.0', debug=False, port=int(CONFIG["restapi"]["api"]["listen_port"]))
-#        app.run(host='0.0.0.0', debug=True, port=int(CONFIG["restapi"]["api"]["listen_port"]))
+    with daemon.DaemonContext(pidfile=PIDLockFile(CONFIG["restapi"]["api"]["pidfile"]), working_directory=os.getcwd()):
+        atexit.register(log_shutdown)
+        get_log()
+        app.run(host='0.0.0.0', debug=False, port=int(CONFIG["restapi"]["api"]["listen_port"]))
