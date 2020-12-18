@@ -1,6 +1,5 @@
 import json
 import harvester.Exporter as Exporter
-import pdb
 
 
 class ExporterDataverse(Exporter.Exporter):
@@ -22,7 +21,7 @@ class ExporterDataverse(Exporter.Exporter):
         records_sql = """SELECT recs.record_id, recs.item_url, recs.pub_date, recs.title, recs.item_url, recs.series, recs.repository_id, reps.repository_url
             FROM records recs
             JOIN repositories reps on reps.repository_id = recs.repository_id
-            WHERE geodisy_harvested = 0 LIMIT ?"""
+            WHERE recs.geodisy_harvested = 0 AND recs.deleted = 1 LIMIT ?"""
         records_cursor.execute(self.db._prep(records_sql), (self.records_per_loop,))
 
         records = []
@@ -33,6 +32,18 @@ class ExporterDataverse(Exporter.Exporter):
         return self.get_batch_record_metadata(0, len(records), records)
         
 
+        #TODO finish generating a list of deleted items for Geodisy
+        deleted_sql = """SELECT recs.record_id, recs.item_url, recs.item_url recs.repository_id, reps.repository_url
+            FROM records recs
+            JOIN repositories reps on reps.repository_id = recs.repository_id
+            WHERE geodisy_harvested = 0 AND deleted = 0 LIMIT ?"""
+        records_cursor.execute(self.db._prep(deleted_sql), (self.records_per_loop,))
+
+        deleted = []
+        for row in records_cursor:
+            deleted_record = (dict(zip(['record_id','item_url', 'item_url', 'repository_id', 'repository_url'], row)))
+            deleted.append(deleted_record)
+        self.get_batch_deleted_records(0, len(records), deleted)
     # create json in batches
     def get_batch_record_metadata(self, start, last_rec_num, records):
         self.output_buffer = []
@@ -46,6 +57,10 @@ class ExporterDataverse(Exporter.Exporter):
         done = current == last_rec_num
         #self._write_batch(done)
         return self._write_batch(done)
+
+    # TODO create list of deleted records to add to json being sent to Geodisy
+    def get_batch_deleted_records(self,start, last_rec_num, deleted_records):
+        pass
 
     # make calls back to the FRDR Harvester's db to get the needed info to generate a DV-like json for Geodisy to parse
     def _generate_dv_json(self, record):
@@ -80,12 +95,12 @@ class ExporterDataverse(Exporter.Exporter):
 
     def get_citation_metadata_field(self, record):
         citations = {"displayName": "Citation Metadata"}
-        fields = [self.json_dv_dict("title", "false", "primary", record["title"]),
+        fields = [self.json_dv_dict("title", "false", "primitive", record["title"]),
                   self.json_dv_dict("author", "true", "compound", self.get_authors(record)),
                   self.json_dv_dict("dsDescription", "true", "compound", self.get_descriptions(record)),
                   self.json_dv_dict("subject", "true", "compound", self.get_subjects(record)),
                   self.json_dv_dict("keyword", "true", "compound", self.get_keywords(record)),
-                  self.json_dv_dict("series", "false", "compound", [record["series"]])]
+                  self.json_dv_dict("series", "false", "compound", self.get_series(record))]
 
         if fields:
             citations["fields"] = fields
@@ -100,7 +115,7 @@ class ExporterDataverse(Exporter.Exporter):
                             (record["record_id"],))
             vals = self._rows_to_list(cur)
             for val in vals:
-                retlist.append({"authorName": self.json_dv_dict("authorName", "false", "primary", val)})
+                retlist.append({"authorName": self.json_dv_dict("authorName", "false", "primitive", val)})
         except:
             self.logger.error("Unable to get author metadata field for creating Dataverse JSON")
         return retlist
@@ -114,7 +129,7 @@ class ExporterDataverse(Exporter.Exporter):
                 (record["record_id"],))
             vals = self._rows_to_list(cur)
             for val in vals:
-                retlist.append({"dsDescriptionValue": self.json_dv_dict("dsDescriptionValue", "false", "primary", val)})
+                retlist.append({"dsDescriptionValue": self.json_dv_dict("dsDescriptionValue", "false", "primitive", val)})
         except:
             self.logger.error("Unable to get description metadata field for creating Dataverse JSON")
         return retlist
@@ -140,10 +155,13 @@ class ExporterDataverse(Exporter.Exporter):
                 WHERE records_x_tags.record_id=? and tags.language = 'en' """), (record["record_id"],))
             vals = self._rows_to_list(cur)
             for val in vals:
-                retlist.append({"keywordValue": self.json_dv_dict("keywordValue", "false", "primary", val)})
+                retlist.append({"keywordValue": self.json_dv_dict("keywordValue", "false", "primitive", val)})
         except:
             self.logger.error("Unable to get keyword metadata field for creating Dataverse JSON")
         return retlist
+
+    def get_series(self, record):
+        return {"seriesName": self.json_dv_dict("seriesName", "false", "primitive", record["series"])}
 
     def get_license(self, record):
         cur = self.db.getLambdaCursor()
@@ -169,14 +187,13 @@ class ExporterDataverse(Exporter.Exporter):
         if geographic_bounding_box is not None:
             geospatial_groups.append(geographic_bounding_box)
         if geospatial_groups:
-            geospatial["field"] = geospatial_groups
+            geospatial["fields"] = geospatial_groups
             return geospatial
 
     def get_geo_coverage(self, record):
         geos_coverage = []
 
         try:
-            #print("Getting geoplace data for record {}".format(record["record_id"]))
             geocur = self.db.getDictCursor()
             geo_places_sql = """SELECT gp.country, gp.province_state, gp.city, gp.other, gp.place_name 
                 FROM geoplace gp
@@ -185,15 +202,12 @@ class ExporterDataverse(Exporter.Exporter):
             geocur.execute(self.db._prep(geo_places_sql), (record["record_id"],))
 
             for row in geocur:
-                #val = (dict(zip(['country', 'province_state', 'city', 'other', 'place_name'], row)))
-                #print(dict(row))
-                #print("val: {}".format(json.dumps(val)))
                 # What happened to place_name? It does not appear in the location dict below
                 location = {
-                    "country": self.json_dv_dict("country", "false", "controlledVocabulary", row["country"]), 
-                    "state":   self.json_dv_dict("state", "false", "primative", row["province_state"]), 
-                    "city":    self.json_dv_dict("city", "false", "primative", row["city"]), 
-                    "other":   self.json_dv_dict("other", "false", "primative", row["other"])
+                    "country": self.json_dv_dict("country", "false", "controlledVocabulary", row["country"]),
+                    "state":   self.json_dv_dict("state", "false", "primative", row["province_state"]),
+                    "city":    self.json_dv_dict("city", "false", "primative", row["city"]),
+                    "otherGeographicCoverage":   self.json_dv_dict("otherGeographicCoverage", "false", "primative", row["otherGeographicCoverage"])
                 }
                 geos_coverage.append(location)
         except:
@@ -202,7 +216,7 @@ class ExporterDataverse(Exporter.Exporter):
         return geos_coverage
 
     def get_geo_bbox(self, record):
-        cur = self.db.getLambdaCursor()
+        cur = self.db.getDictCursor()
         try:
             cur.execute(self.db._prep(
                 """SELECT westLon, eastLon, northLat, southLat FROM geobbox WHERE record_id=?"""),
