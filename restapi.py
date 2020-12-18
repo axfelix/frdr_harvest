@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from flask import Flask, request, got_request_exception
+from flask import Flask, request, Response, got_request_exception
 from flask_restful import reqparse, abort, Api, Resource
 import configparser
 import logging
@@ -12,6 +12,7 @@ from lockfile.pidlockfile import PIDLockFile
 
 from harvester.DBInterface import DBInterface
 from harvester.HarvestLogger import HarvestLogger
+from harvester.ExporterDataverse import ExporterDataverse
 
 app = Flask(__name__)
 
@@ -38,6 +39,14 @@ def get_db():
     if "db" not in CONFIG["handles"]:
         CONFIG["handles"]["db"] = DBInterface(CONFIG['db'])
     return CONFIG["handles"]["db"]
+
+
+def get_exporter():
+    if "exporter" not in CONFIG["handles"]:
+        CONFIG["export"]["destination"] = "stream"
+        CONFIG["handles"]["exporter"] = ExporterDataverse(get_db(), get_log(), CONFIG["export"])
+    return CONFIG["handles"]["exporter"]
+
 
 def check_cache(objname):
     if objname in CACHE:
@@ -152,6 +161,17 @@ class Record(Resource):
         response = self.get(record_id)
         return response
 
+
+class Exporter(Resource):
+    def get(self):
+        def _generate_resp():
+            yield get_exporter()._generate(False)
+
+        get_log().debug("{} GET /exporter".format(request.remote_addr))
+
+        return Response(_generate_resp()) 
+        
+
 # Default response
 class Default(Resource):
     def get(self):
@@ -164,11 +184,13 @@ class Default(Resource):
 api.add_resource(RepoList, '/repos')
 api.add_resource(Repo, '/repos/<repo_id>')
 api.add_resource(Record, '/records/<record_id>')
+api.add_resource(Exporter, '/exporter')
 api.add_resource(Default, '/')
 
 if __name__ == '__main__':
     CONFIG["restapi"] = get_config_ini("conf/restapi.conf")
     CONFIG["db"] = get_config_ini("conf/harvester.conf")["db"]
+    CONFIG["export"] = get_config_ini("conf/harvester.conf")["export"]
 
     # For debugging use this line and comment out the daemon block below
     # and then run the API with 'python3 restapi.py', view at http://localhost:listen_port

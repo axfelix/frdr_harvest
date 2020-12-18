@@ -28,7 +28,9 @@ class ExporterDataverse(Exporter.Exporter):
         for row in records_cursor:
             record = (dict(zip(['record_id','item_url','pub_date','title','item_url','series','repository_id','repository_url'], row)))
             records.append(record)
-        self.get_batch_record_metadata(0, len(records), records)
+        #self.get_batch_record_metadata(0, len(records), records)
+        return self.get_batch_record_metadata(0, len(records), records)
+        
 
         #TODO finish generating a list of deleted items for Geodisy
         deleted_sql = """SELECT recs.record_id, recs.item_url, recs.item_url, recs.repository_id, reps.repository_url
@@ -53,7 +55,8 @@ class ExporterDataverse(Exporter.Exporter):
             self.output_buffer.append(self._generate_dv_json(records[current]))
             current += 1
         done = current == last_rec_num
-        self._write_batch(done)
+        #self._write_batch(done)
+        return self._write_batch(done)
 
     # TODO create list of deleted records to add to json being sent to Geodisy
     def get_batch_deleted_records(self,start, last_rec_num, deleted_records):
@@ -229,10 +232,15 @@ class ExporterDataverse(Exporter.Exporter):
 
     def get_bbox(self, bbox_dict):
         return {
-            "westLongitude": self.json_dv_dict("westLongitude", "false", "primative", bbox_dict["westLon"]),
-            "eastLongitude": self.json_dv_dict("eastLongitude", "false", "primative", bbox_dict["eastLon"]),
-            "northLatitude": self.json_dv_dict("northLatitude", "false", "primative", bbox_dict["northLat"]),
-            "southLatitude": self.json_dv_dict("southLatitude", "false", "primative", bbox_dict["southLat"])
+            #"westLongitude": self.json_dv_dict("westLongitude", "false", "primative", bbox_dict["westLon"]),
+            #"eastLongitude": self.json_dv_dict("eastLongitude", "false", "primative", bbox_dict["eastLon"]),
+            #"northLatitude": self.json_dv_dict("northLatitude", "false", "primative", bbox_dict["northLat"]),
+            #"southLatitude": self.json_dv_dict("southLatitude", "false", "primative", bbox_dict["southLat"])
+            "westLongitude": self.json_dv_dict("westLongitude", "false", "primative", str(bbox_dict["westLon"])),
+            "eastLongitude": self.json_dv_dict("eastLongitude", "false", "primative", str(bbox_dict["eastLon"])),
+            "northLatitude": self.json_dv_dict("northLatitude", "false", "primative", str(bbox_dict["northLat"])),
+            "southLatitude": self.json_dv_dict("southLatitude", "false", "primative", str(bbox_dict["southLat"]))
+
         }
 
     def get_files(self, record):
