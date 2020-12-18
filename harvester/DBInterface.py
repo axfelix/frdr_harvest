@@ -386,7 +386,16 @@ class DBInterface:
             cur.execute(self._prep(sqlstring), [given_val] + (list(paramlist.values())))
             if cur is not None:
                 records = cur.fetchall()
+        return records
 
+    def get_records_raw_query(self, sqlstring):
+        records = []
+        con = self.getConnection()
+        with con:
+            cur = self.getCursor(con)
+            cur.execute(self._prep(sqlstring))
+            if cur is not None:
+                records = cur.fetchall()
         return records
 
     def get_single_record_id(self, tablename, val, extrawhere="", **kwargs):
@@ -396,7 +405,6 @@ class DBInterface:
         records = self.get_multiple_records(tablename, idcolumn, valcolumn, val, extrawhere, **kwargs)
         for record in records:
             returnvalue = int(record[idcolumn])
-
         return returnvalue
 
     def construct_local_url(self, record):
@@ -599,8 +607,9 @@ class DBInterface:
             if "subject" in record:
                 if not isinstance(record["subject"], list):
                     record["subject"] = [record["subject"]]
-                existing_subject_recs_en = self.get_multiple_records("records_x_subjects", "subject_id", "record_id",
-                                                                  record["record_id"], "and language='en'")
+                existing_subject_recs_en = self.get_records_raw_query("""select s.subject_id from subjects s
+                    join records_x_subjects x on x.subject_id = s.subject_id
+                    where x.record_id = {} and s.language = 'en' """.format(record["record_id"]))
                 existing_subject_ids = [e["subject_id"] for e in existing_subject_recs_en]
                 new_subject_ids = []
                 for subject in record["subject"]:
@@ -622,8 +631,9 @@ class DBInterface:
             if "subject_fr" in record:
                 if not isinstance(record["subject_fr"], list):
                     record["subject_fr"] = [record["subject_fr"]]
-                existing_subject_recs_fr = self.get_multiple_records("records_x_subjects", "subject_id", "record_id",
-                                                                  record["record_id"], "and language='fr'")
+                existing_subject_recs_fr = self.get_records_raw_query("""select s.subject_id from subjects s
+                    join records_x_subjects x on x.subject_id = s.subject_id
+                    where x.record_id = {} and s.language = 'fr' """.format(record["record_id"]))
                 existing_subject_ids = [e["subject_id"] for e in existing_subject_recs_fr]
                 new_subject_ids = []
                 for subject in record["subject_fr"]:
@@ -771,8 +781,9 @@ class DBInterface:
             if "tags" in record:
                 if not isinstance(record["tags"], list):
                     record["tags"] = [record["tags"]]
-                existing_tag_recs_en = self.get_multiple_records("records_x_tags", "tag_id", "record_id",
-                                                              record["record_id"], "and language='en'")
+                existing_tag_recs_en = self.get_records_raw_query("""select t.tag_id from tags t
+                    join records_x_tags x on x.tag_id = t.tag_id
+                    where x.record_id = {} and t.language = 'en' """.format(record["record_id"]))
                 existing_tag_ids = [e["tag_id"] for e in existing_tag_recs_en]
                 new_tag_ids = []
                 for tag in record["tags"]:
@@ -794,8 +805,9 @@ class DBInterface:
             if "tags_fr" in record:
                 if not isinstance(record["tags_fr"], list):
                     record["tags_fr"] = [record["tags_fr"]]
-                existing_tag_recs_fr = self.get_multiple_records("records_x_tags", "tag_id", "record_id",
-                                                              record["record_id"], "and language='fr'")
+                existing_tag_recs_fr = self.get_records_raw_query("""select t.tag_id from tags t
+                    join records_x_tags x on x.tag_id = t.tag_id
+                    where x.record_id = {} and t.language = 'fr' """.format(record["record_id"]))
                 existing_tag_ids = [e["tag_id"] for e in existing_tag_recs_fr]
                 new_tag_ids = []
                 for tag in record["tags_fr"]:
