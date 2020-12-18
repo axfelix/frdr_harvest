@@ -127,9 +127,9 @@ class HarvestRepository(object):
     def check_for_dms(self, coordinate):
         lowercase = coordinate.lower()
         if "west" in lowercase or "w" in lowercase or "south" in lowercase or "s" in lowercase:
-            return self.convert_DMS_2_DD(lowercase, False)
+            return self.convert_dms_2_dd(lowercase, False)
         elif "east" in lowercase or "e" in lowercase or "north" in lowercase or "n" in lowercase:
-            return self.convert_DMS_2_DD(lowercase, True)
+            return self.convert_dms_2_dd(lowercase, True)
         else:
             return coordinate
 
