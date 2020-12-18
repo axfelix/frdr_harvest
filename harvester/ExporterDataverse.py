@@ -21,7 +21,7 @@ class ExporterDataverse(Exporter.Exporter):
         records_sql = """SELECT recs.record_id, recs.item_url, recs.pub_date, recs.title, recs.item_url, recs.series, recs.repository_id, reps.repository_url
             FROM records recs
             JOIN repositories reps on reps.repository_id = recs.repository_id
-            WHERE recs.geodisy_harvested = 0 AND recs.deleted = 1 LIMIT ?"""
+            WHERE recs.geodisy_harvested = 0 AND recs.deleted = 0 LIMIT ?"""
         records_cursor.execute(self.db._prep(records_sql), (self.records_per_loop,))
 
         records = []
@@ -33,7 +33,7 @@ class ExporterDataverse(Exporter.Exporter):
         
 
         #TODO finish generating a list of deleted items for Geodisy
-        deleted_sql = """SELECT recs.record_id, recs.item_url, recs.item_url recs.repository_id, reps.repository_url
+        deleted_sql = """SELECT recs.record_id, recs.item_url, recs.item_url, recs.repository_id, reps.repository_url
             FROM records recs
             JOIN repositories reps on reps.repository_id = recs.repository_id
             WHERE geodisy_harvested = 0 AND deleted = 0 LIMIT ?"""
@@ -207,7 +207,7 @@ class ExporterDataverse(Exporter.Exporter):
                     "country": self.json_dv_dict("country", "false", "controlledVocabulary", row["country"]),
                     "state":   self.json_dv_dict("state", "false", "primative", row["province_state"]),
                     "city":    self.json_dv_dict("city", "false", "primative", row["city"]),
-                    "otherGeographicCoverage":   self.json_dv_dict("otherGeographicCoverage", "false", "primative", row["otherGeographicCoverage"])
+                    "otherGeographicCoverage":   self.json_dv_dict("otherGeographicCoverage", "false", "primative", row["other"])
                 }
                 geos_coverage.append(location)
         except:
