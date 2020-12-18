@@ -599,14 +599,9 @@ class DBInterface:
             if "subject" in record:
                 if not isinstance(record["subject"], list):
                     record["subject"] = [record["subject"]]
-                existing_subject_recs = self.get_multiple_records("records_x_subjects", "subject_id", "record_id",
-                                                                  record["record_id"])
-                existing_subject_ids_all = [e["subject_id"] for e in existing_subject_recs]
-                existing_subject_ids = existing_subject_ids_all.copy()
-                for eid in existing_subject_ids_all: # remove existing subject ids for fr tags
-                    subject = self.get_multiple_records("subjects", "language", "subject_id", eid)
-                    if subject[0]["language"] == 'fr':
-                        existing_subject_ids.remove(eid)
+                existing_subject_recs_en = self.get_multiple_records("records_x_subjects", "subject_id", "record_id",
+                                                                  record["record_id"], "and language='en'")
+                existing_subject_ids = [e["subject_id"] for e in existing_subject_recs_en]
                 new_subject_ids = []
                 for subject in record["subject"]:
                     subject_id = self.get_single_record_id("subjects", subject, "and language='en'")
@@ -627,14 +622,9 @@ class DBInterface:
             if "subject_fr" in record:
                 if not isinstance(record["subject_fr"], list):
                     record["subject_fr"] = [record["subject_fr"]]
-                existing_subject_recs = self.get_multiple_records("records_x_subjects", "subject_id", "record_id",
-                                                                  record["record_id"])
-                existing_subject_ids_all = [e["subject_id"] for e in existing_subject_recs]
-                existing_subject_ids = existing_subject_ids_all.copy()
-                for eid in existing_subject_ids_all: # remove existing subject ids for en tags
-                    subject = self.get_multiple_records("subjects", "language", "subject_id", eid)
-                    if subject[0]["language"] == 'en':
-                        existing_subject_ids.remove(eid)
+                existing_subject_recs_fr = self.get_multiple_records("records_x_subjects", "subject_id", "record_id",
+                                                                  record["record_id"], "and language='fr'")
+                existing_subject_ids = [e["subject_id"] for e in existing_subject_recs_fr]
                 new_subject_ids = []
                 for subject in record["subject_fr"]:
                     subject_id = self.get_single_record_id("subjects", subject, "and language='fr'")
@@ -781,14 +771,9 @@ class DBInterface:
             if "tags" in record:
                 if not isinstance(record["tags"], list):
                     record["tags"] = [record["tags"]]
-                existing_tag_recs = self.get_multiple_records("records_x_tags", "tag_id", "record_id",
-                                                              record["record_id"])
-                existing_tag_ids_all = [e["tag_id"] for e in existing_tag_recs]
-                existing_tag_ids = existing_tag_ids_all.copy()
-                for eid in existing_tag_ids_all: # remove existing tag ids for fr tags
-                    tag = self.get_multiple_records("tags", "language", "tag_id", eid)
-                    if tag[0]["language"] == 'fr':
-                        existing_tag_ids.remove(eid)
+                existing_tag_recs_en = self.get_multiple_records("records_x_tags", "tag_id", "record_id",
+                                                              record["record_id"], "and language='en'")
+                existing_tag_ids = [e["tag_id"] for e in existing_tag_recs_en]
                 new_tag_ids = []
                 for tag in record["tags"]:
                     tag_id = self.get_single_record_id("tags", tag, "and language='en'")
@@ -809,14 +794,9 @@ class DBInterface:
             if "tags_fr" in record:
                 if not isinstance(record["tags_fr"], list):
                     record["tags_fr"] = [record["tags_fr"]]
-                existing_tag_recs = self.get_multiple_records("records_x_tags", "tag_id", "record_id",
-                                                              record["record_id"])
-                existing_tag_ids_all = [e["tag_id"] for e in existing_tag_recs]
-                existing_tag_ids = existing_tag_ids_all.copy()
-                for eid in existing_tag_ids_all: # remove existing tag ids for en tags
-                    tag = self.get_multiple_records("tags", "language", "tag_id", eid)
-                    if tag[0]["language"] == 'en':
-                        existing_tag_ids.remove(eid)
+                existing_tag_recs_fr = self.get_multiple_records("records_x_tags", "tag_id", "record_id",
+                                                              record["record_id"], "and language='fr'")
+                existing_tag_ids = [e["tag_id"] for e in existing_tag_recs_fr]
                 new_tag_ids = []
                 for tag in record["tags_fr"]:
                     tag_id = self.get_single_record_id("tags", tag, "and language='fr'")
