@@ -21,7 +21,7 @@ class ExporterDataverse(Exporter.Exporter):
         records_sql = """SELECT recs.record_id, recs.item_url, recs.pub_date, recs.title, recs.item_url, recs.series, recs.repository_id, reps.repository_url
             FROM records recs
             JOIN repositories reps on reps.repository_id = recs.repository_id
-            WHERE geodisy_harvested = 0 LIMIT ?"""
+            WHERE recs.geodisy_harvested = 0 AND recs.deleted = 1 LIMIT ?"""
         records_cursor.execute(self.db._prep(records_sql), (self.records_per_loop,))
 
         records = []
@@ -30,6 +30,18 @@ class ExporterDataverse(Exporter.Exporter):
             records.append(record)
         self.get_batch_record_metadata(0, len(records), records)
 
+        #TODO finish generating a list of deleted items for Geodisy
+        deleted_sql = """SELECT recs.record_id, recs.item_url, recs.item_url recs.repository_id, reps.repository_url
+            FROM records recs
+            JOIN repositories reps on reps.repository_id = recs.repository_id
+            WHERE geodisy_harvested = 0 AND deleted = 0 LIMIT ?"""
+        records_cursor.execute(self.db._prep(deleted_sql), (self.records_per_loop,))
+
+        deleted = []
+        for row in records_cursor:
+            deleted_record = (dict(zip(['record_id','item_url', 'item_url', 'repository_id', 'repository_url'], row)))
+            deleted.append(deleted_record)
+        self.get_batch_deleted_records(0, len(records), deleted)
     # create json in batches
     def get_batch_record_metadata(self, start, last_rec_num, records):
         self.output_buffer = []
@@ -42,6 +54,10 @@ class ExporterDataverse(Exporter.Exporter):
             current += 1
         done = current == last_rec_num
         self._write_batch(done)
+
+    # TODO create list of deleted records to add to json being sent to Geodisy
+    def get_batch_deleted_records(self,start, last_rec_num, deleted_records):
+        pass
 
     # make calls back to the FRDR Harvester's db to get the needed info to generate a DV-like json for Geodisy to parse
     def _generate_dv_json(self, record):
@@ -143,7 +159,6 @@ class ExporterDataverse(Exporter.Exporter):
 
     def get_series(self, record):
         return {"seriesName": self.json_dv_dict("seriesName", "false", "primitive", record["series"])}
-
 
     def get_license(self, record):
         cur = self.db.getLambdaCursor()
