@@ -207,7 +207,7 @@ class ExporterDataverse(Exporter.Exporter):
                     "country": self.json_dv_dict("country", "false", "controlledVocabulary", row["country"]),
                     "state":   self.json_dv_dict("state", "false", "primative", row["province_state"]),
                     "city":    self.json_dv_dict("city", "false", "primative", row["city"]),
-                    "otherGeographicCoverage":   self.json_dv_dict("otherGeographicCoverage", "false", "primative", row["otherGeographicCoverage"])
+                    "otherGeographicCoverage":   self.json_dv_dict("otherGeographicCoverage", "false", "primative", row["other"])
                 }
                 geos_coverage.append(location)
         except:
