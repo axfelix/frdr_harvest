@@ -145,7 +145,7 @@ class DBInterface:
             setattr(self, key, value)
         con = self.getConnection()
         with con:
-            cur = self.getRowCursor()
+            cur = self.getDictCursor()
             if self.repo_id > 0:
                 # Existing repo
                 try:
