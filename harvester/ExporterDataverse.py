@@ -1,6 +1,5 @@
 import json
 import harvester.Exporter as Exporter
-import pdb
 
 
 class ExporterDataverse(Exporter.Exporter):
@@ -170,7 +169,7 @@ class ExporterDataverse(Exporter.Exporter):
         if geographic_bounding_box is not None:
             geospatial_groups.append(geographic_bounding_box)
         if geospatial_groups:
-            geospatial["field"] = geospatial_groups
+            geospatial["fields"] = geospatial_groups
             return geospatial
 
     def get_geo_coverage(self, record):
@@ -185,13 +184,13 @@ class ExporterDataverse(Exporter.Exporter):
             geocur.execute(self.db._prep(geo_places_sql), (record["record_id"],))
 
             for row in geocur:
-                val = (dict(zip(['country', 'province_state', 'city', 'other', 'place_name'], row)))
+                val = (dict(zip(['country', 'province_state', 'city', 'otherGeographicCoverage', 'place_name'], row)))
                 # What happened to place_name? It does not appear in the location dict below
                 location = {
-                    "country": self.json_dv_dict("country", "false", "controlledVocabulary", row["country"]), 
-                    "state":   self.json_dv_dict("state", "false", "primative", row["province_state"]), 
-                    "city":    self.json_dv_dict("city", "false", "primative", row["city"]), 
-                    "other":   self.json_dv_dict("other", "false", "primative", row["other"])
+                    "country": self.json_dv_dict("country", "false", "controlledVocabulary", val["country"]),
+                    "state":   self.json_dv_dict("state", "false", "primative", val["province_state"]),
+                    "city":    self.json_dv_dict("city", "false", "primative", val["city"]),
+                    "otherGeographicCoverage":   self.json_dv_dict("otherGeographicCoverage", "false", "primative", val["otherGeographicCoverage"])
                 }
                 geos_coverage.append(location)
         except:
