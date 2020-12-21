@@ -107,30 +107,40 @@ class Exporter(object):
                 elif self.db.getType() == "postgres":
                     litecur = con.cursor(cursor_factory=None)
 
-                # TODO update this to export new geospatial elements
-                litecur.execute(self.db._prep("SELECT coordinate_type, lat, lon FROM geospatial WHERE record_id=?"),
-                                (record["record_id"],))
-                geodata = litecur.fetchall()
-                record["frdr_geospatial"] = []
-                polycoordinates = []
+                litecur.execute(self.db._prep("""SELECT geobbox.westLon, geobbox.eastLon, geobbox.northLat, geobbox.southLat
+                                    FROM geobbox WHERE geobbox.record_id=?"""), (record["record_id"],))
+                geobboxes = litecur.fetchall()
+                if len(geobboxes) > 0:
+                    record["datacite_geoLocationBox"] = []
+                    for geobbox in geobboxes:
+                        record["datacite_geoLocationBox"].append({"westBoundLongitude": geobbox["westLon"],
+                                                                  "eastBoundLongitude": geobbox["eastLon"],
+                                                                  "northBoundLatitude": geobbox["northLat"],
+                                                                  "southBoundLatitude": geobbox["southLat"]})
 
-                try:
-                    for coordinate in geodata:
-                        if coordinate[0] == "Polygon":
-                            polycoordinates.append([float(coordinate[1]), float(coordinate[2])])
-                        else:
-                            record["frdr_geospatial"].append({"frdr_geospatial_type": "Feature",
-                                                              "frdr_geospatial_geometry": {
-                                                                  "frdr_geometry_type": coordinate[0],
-                                                                  "frdr_geometry_coordinates": [float(coordinate[1]),
-                                                                                                float(coordinate[2])]}})
-                except:
-                    pass
 
-                if polycoordinates:
-                    record["frdr_geospatial"].append({"frdr_geospatial_type": "Feature",
-                                                      "frdr_geospatial_geometry": {"frdr_geometry_type": "Polygon",
-                                                                                   "frdr_geometry_coordinates": polycoordinates}})
+                litecur.execute(self.db._prep("""SELECT geopoint.lat, geopoint.lon FROM geopoint WHERE geopoint.record_id=?"""), (record["record_id"],))
+                geopoints = litecur.fetchall()
+                if len(geopoints) > 0:
+                    record["datacite_geoLocationPoint"] = []
+                    for geopoint in geopoints:
+                        record["datacite_geoLocationPoint"].append({"pointLatitude": geopoint["lat"],
+                                                                    "pointLongitude": geopoint["lon"]})
+
+                litecur.execute(self.db._prep("""SELECT geoplace.country, geoplace.province_state, geoplace.city, geoplace.other, geoplace.place_name
+                    FROM geoplace JOIN records_x_geoplace on records_x_geoplace.geoplace_id = geoplace.geoplace_id
+                                    WHERE records_x_geoplace.record_id=?"""), (record["record_id"],))
+                geoplaces = litecur.fetchall()
+                if len(geoplaces) > 0:
+                    record["datacite_geoLocationPlace"] = []
+                    for geoplace in geoplaces:
+                        if geoplace["place_name"]:
+                            record["datacite_geoLocationPlace"].append({"place_name": geoplace["place_name"]})
+                        elif geoplace["country"] or geoplace["province_state"] or geoplace["city"] or geoplace["other"]:
+                            record["datacite_geoLocationPlace"].append({"country": geoplace["country"],
+                                                                        "province_state": geoplace["province_state"],
+                                                                        "city": geoplace["city"],
+                                                                        "additional": geoplace["other"]})
 
             with con:
                 if self.db.getType() == "sqlite":
