@@ -214,10 +214,10 @@ class ExporterDataverse(Exporter.Exporter):
 
         try:
             geocur = self.db.getDictCursor()
-            geo_places_sql = """SELECT gp.country, gp.province_state, gp.city, gp.other, gp.place_name 
-                FROM geoplace gp
-                JOIN records_x_geoplace rxg ON rxg.geoplace_id = gp.geoplace_id
-                WHERE rxg.record_id=?"""
+            geo_places_sql = """SELECT geoplace.country, geoplace.province_state, geoplace.city, geoplace.other, geoplace.place_name 
+                FROM geoplace
+                JOIN records_x_geoplace ON records_x_geoplace.geoplace_id = geoplace.geoplace_id
+                WHERE records_x_geoplace.record_id=?"""
             geocur.execute(self.db._prep(geo_places_sql), (record["record_id"],))
 
             for row in geocur:
