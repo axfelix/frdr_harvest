@@ -79,13 +79,20 @@ class ExporterDataverse(Exporter.Exporter):
             "license": self.get_license(record),
             "repo_base_url": record["repository_url"]
         }
-
-        metadata = {
-            "metadataBlocks": {
-                "citation": self.get_citation_metadata_field(record),
-                "geospatial": self.get_geospatial_metadata(record)            
+        geo = self.get_geospatial_metadata(record)
+        if geo:
+            metadata = {
+                "metadataBlocks": {
+                    "citation": self.get_citation_metadata_field(record),
+                    "geospatial": geo
+                }
             }
-        }
+        else:
+            metadata = {
+                "metadataBlocks": {
+                    "citation": self.get_citation_metadata_field(record),
+                }
+            }
         record_dv_data["datasetVersion"] = metadata
 
         return record_dv_data
@@ -189,7 +196,7 @@ class ExporterDataverse(Exporter.Exporter):
         geospatial_groups = []
         if geographic_coverage is not None and geographic_coverage != "__bad__":
             geospatial_groups.append(geographic_coverage)
-        if geographic_bounding_box is not None:
+        if geographic_bounding_box is not None and geographic_bounding_box != "__bad__":
             geospatial_groups.append(geographic_bounding_box)
         if geospatial_groups:
             geospatial["fields"] = geospatial_groups
