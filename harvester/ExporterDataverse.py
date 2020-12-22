@@ -217,13 +217,17 @@ class ExporterDataverse(Exporter.Exporter):
                 # What happened to place_name? It does not appear in the location dict below
                 val = (dict(zip(['country', 'province_state', 'city', 'otherGeographicCoverage', 'place_name'], row)))
                 # What happened to place_name? It does not appear in the location dict below
+                country = val["country"] if val["country"] != "country" else ""
+                state = val["province_state"] if val["province_state"] != "province_state" else ""
+                city = val["city"] if val["city"] != "city" else ""
+                other = val["otherGeographicCoverage"] if val["otherGeographicCoverage"] != "other" else ""
                 location = {
-                    "country": self.json_dv_dict("country", "false", "controlledVocabulary", val["country"]),
-                    "state": self.json_dv_dict("state", "false", "primative", val["province_state"]),
-                    "city": self.json_dv_dict("city", "false", "primative", val["city"]),
-                    "otherGeographicCoverage": self.json_dv_dict("otherGeographicCoverage", "false", "primative", val["otherGeographicCoverage"])
+                    "country": self.json_dv_dict("country", "false", "controlledVocabulary", country),
+                    "state": self.json_dv_dict("state", "false", "primative", state),
+                    "city": self.json_dv_dict("city", "false", "primative", city),
+                    "otherGeographicCoverage": self.json_dv_dict("otherGeographicCoverage", "false", "primative", other)
                 }
-                if val["country"] != "" or val["province_state"] != "" or val["city"] != "" or val["otherGeographicCoverage"] != "":
+                if country != "" or state != "" or city != "" or other != "":
                     geos_coverage.append(location)
         except:
             self.logger.error("Unable to get geoplace metadata fields for record: {}".format(record["record_id"]))
