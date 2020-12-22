@@ -224,10 +224,10 @@ class ExporterDataverse(Exporter.Exporter):
                 # What happened to place_name? It does not appear in the location dict below
                 val = (dict(zip(['country', 'province_state', 'city', 'otherGeographicCoverage', 'place_name'], row)))
                 # What happened to place_name? It does not appear in the location dict below
-                country = val["country"] if val["country"] != "country" else ""
-                state = val["province_state"] if val["province_state"] != "province_state" else ""
-                city = val["city"] if val["city"] != "city" else ""
-                other = val["otherGeographicCoverage"] if val["otherGeographicCoverage"] != "other" else ""
+                country = val["country"]
+                state = val["province_state"]
+                city = val["city"]
+                other = val["otherGeographicCoverage"]
                 location = {
                     "country": self.json_dv_dict("country", "false", "controlledVocabulary", country),
                     "state": self.json_dv_dict("state", "false", "primative", state),
