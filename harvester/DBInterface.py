@@ -979,23 +979,33 @@ class DBInterface:
                         modified_upstream = True
 
             if len(domain_metadata) > 0:
-                # TODO Add deletion for domain metadata
-                existing_metadata_ids = self.get_multiple_records("domain_metadata", "metadata_id", "record_id",
+                existing_metadata_recs = self.get_multiple_records("domain_metadata", "*", "record_id",
                                                                   record["record_id"])
-                if not existing_metadata_ids:
-                    for field_uri in domain_metadata:
-                        field_pieces = field_uri.split("#")
-                        domain_schema = field_pieces[0]
-                        field_name = field_pieces[1]
-                        schema_id = self.get_single_record_id("domain_schemas", domain_schema)
-                        if schema_id is None:
-                            schema_id = self.insert_related_record("domain_schemas", domain_schema)
-                        if not isinstance(domain_metadata[field_uri], list):
-                            domain_metadata[field_uri] = [domain_metadata[field_uri]]
-                        for field_value in domain_metadata[field_uri]:
+                existing_metadata_ids = [e["metadata_id"] for e in existing_metadata_recs]
+                new_metadata_ids = []
+                for field_uri in domain_metadata:
+                    field_pieces = field_uri.split("#")
+                    domain_schema = field_pieces[0]
+                    field_name = field_pieces[1]
+                    schema_id = self.get_single_record_id("domain_schemas", domain_schema)
+                    if schema_id is None:
+                        schema_id = self.insert_related_record("domain_schemas", domain_schema)
+                    if not isinstance(domain_metadata[field_uri], list):
+                        domain_metadata[field_uri] = [domain_metadata[field_uri]]
+                    for field_value in domain_metadata[field_uri]:
+                        extras = {"record_id": record["record_id"], "field_name": field_name, "field_value": field_value}
+                        metadata_id = self.get_single_record_id("domain_metadata", schema_id, "", **extras)
+                        if metadata_id is None:
                             extras = {"record_id": record["record_id"], "field_name": field_name,
                                       "field_value": field_value}
-                            self.insert_related_record("domain_metadata", schema_id, **extras)
+                            metadata_id = self.insert_related_record("domain_metadata", schema_id, **extras)
+                        if metadata_id is not None:
+                            new_metadata_ids.append(metadata_id)
+
+                for eid in existing_metadata_ids:
+                    if eid not in new_metadata_ids:
+                        self.delete_row_generic("domain_metadata", "metadata_id", eid)
+                        modified_upstream = True
 
             if modified_upstream:
                 self.update_record_upstream_modified(record)
