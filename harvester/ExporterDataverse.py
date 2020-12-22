@@ -28,22 +28,27 @@ class ExporterDataverse(Exporter.Exporter):
         for row in records_cursor:
             record = (dict(zip(['record_id','item_url','pub_date','title','item_url','series','repository_id','repository_url'], row)))
             records.append(record)
-        #self.get_batch_record_metadata(0, len(records), records)
-        return self.get_batch_record_metadata(0, len(records), records)
-        
 
-        #TODO finish generating a list of deleted items for Geodisy
+        # TODO finish generating a list of deleted items for Geodisy
         deleted_sql = """SELECT recs.record_id, recs.item_url, recs.item_url, recs.repository_id, reps.repository_url
-            FROM records recs
-            JOIN repositories reps on reps.repository_id = recs.repository_id
-            WHERE geodisy_harvested = 0 AND deleted = 0 LIMIT ?"""
+                    FROM records recs
+                    JOIN repositories reps on reps.repository_id = recs.repository_id
+                    WHERE geodisy_harvested = 0 AND deleted = 1 LIMIT ?"""
         records_cursor.execute(self.db._prep(deleted_sql), (self.records_per_loop,))
 
         deleted = []
         for row in records_cursor:
-            deleted_record = (dict(zip(['record_id','item_url', 'item_url', 'repository_id', 'repository_url'], row)))
+            deleted_record = (
+                dict(zip(['record_id', 'item_url', 'item_url', 'repository_id', 'repository_url'], row)))
             deleted.append(deleted_record)
         self.get_batch_deleted_records(0, len(records), deleted)
+
+        # self.get_batch_record_metadata(0, len(records), records)
+        return self.get_batch_record_metadata(0, len(records), records)
+        
+
+
+
     # create json in batches
     def get_batch_record_metadata(self, start, last_rec_num, records):
         self.output_buffer = []
@@ -203,13 +208,16 @@ class ExporterDataverse(Exporter.Exporter):
 
             for row in geocur:
                 # What happened to place_name? It does not appear in the location dict below
+                val = (dict(zip(['country', 'province_state', 'city', 'otherGeographicCoverage', 'place_name'], row)))
+                # What happened to place_name? It does not appear in the location dict below
                 location = {
-                    "country": self.json_dv_dict("country", "false", "controlledVocabulary", row["country"]),
-                    "state":   self.json_dv_dict("state", "false", "primative", row["province_state"]),
-                    "city":    self.json_dv_dict("city", "false", "primative", row["city"]),
-                    "otherGeographicCoverage":   self.json_dv_dict("otherGeographicCoverage", "false", "primative", row["other"])
+                    "country": self.json_dv_dict("country", "false", "controlledVocabulary", val["country"]),
+                    "state": self.json_dv_dict("state", "false", "primative", val["province_state"]),
+                    "city": self.json_dv_dict("city", "false", "primative", val["city"]),
+                    "otherGeographicCoverage": self.json_dv_dict("otherGeographicCoverage", "false", "primative", val["otherGeographicCoverage"])
                 }
-                geos_coverage.append(location)
+                if val["country"] != "" or val["province_state"] != "" or val["city"] != "" or val["otherGeographicCoverage"] != "":
+                    geos_coverage.append(location)
         except:
             self.logger.error("Unable to get geoplace metadata fields for record: {}".format(record["record_id"]))
 
@@ -232,15 +240,10 @@ class ExporterDataverse(Exporter.Exporter):
 
     def get_bbox(self, bbox_dict):
         return {
-            #"westLongitude": self.json_dv_dict("westLongitude", "false", "primative", bbox_dict["westLon"]),
-            #"eastLongitude": self.json_dv_dict("eastLongitude", "false", "primative", bbox_dict["eastLon"]),
-            #"northLatitude": self.json_dv_dict("northLatitude", "false", "primative", bbox_dict["northLat"]),
-            #"southLatitude": self.json_dv_dict("southLatitude", "false", "primative", bbox_dict["southLat"])
             "westLongitude": self.json_dv_dict("westLongitude", "false", "primative", str(bbox_dict["westLon"])),
             "eastLongitude": self.json_dv_dict("eastLongitude", "false", "primative", str(bbox_dict["eastLon"])),
             "northLatitude": self.json_dv_dict("northLatitude", "false", "primative", str(bbox_dict["northLat"])),
             "southLatitude": self.json_dv_dict("southLatitude", "false", "primative", str(bbox_dict["southLat"]))
-
         }
 
     def get_files(self, record):
