@@ -56,7 +56,9 @@ class ExporterDataverse(Exporter.Exporter):
         rec_nums = self.records_per_loop
         stop = (start + rec_nums) if (start + rec_nums < last_rec_num) else last_rec_num
         while current < stop:
-            self.output_buffer.append(self._generate_dv_json(records[current]))
+            r = self._generate_dv_json(records[current])
+            if r != "":
+                self.output_buffer.append(r)
             current += 1
         done = current == last_rec_num
         #self._write_batch(done)
@@ -86,15 +88,16 @@ class ExporterDataverse(Exporter.Exporter):
                     "geospatial": geo
                 }
             }
+            record_dv_data["datasetVersion"] = metadata
+            return record_dv_data
         else:
             metadata = {
                 "metadataBlocks": {
-                    "citation": self.get_citation_metadata_field(record),
+                    "citation": self.get_citation_metadata_field(record)
                 }
             }
-        record_dv_data["datasetVersion"] = metadata
-
-        return record_dv_data
+            record_dv_data["datasetVersion"] = metadata
+            return record_dv_data
 
     def send_json(self, json_string, done):
         data = {"records": json_string, "finished": done}
