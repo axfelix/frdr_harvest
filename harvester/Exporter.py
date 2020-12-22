@@ -113,10 +113,10 @@ class Exporter(object):
                 if len(geobboxes) > 0:
                     record["datacite_geoLocationBox"] = []
                     for geobbox in geobboxes:
-                        record["datacite_geoLocationBox"].append({"westBoundLongitude": geobbox["westLon"],
-                                                                  "eastBoundLongitude": geobbox["eastLon"],
-                                                                  "northBoundLatitude": geobbox["northLat"],
-                                                                  "southBoundLatitude": geobbox["southLat"]})
+                        record["datacite_geoLocationBox"].append({"westBoundLongitude": float(geobbox["westlon"]),
+                                                                  "eastBoundLongitude": float(geobbox["eastlon"]),
+                                                                  "northBoundLatitude": float(geobbox["northlat"]),
+                                                                  "southBoundLatitude": float(geobbox["southlat"])})
 
 
                 litecur.execute(self.db._prep("""SELECT geopoint.lat, geopoint.lon FROM geopoint WHERE geopoint.record_id=?"""), (record["record_id"],))
@@ -124,8 +124,8 @@ class Exporter(object):
                 if len(geopoints) > 0:
                     record["datacite_geoLocationPoint"] = []
                     for geopoint in geopoints:
-                        record["datacite_geoLocationPoint"].append({"pointLatitude": geopoint["lat"],
-                                                                    "pointLongitude": geopoint["lon"]})
+                        record["datacite_geoLocationPoint"].append({"pointLatitude": float(geopoint["lat"]),
+                                                                    "pointLongitude": float(geopoint["lon"])})
 
                 litecur.execute(self.db._prep("""SELECT geoplace.country, geoplace.province_state, geoplace.city, geoplace.other, geoplace.place_name
                     FROM geoplace JOIN records_x_geoplace on records_x_geoplace.geoplace_id = geoplace.geoplace_id
