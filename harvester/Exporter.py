@@ -105,7 +105,7 @@ class Exporter(object):
                     con.row_factory = Row
                     litecur = con.cursor()
                 elif self.db.getType() == "postgres":
-                    litecur = con.cursor(cursor_factory=None)
+                    litecur = con.cursor(cursor_factory=DictCursor)
 
                 litecur.execute(self.db._prep("""SELECT geobbox.westLon, geobbox.eastLon, geobbox.northLat, geobbox.southLat
                                     FROM geobbox WHERE geobbox.record_id=?"""), (record["record_id"],))
@@ -209,7 +209,7 @@ class Exporter(object):
                     con.row_factory = Row
                     litecur = con.cursor()
                 elif self.db.getType() == "postgres":
-                    litecur = con.cursor(cursor_factory=None)
+                    litecur = con.cursor(cursor_factory=DictCursor)
 
                 litecur.execute(self.db._prep(
                     "SELECT ds.namespace, dm.field_name, dm.field_value FROM domain_metadata dm, domain_schemas ds WHERE dm.schema_id=ds.schema_id and dm.record_id=?"),
