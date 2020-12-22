@@ -942,10 +942,12 @@ class DBInterface:
 
                     if geoplace_id is None:
                         geoplace_id = self.insert_related_record("geoplace", geoplace["place_name"], **extras)
+                        modified_upstream = True
                     if geoplace_id is not None:
                         new_geoplace_ids.append(geoplace_id)
                         if geoplace_id not in existing_geoplace_ids:
                             self.insert_cross_record("records_x_geoplace", "geoplace", geoplace_id, record["record_id"])
+                            modified_upstream = True
 
                 for eid in existing_geoplace_ids:
                     if eid not in new_geoplace_ids:
