@@ -187,7 +187,7 @@ class ExporterDataverse(Exporter.Exporter):
         geographic_bounding_box = self.json_dv_dict("geographicBoundingBox", "true", "compound", self.get_geo_bbox(record))
         geospatial["displayName"] = "Geospatial Metadata"
         geospatial_groups = []
-        if geographic_coverage is not None:
+        if geographic_coverage is not None and geographic_coverage != "__bad__":
             geospatial_groups.append(geographic_coverage)
         if geographic_bounding_box is not None:
             geospatial_groups.append(geographic_bounding_box)
@@ -220,7 +220,8 @@ class ExporterDataverse(Exporter.Exporter):
                     geos_coverage.append(location)
         except:
             self.logger.error("Unable to get geoplace metadata fields for record: {}".format(record["record_id"]))
-
+        if not geos_coverage:
+            return "__bad__"
         return geos_coverage
 
     def get_geo_bbox(self, record):
@@ -237,6 +238,7 @@ class ExporterDataverse(Exporter.Exporter):
                 return self.json_dv_dict("geographicBoundingBox", "true", "compound", coords)
         except:
             self.logger.error("Unable to get geobbox metadata fields for creating json for Geodisy")
+            return "__bad__"
 
     def get_bbox(self, bbox_dict):
         return {
@@ -284,6 +286,8 @@ class ExporterDataverse(Exporter.Exporter):
     # Utility Functions____________________________________________
 
     def json_dv_dict(self, type_name, multiple, type_class, value):
+        if value == "__bad__" or value == "" or value == [] or value is None:
+            return "__bad__"
         default_value = ""
         if type_class == "compound":
             default_value = []
