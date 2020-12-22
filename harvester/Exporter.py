@@ -218,7 +218,10 @@ class Exporter(object):
                     domain_namespace = str(row["namespace"])
                     field_name = str(row["field_name"])
                     field_value = str(row["field_value"])
-                    custom_label = domain_namespace + "#" + field_name
+                    if domain_namespace == "http://datacite.org/schema/kernel-4":
+                        custom_label = "datacite_" + field_name
+                    else:
+                        custom_label = domain_namespace + "#" + field_name
                     if custom_label not in record:
                         record[custom_label] = field_value
                     else:
