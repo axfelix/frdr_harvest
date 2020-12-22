@@ -17,11 +17,11 @@ class ExporterDataverse(Exporter.Exporter):
         records_con = self.db.getConnection()
         with records_con:
             records_cursor = records_con.cursor()
-
+        # geodisy_harvested is defaulted backwords such that 1 = false and 0 = true
         records_sql = """SELECT recs.record_id, recs.item_url, recs.pub_date, recs.title, recs.item_url, recs.series, recs.repository_id, reps.repository_url
             FROM records recs
             JOIN repositories reps on reps.repository_id = recs.repository_id
-            WHERE recs.geodisy_harvested = 0 AND recs.deleted = 0 LIMIT ?"""
+            WHERE recs.geodisy_harvested = 1 AND recs.deleted = 0 LIMIT ?"""
         records_cursor.execute(self.db._prep(records_sql), (self.records_per_loop,))
 
         records = []
