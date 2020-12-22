@@ -235,8 +235,8 @@ class ExporterDataverse(Exporter.Exporter):
                     "city": self.json_dv_dict("city", "false", "primative", city),
                     "otherGeographicCoverage": self.json_dv_dict("otherGeographicCoverage", "false", "primative", other)
                 }
-                print(val)
-                print(location)
+                self.logger.info(val)
+                self.logger.info(location)
                 if country != "" or state != "" or city != "" or other != "":
                     geos_coverage.append(location)
         except:
