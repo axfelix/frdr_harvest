@@ -1,15 +1,13 @@
 {
     "repos": [
         {
-            "name": "SFU Radar",
-            "url": "https://researchdata.sfu.ca/oai2",
-            "homepage_url": "https://researchdata.sfu.ca/",
-            "set": "",
-            "thumbnail": "http://static.lib.sfu.ca/clf2013/sfu-logo.png",
-            "type": "oai",
-            "item_url_pattern": "http://researchdata.sfu.ca/islandora/object/%id%",
-            "enabled": true,
-            "copyerrorstoemail": false
+            "name": "UBC Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/ubc",
+            "set": 71618,
+            "thumbnail": "https://{{ web_hostname }}/discover/img/sources/ubccrest_80x80.png",
+            "type": "dataverse",
+            "enabled": true
         }
     ]
 }
