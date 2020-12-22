@@ -203,7 +203,6 @@ class Exporter(object):
                     WHERE records_x_access.record_id=?"""), (record["record_id"],))
                 record["frdr_access"] = self._rows_to_dict(litecur)
 
-            domain_schemas = {}
             with con:
                 if self.db.getType() == "sqlite":
                     from sqlite3 import Row
@@ -216,12 +215,17 @@ class Exporter(object):
                     "SELECT ds.namespace, dm.field_name, dm.field_value FROM domain_metadata dm, domain_schemas ds WHERE dm.schema_id=ds.schema_id and dm.record_id=?"),
                                 (record["record_id"],))
                 for row in litecur:
-                    domain_namespace = str(row[0])
-                    if domain_namespace not in domain_schemas.keys():
-                        current_count = len(domain_schemas)
-                        domain_schemas[domain_namespace] = "frdrcust" + str(current_count + 1)
-                    custom_label = domain_schemas[domain_namespace] + ":" + str(row[1])
-                    record[custom_label] = str(row[2])
+                    domain_namespace = str(row["namespace"])
+                    field_name = str(row["field_name"])
+                    field_value = str(row["field_value"])
+                    custom_label = domain_namespace + "#" + field_name
+                    if custom_label not in record:
+                        record[custom_label] = field_value
+                    else:
+                        if not isinstance(record[custom_label], list):
+                            record[custom_label] = [record[custom_label]]
+                        record[custom_label].append(field_value)
+
 
             # Convert friendly column names into dc element names
             record["dc_title_en"] = record["title"]
@@ -247,14 +251,6 @@ class Exporter(object):
             record.pop("title", None)
             record.pop("title_fr", None)
 
-            # record["@context"] = {
-            #     "dc": "http://dublincore.org/documents/dcmi-terms",
-            #     "frdr": "https://frdr.ca/schema/1.0",
-            #     "datacite": "https://schema.labs.datacite.org/meta/kernel-4.0/metadata.xsd"
-            # }
-            # for custom_schema in domain_schemas:
-            #     short_label = domain_schemas[custom_schema]
-            #     record["@context"].update({short_label: custom_schema})
             record["datacite_resourceTypeGeneral"] = "dataset"
             gmeta_data = {"@datatype": "GMetaEntry", "@version": "2016-11-09",
                           "subject": record["item_url"], "visible_to": ["public"], "mimetype": "application/json",
