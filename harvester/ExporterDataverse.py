@@ -267,7 +267,7 @@ class ExporterDataverse(Exporter.Exporter):
                 val = {"westLon": row["westlon"], "eastLon": row["eastlon"], "northLat": row["northlat"], "southLat": row["southlat"]}
                 coords.append(self.get_bbox(val))
             if coords:
-                return self.json_dv_dict("geographicBoundingBox", "true", "compound", coords)
+                return coords
         except:
             self.logger.error("Unable to get geobbox metadata fields for creating json for Geodisy")
             return ""
