@@ -251,7 +251,7 @@ class DBInterface:
 
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getRowCursor()
             cur.execute(self._prep(update_record_sql),
                         update_vals)
 
