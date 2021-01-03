@@ -27,6 +27,17 @@ class ExporterDataverse(Exporter.Exporter):
         for row in records_cursor:
             record = (dict(zip(['record_id','item_url','pub_date','title','item_url','series','repository_id','repository_url'], row)))
             records.append(record)
+        cur = self.db.getLambdaCursor()
+        records_sql = """SELECT count(*)
+                            FROM records recs
+                            JOIN repositories reps on reps.repository_id = recs.repository_id
+                            WHERE recs.geodisy_harvested = 0 AND recs.deleted = 0"""
+        cur.execute(records_sql)
+        vals = self._rows_to_list(cur)
+        for val in vals:
+            total_records = val
+            break
+
 
         # TODO finish generating a list of deleted items for Geodisy
         deleted_sql = """SELECT recs.record_id, recs.item_url, recs.item_url, recs.repository_id, reps.repository_url
@@ -43,7 +54,7 @@ class ExporterDataverse(Exporter.Exporter):
         self.get_batch_deleted_records(0, len(records), deleted)
 
         # self.get_batch_record_metadata(0, len(records), records)
-        return self.get_batch_record_metadata(0, len(records), records)
+        return self.get_batch_record_metadata(0, total_records, records)
         
 
 
