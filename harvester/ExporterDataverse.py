@@ -92,23 +92,17 @@ class ExporterDataverse(Exporter.Exporter):
             "repo_base_url": record["repository_url"]
         }
         geo = self.get_geospatial_metadata(record)
+        files = self.get_files(record)
+        metadata_blocks = {"citation": self.get_citation_metadata_field(record)}
         if geo:
-            metadata = {
-                "metadataBlocks": {
-                    "citation": self.get_citation_metadata_field(record),
-                    "geospatial": geo
-                }
-            }
-            record_dv_data["datasetVersion"] = metadata
-            return record_dv_data
-        else:
-            metadata = {
-                "metadataBlocks": {
-                    "citation": self.get_citation_metadata_field(record)
-                }
-            }
-            record_dv_data["datasetVersion"] = metadata
-            return record_dv_data
+            metadata_blocks["geospatial"] = geo
+        if files:
+            metadata_blocks["files"] = files
+        metadata = {
+            "metadataBlocks": metadata_blocks
+        }
+        record_dv_data["datasetVersion"] = metadata
+        return record_dv_data
 
     def send_json(self, json_string, done):
         data = {"records": json_string, "finished": done}
@@ -281,7 +275,7 @@ class ExporterDataverse(Exporter.Exporter):
         }
 
     def get_files(self, record):
-        cur = self.db.getLambdaCursor()
+        cur = self.db.getDictCursor()
         try:
             cur.execute(self.db._prep(
                     """SELECT filename, uri FROM geofile WHERE record_id=?"""),(record["record_id"],))
@@ -297,11 +291,14 @@ class ExporterDataverse(Exporter.Exporter):
     def get_file_info(self, file_info, record):
         full = file_info["uri"]
         try:
-            file_id_start = full.index("/datafile/", [0, ]) + 10
+            file_id_start = full.index("/datafile/") + 10
             file_id = full[file_id_start:]
             return {
+                "frdr_harvester": True,
+                "restricted": False,
                 "label": file_info["filename"],
                 "dataFile": {
+                    "server": full[0: full.index("api/")],
                     "record_id": file_id, 
                     "pidURL": record["item_url"],
                     "filename": file_info["filename"]
