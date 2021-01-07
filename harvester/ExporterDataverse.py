@@ -285,7 +285,7 @@ class ExporterDataverse(Exporter.Exporter):
                 val = (dict(zip(["filename", "uri"], row)))
                 files.append(self.get_file_info(val, record))
             if files:
-                self.logger.info(files)
+                self.logger.error(files)
                 return {"files": files}
         except:
             self.logger.error("Unable to get geo file metadata fields for creating json for Geodisy")
