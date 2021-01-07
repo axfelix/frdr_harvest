@@ -286,7 +286,7 @@ class ExporterDataverse(Exporter.Exporter):
                 files.append(self.get_file_info(val, record))
             if files:
                 self.logger.error(files)
-                return {"files": files}
+                return files
         except:
             self.logger.error("Unable to get geo file metadata fields for creating json for Geodisy")
 
