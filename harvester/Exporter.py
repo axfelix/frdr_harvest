@@ -11,7 +11,7 @@ class Exporter(object):
         self.logger = log
         self.destination = finalconfig.get('destination', "file")
         self.export_limit = finalconfig.get('export_file_limit_mb', 10)
-        self.records_per_loop = 50
+        self.records_per_loop = 500
         if self.db.dbtype == "postgres":
             import psycopg2
             global DictRow
