@@ -313,6 +313,7 @@ class ExporterDataverse(Exporter.Exporter):
         except ValueError:
             self.logger.error("Couldn't find 'datafile' in file uri in record {} for creating json for "
                               "Geodisy, index somehow went out of bounds".format(record["record_id"]))
+            self.logger.error(full)
 
 
     # Utility Functions____________________________________________
