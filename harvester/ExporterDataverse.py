@@ -102,6 +102,7 @@ class ExporterDataverse(Exporter.Exporter):
             "metadataBlocks": metadata_blocks
         }
         record_dv_data["datasetVersion"] = metadata
+        self.logger.info(record_dv_data)
         return record_dv_data
 
     def send_json(self, json_string, done):
@@ -284,6 +285,7 @@ class ExporterDataverse(Exporter.Exporter):
                 val = (dict(zip(["filename", "uri"], row)))
                 files.append(self.get_file_info(val, record))
             if files:
+                self.logger.info(files)
                 return {"files": files}
         except:
             self.logger.error("Unable to get geo file metadata fields for creating json for Geodisy")
@@ -293,17 +295,18 @@ class ExporterDataverse(Exporter.Exporter):
         try:
             file_id_start = full.index("/datafile/") + 10
             file_id = full[file_id_start:]
-            return {
+            file_metadata = {
                 "frdr_harvester": True,
                 "restricted": False,
                 "label": file_info["filename"],
                 "dataFile": {
                     "server": full[0: full.index("api/")],
-                    "record_id": file_id, 
+                    "record_id": file_id,
                     "pidURL": record["item_url"],
                     "filename": file_info["filename"]
                     }
                 }
+            return file_metadata
         except IndexError:
             self.logger.error("Unable to get geofile info for creating json for Geodisy, "
                               "index somehow went out of bounds")
