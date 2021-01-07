@@ -285,7 +285,6 @@ class ExporterDataverse(Exporter.Exporter):
                 val = {"filename": row["filename"], "uri": row["uri"]}
                 files.append(self.get_file_info(val, record))
             if files:
-                self.logger.error(files)
                 return files
         except:
             self.logger.error("Unable to get geo file metadata fields for creating json for Geodisy")
@@ -313,8 +312,6 @@ class ExporterDataverse(Exporter.Exporter):
         except ValueError:
             self.logger.error("Couldn't find 'datafile' in file uri in record {} for creating json for "
                               "Geodisy, index somehow went out of bounds".format(record["record_id"]))
-            self.logger.error(full)
-
 
     # Utility Functions____________________________________________
 
