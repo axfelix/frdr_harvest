@@ -282,7 +282,7 @@ class ExporterDataverse(Exporter.Exporter):
                     """SELECT filename, uri FROM geofile WHERE record_id=?"""),(record["record_id"],))
             files = []
             for row in cur:
-                val = (dict(zip(["filename", "uri"], row)))
+                val = {"filename": row["filename"], "uri": row["uri"]}
                 files.append(self.get_file_info(val, record))
             if files:
                 self.logger.error(files)
