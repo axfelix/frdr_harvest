@@ -98,6 +98,9 @@ class DataStreamRepository(HarvestRepository):
             else:
                 record["access"] = "Limited"
 
+        if ("license" in datastream_record) and datastream_record["license"]:
+            record["rights"] = datastream_record["license"]
+
         if ("@id" in datastream_record) and datastream_record["@id"]:
             record["identifier"] = datastream_record["@id"]
 
