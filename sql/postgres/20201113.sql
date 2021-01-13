@@ -1,0 +1,1 @@
+alter table records add column upstream_modified_timestamp INTEGER DEFAULT 0;

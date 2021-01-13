@@ -16,6 +16,8 @@ class DataverseRepository(HarvestRepository):
         self.domain_metadata = []
         self.params = {
         }
+        self.geofile_extensions = [".tif", ".tiff",".xyz", ".png", ".aux.xml",".tab",".twf",".tifw", ".tiffw",".wld",
+                                  ".tif.prj",".tfw", ".geojson",".shp",".gpkg", ".shx", ".dbf", ".sbn",".prj", ".csv", ".txt", ".zip"]
 
     def _crawl(self):
         kwargs = {
@@ -194,26 +196,47 @@ class DataverseRepository(HarvestRepository):
                             if "country" in geographicCoverage:
                                 geolocationPlace["country"] = geographicCoverage["country"]["value"]
                             if "state" in geographicCoverage:
-                                geolocationPlace["state"] = geographicCoverage["state"]["value"]
+                                geolocationPlace["province_state"] = geographicCoverage["state"]["value"]
                             if "city" in geographicCoverage:
                                 geolocationPlace["city"] = geographicCoverage["city"]["value"]
                             if "otherGeographicCoverage" in geographicCoverage:
                                 geolocationPlace["other"] = geographicCoverage["otherGeographicCoverage"]["value"]
                             geolocationPlaces.append(geolocationPlace)
+                        record["geoplaces"] = geolocationPlaces
                     elif geospatial_field["typeName"] == "geographicBoundingBox":
                         # Get bounding box values
                         geolocationBoxes = []
                         for geographicBoundingBox in geospatial_field["value"]:
                             geolocationBox = {}
                             if "westLongitude" in geographicBoundingBox:
-                                geolocationBox["westLongitude"] = geographicBoundingBox["westLongitude"]["value"]
+                                geolocationBox["westLon"] = geographicBoundingBox["westLongitude"]["value"]
                             if "eastLongitude" in geographicBoundingBox:
-                                geolocationBox["eastLongitude"] = geographicBoundingBox["eastLongitude"]["value"]
+                                geolocationBox["eastLon"] = geographicBoundingBox["eastLongitude"]["value"]
                             if "northLongitude" in geographicBoundingBox:
-                                geolocationBox["northLatitude"] = geographicBoundingBox["northLongitude"]["value"]
+                                geolocationBox["northLat"] = geographicBoundingBox["northLongitude"]["value"]
                             if "southLongitude" in geographicBoundingBox:
-                                geolocationBox["southLatitude"] = geographicBoundingBox["southLongitude"]["value"]
+                                geolocationBox["southLat"] = geographicBoundingBox["southLongitude"]["value"]
                             geolocationBoxes.append(geolocationBox)
+                        record["geobboxes"] = geolocationBoxes
+
+        if "files" in dataverse_record["latestVersion"]:
+            record["geofiles"] = []
+            for dataverse_file in dataverse_record["latestVersion"]["files"]:
+                if "dataFile" in dataverse_file:
+                    if not dataverse_file["restricted"]:
+                        try:
+                            extension = "." + dataverse_file["dataFile"]["filename"].split(".")[1]
+                            if extension.lower() in self.geofile_extensions:
+                                geofile = {}
+                                geofile["filename"] = dataverse_file["dataFile"]["filename"]
+                                geofile["uri"] = self.url.replace("dataverses/%id%/contents", "access/datafile/") + str(
+                                    dataverse_file["dataFile"]["id"])
+                                record["geofiles"].append(geofile)
+                        except IndexError: # no extension
+                            pass
+
+            if len(record["geofiles"]) == 0:
+                record.pop("geofiles")
 
         return record
 

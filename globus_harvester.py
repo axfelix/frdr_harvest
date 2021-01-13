@@ -1,14 +1,16 @@
 """Globus Harvester.
 
 Usage:
-  globus_harvester.py [--onlyharvest | --onlyexport | --init] [--only-new-records] [--dump-on-failure] [--export-filepath=<file>] [--export-format=<format>] [--repository-id=<id>]
+  globus_harvester.py [--openrefine-import | --onlyharvest | --onlyexport | --init] [--only-new-records] [--dump-on-failure] [--export-filepath=<file>] [--export-format=<format>] [--repository-id=<id>] [--openrefine-csv=<file>]
 
 Options:
+  --openrefine-import       Don't harvest or export normally; import data from OpenRefine.
   --onlyharvest             Just harvest new items, do not export anything.
   --onlyexport              Just export existing items, do not harvest anything.
   --only-new-records        Only export records changed since last crawl.
   --dump-on-failure         If a record ever fails validation, print the whole record.
   --export-filepath=<file>  The path to export the data to.
+  --openrefine-csv=<file>   The CSV from OpenRefine to import.
   --export-format=<format>  The export format (currently gmeta or xml).
   --repository-id=<id>      Only export this repository, based on the database table ID
   --init                    Just initialize the database, do not harvest or export.
@@ -19,7 +21,9 @@ from docopt import docopt
 import json
 import os
 import time
+import sys
 import configparser
+import csv
 
 from harvester.OAIRepository import OAIRepository
 from harvester.CKANRepository import CKANRepository
@@ -96,6 +100,29 @@ if __name__ == "__main__":
     dbh = DBInterface(config['db'])
     dbh.setLogger(main_log)
     repo_configs = get_config_json()
+
+    if arguments["--openrefine-import"] == True:
+        if arguments["--openrefine-csv"] is None:
+            print("OpenRefine import needs a CSV path specified with --openrefine-csv")
+        else:
+            with open(arguments["--openrefine-csv"], encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                con = dbh.getConnection()
+                cur = dbh.getCursor(con)
+                for row in reader:
+                    if row['No match (no equivalent or broader term)'] == 'y' or row['No match (need access to dataset for context)'] == 'y':
+                        continue
+                    elif row['Correct auto match to FAST'] == 'y' or row['Manual match to FAST (Within OpenRefine choices)'] == 'y' or row['Manual match to FAST (Need to Look at FAST)'] == 'y' or row['Manual match to FAST (Broader Heading)'] == 'y':
+                        cur.execute("SELECT tag_id FROM tags WHERE tag=?", (row['Original Keyword'],))
+                        tag_id = cur.fetchone()
+                        try:
+                            cur.execute(dbh._prep("""INSERT INTO reconciliations (tag_id, reconciliation, language) VALUES (?,?,?)"""), (tag_id, row['Reconciliation'], 'en'))
+                            if row['Reconciliation - Additional Term'] is not None:
+                                cur.execute(dbh._prep("""INSERT INTO reconciliations (tag_id, reconciliation, language) VALUES (?,?,?)"""), (tag_id, row['Reconciliation - Additional Term'], 'en'))
+                        except dbh.dblayer.IntegrityError as e:
+                            pass
+        instance_lock.unlock()
+        sys.exit()
 
     if run_harvest:
         # Find any new information in the repositories
