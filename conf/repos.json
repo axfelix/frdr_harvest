@@ -1,12 +1,817 @@
 {
     "repos": [
         {
+            "name": "Abacus Open Data",
+            "url": "https://abacus.library.ubc.ca/api/dataverses/%id%/contents",
+            "homepage_url": "https://abacus.library.ubc.ca/dataverse/abacus-open",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/ubccrest_80x80.png",
+            "type": "dataverse",
+            "set": 2746,
+            "update_log_after_numitems": 50,
+            "enabled": true
+        },
+        {
+            "name": "Algoma University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/algoma",
+            "set": 41120,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/algoma_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "BC Data Catalogue",
+            "url": "https://catalogue.data.gov.bc.ca",
+            "homepage_url": "https://catalogue.data.gov.bc.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/bcdata_80x80.png",
+            "type": "ckan",
+            "update_log_after_numitems": 50,
+            "item_url_pattern": "https://catalogue.data.gov.bc.ca/dataset/%id%",
+            "enabled": true
+        },
+        {
+            "name": "Brandon University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/brandon",
+            "set": 84369,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/brandon_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Brock University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/brock",
+            "set": 41121,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/brock_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Canadian Integrated Ocean Observing System (CIOOS)",
+            "url": "https://catalogue.cioos.ca/",
+            "homepage_url": "https://catalogue.cioos.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/cioos_80x80.png",
+            "type": "ckan",
+            "item_url_pattern": "https://catalogue.cioos.ca/dataset/%id%",
+            "enabled": true
+        },
+        {
+            "name": "Canadian Opinion Research Archive",
+            "url": "https://search2.odesi.ca/search",
+            "homepage_url": "https://search2.odesi.ca/",
+            "item_url_pattern": "https://search2.odesi.ca/#/details?uri=%2Fodesi%2F%id%",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/odesi_80x80.png",
+            "collection": "cora",
+            "options": "odesi-opts2",
+            "contact": "contact@person.ca",
+            "publisher": "Queen's University",
+            "type": "marklogic",
+            "enabled": true
+        },
+        {
+            "name": "Carleton University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/carleton",
+            "set": 41122,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/carleton_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "CanWin Data Hub",
+            "url": "http://lwbin-datahub.ad.umanitoba.ca/",
+            "homepage_url": "http://lwbin-datahub.ad.umanitoba.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/canwin_80x80.png",
+            "type": "ckan",
+            "contact": "claire.herbert@umanitoba.ca",
+            "item_url_pattern": "http://lwbin-datahub.ad.umanitoba.ca/dataset/%id%",
+            "enabled": true
+        },
+        {
+            "name": "Cape Breton University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/capebreton",
+            "set": 80591,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/capebreton_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "City of Calgary Open Data Portal",
+            "url": "data.calgary.ca",
+            "homepage_url": "https://data.calgary.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/calgary_80x80.png",
+            "type": "socrata",
+            "contact": "https://calgary-csrprodcwi.motorolasolutions.com/Public/ServiceRequest.mvc/SRIntakeStep3/IIPUDACA",
+            "item_url_pattern": "https://data.calgary.ca/d/%id%",
+            "enabled": true
+        },
+        {
+            "name": "City of Edmonton Open Data Portal",
+            "url": "data.edmonton.ca",
+            "homepage_url": "https://data.edmonton.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/edmonton_80x80.png",
+            "type": "socrata",
+            "contact": "opendata@edmonton.ca",
+            "item_url_pattern": "https://data.edmonton.ca/d/%id%",
+            "enabled": true
+        },
+        {
+            "name": "City of Surrey Open Data",
+            "url": "https://data.surrey.ca",
+            "homepage_url": "https://data.surrey.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/surrey_80x80.png",
+            "type": "ckan",
+            "item_url_pattern": "https://data.surrey.ca/dataset/%id%",
+            "enabled": true
+        },
+        {
+            "name": "Open Data Kingston",
+            "url": "https://opendatakingston.cityofkingston.ca/api/datasets/1.0/search",
+            "homepage_url": "https://opendatakingston.cityofkingston.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/kingston_80x80.png",
+            "type": "opendatasoft",
+            "item_url_pattern": "https://opendatakingston.cityofkingston.ca/explore/dataset/%id%",
+            "enabled": true,
+            "copyerrorstoemail": false
+        },
+        {
+            "name": "City of Toronto Open Data Portal",
+            "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/",
+            "homepage_url": "https://open.toronto.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/toronto_80x80.png",
+            "type": "ckan",
+            "item_url_pattern": "https://open.toronto.ca/dataset/%id%",
+            "enabled": true
+        },
+        {
+            "name": "City of Vancouver Open Data Portal",
+            "url": "https://opendata.vancouver.ca/api/datasets/1.0/search",
+            "homepage_url": "https://opendata.vancouver.ca",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/vancouver_80x80.png",
+            "type": "opendatasoft",
+            "item_url_pattern": "https://opendata.vancouver.ca/explore/dataset/%id%",
+            "enabled": true
+        },
+        {
+            "name": "City of Winnipeg Open Data Portal",
+            "url": "data.winnipeg.ca",
+            "homepage_url": "https://data.winnipeg.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/winnipeg_80x80.png",
+            "type": "socrata",
+            "item_url_pattern": "https://data.winnipeg.ca/d/%id%",
+            "enabled": true
+        },
+        {
+            "name": "Concordia Spectrum Research Repository",
+            "url": "https://spectrum.library.concordia.ca/cgi/oai2",
+            "homepage_url": "https://spectrum.library.concordia.ca/",
+            "set": "74797065733D64617461736574",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/concordia_80x80.png",
+            "type": "oai",
+            "enabled": true
+        },
+        {
+            "name": "Concordia University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/concordia",
+            "set": 75135,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/concordia_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Dalhousie University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/dal",
+            "set": 79675,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/dalhousie_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Ontario Data Catalogue",
+            "url": "https://data.ontario.ca/",
+            "homepage_url": "https://data.ontario.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/ontario_80x80.png",
+            "type": "ckan",
+            "contact": "opengov@ontario.ca",
+            "update_log_after_numitems": 50,
+            "item_url_pattern": "https://data.ontario.ca/dataset/%id%",
+            "enabled": true
+        },
+        {
+            "name": "DataStream",
+            "url": "https://datastream.org/dataset/sitemap.xml",
+            "homepage_url": "https://datastream.org/",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/datastream_80x80.png",
+            "type": "datastream",
+            "contact": "https://datastream.org/en/contact",
+            "item_url_pattern": "https://datastream.org/dataset/%id%",
+            "enabled": true
+        },
+        {
+            "name": "Données Québec",
+            "url": "https://www.donneesquebec.ca/recherche",
+            "homepage_url": "https://www.donneesquebec.ca",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/quebec_80x80.png",
+            "type": "ckan",
+            "item_url_pattern": "https://www.donneesquebec.ca/recherche/fr/dataset/%id%",
+            "default_language": "fr",
+            "enabled": true
+        },
+        {
+            "name": "Dataverse de l'École nationale d’administration publique",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/enap",
+            "set": 75133,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/enap_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "FRDR",
+            "url": "https://www.frdr-dfdr.ca/oai/request",
+            "homepage_url": "https://www.frdr-dfdr.ca/",
+            "set": "col_storagegroup1",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/frdr_80x80.png",
+            "type": "oai",
+            "metadataprefix": "frdr",
+            "repo_refresh_days": 0,
+            "enabled": true
+        },
+        {
+            "name": "Global Water Futures (FRDR)",
+            "url": "https://www.frdr-dfdr.ca/oai/request",
+            "homepage_url": "https://www.frdr-dfdr.ca/go/globalwaterfutures",
+            "set": "col_globalwaterfutures",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/globalwaterfutures_80x80.png",
+            "type": "oai",
+            "metadataprefix": "frdr",
+            "repo_refresh_days": 0,
+            "enabled": true
+        },
+        {
+            "name": "Hakai Institute",
+            "url": "https://hecate.hakai.org/geonetwork/srv/eng/csw",
+            "homepage_url": "https://hecate.hakai.org/",
+            "type": "csw",
+            "item_url_pattern": "https://hecate.hakai.org/geonetwork/srv/eng/catalog.search#/metadata/%id%",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/hakai_80x80.png",
+            "contact": "matthew.foster@hakai.org",
+            "enabled": true
+        },
+        {
+            "name": "HEC Montréal Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/hec",
+            "set": 75124,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/hec_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Dataverse de l'Institut national de la recherche scientifique",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/inrs",
+            "set": 75134,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/inrs_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Lakehead University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/lakehead",
+            "set": 41124,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/lakehead_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Laurentian University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/laurentian",
+            "set": 41125,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/laurentian_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "McGill University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/mcgill",
+            "set": 75141,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/mcgill_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "McMaster University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/mcmaster",
+            "set": 41126,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/mcmaster_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Memorial University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/memorial",
+            "set": 93036,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/mun_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Montréal Données Ouvertes",
+            "url": "https://data.montreal.ca/",
+            "homepage_url": "https://donnees.montreal.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/montreal_80x80.png",
+            "type": "ckan",
+            "item_url_pattern": "https://donnees.montreal.ca/dataset/%id%",
+            "default_language": "fr",
+            "enabled": true
+        },
+        {
+            "name": "Mount Royal University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/mru",
+            "set": 105892,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/mru_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Mountain Legacy Project (FRDR)",
+            "url": "https://www.frdr-dfdr.ca/oai/request",
+            "homepage_url": "https://www.frdr-dfdr.ca/go/mountainlegacy",
+            "set": "col_mountainlegacy",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/mountainlegacy_80x80.png",
+            "type": "oai",
+            "metadataprefix": "frdr",
+            "repo_refresh_days": 0,
+            "enabled": true
+        },
+        {
+            "name": "Nipissing University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/nipissing",
+            "set": 41127,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/nipissing_80x80.jpg",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Northern Tornadoes Project (FRDR)",
+            "url": "https://www.frdr-dfdr.ca/oai/request",
+            "homepage_url": "https://www.frdr-dfdr.ca/go/northerntornadoes",
+            "set": "col_northerntornadoes",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/western_80x80.png",
+            "type": "oai",
+            "metadataprefix": "frdr",
+            "repo_refresh_days": 0,
+            "enabled": true
+        },
+        {
+            "name": "OCAD Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/ocad",
+            "set": 41128,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/ocad_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "ODESI Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/odesi-data",
+            "set": 221,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/odesi_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Ontario Tech University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/ontariotechu",
+            "set": 41129,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/ontariotechu_80x80.jpg",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Other Scholars Portal Dataverses",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/",
+            "dataverses_list": [80, 71233, 55315, 43764, 72949, 316, 61458, 60543, 73570, 123945, 72252, 62262, 62659, 73733, 165, 49766, 116, 72306, 49, 60881, 71997, 55335, 60592, 57081, 69, 60728, 69667, 72473, 25, 69526, 71296, 100605, 306, 173, 55289, 244, 51597, 59277, 45823, 62776, 3, 70950, 70547, 72538, 249, 63129],
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/sp_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Polar Data Catalogue",
+            "url": "http://www.polardata.ca/oai/provider",
+            "homepage_url": "https://www.polardata.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/pdc_80x80.png",
+            "type": "oai",
+            "metadataprefix": "fgdc",
+            "enabled": true
+        },
+        {
+            "name": "Dataverse de Polytechnique Montréal",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/polymtl",
+            "set": 75130,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/polymtl_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Government of Nova Scotia Open Data Portal",
+            "url": "data.novascotia.ca",
+            "homepage_url": "https://data.novascotia.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/novascotia_80x80.png",
+            "type": "socrata",
+            "contact": "https://novascotia.ca/opendata/contact-us.asp",
+            "item_url_pattern": "https://data.novascotia.ca/d/%id%",
+            "enabled": true
+        },
+        {
+            "name": "Prince Edward Island Government Open Data Portal",
+            "url": "data.princeedwardisland.ca",
+            "homepage_url": "https://data.princeedwardisland.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/pei_80x80.png",
+            "type": "socrata",
+            "contact": "opendata@gov.pe.ca",
+            "item_url_pattern": "https://data.princeedwardisland.ca/d/%id%",
+            "enabled": true
+        },
+        {
+            "name": "Queen's University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/queens",
+            "set": 41133,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/queens_80x80.jpg",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Royal Military College Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/rmc",
+            "set": 41134,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/rmc_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Ryerson University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/ryerson",
+            "set": 41138,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/ryerson_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "SFU Radar",
+            "url": "https://researchdata.sfu.ca/oai2",
+            "homepage_url": "https://researchdata.sfu.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/sfu_80x80.png",
+            "type": "oai",
+            "item_url_pattern": "http://researchdata.sfu.ca/islandora/object/%id%",
+            "enabled": true
+        },
+        {
+            "name": "St. Francis Xavier University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/stfx",
+            "set": 79676,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/stfx_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Statistics Canada Open License",
+            "url": "https://abacus.library.ubc.ca/api/dataverses/%id%/contents",
+            "homepage_url": "https://abacus.library.ubc.ca/dataverse/statcan-public",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/odc_80x80.png",
+            "type": "dataverse",
+            "set": 86626,
+            "update_log_after_numitems": 50,
+            "enabled": true
+        },
+        {
+            "name": "SuperDARN (FRDR)",
+            "url": "https://www.frdr-dfdr.ca/oai/request",
+            "homepage_url": "https://www.frdr-dfdr.ca/go/superdarn",
+            "set": "col_superdarn",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/superdarn_80x80.png",
+            "type": "oai",
+            "metadataprefix": "frdr",
+            "repo_refresh_days": 0,
+            "enabled": true
+        },
+        {
+            "name": "Trent University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/trent",
+            "set": 41141,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/trent_80x80.jpg",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "UBC Brain Circuits (FRDR)",
+            "url": "https://www.frdr-dfdr.ca/oai/request",
+            "homepage_url": "https://www.frdr-dfdr.ca/go/ubcbraincircuits",
+            "set": "col_ubcbraincircuits",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/ubccrest_80x80.png",
+            "type": "oai",
+            "metadataprefix": "frdr",
+            "repo_refresh_days": 0,
+            "enabled": true
+        },
+        {
+            "name": "Trinity Western University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/twu",
+            "set": 93037,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/twu_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "UBC cIRcle",
+            "url": "https://circle.library.ubc.ca/oai/request",
+            "homepage_url": "https://circle.library.ubc.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/ubc_80x80.png",
+            "type": "oai",
+            "prune_non_dataset_items": true,
+            "enabled": true
+        },
+        {
+            "name": "UBC cIRcle BIRS Workshop Lecture Videos",
+            "url": "https://circle.library.ubc.ca/oai/request",
+            "homepage_url": "https://open.library.ubc.ca/cIRcle/collections/birs",
+            "set": "col_2429_48630",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/ubc_80x80.png",
+            "type": "oai",
+            "enabled": true
+        },
+        {
             "name": "UBC Dataverse",
             "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
             "homepage_url": "https://dataverse.scholarsportal.info/dataverse/ubc",
             "set": 71618,
-            "thumbnail": "https://{{ web_hostname }}/discover/img/sources/ubccrest_80x80.png",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/ubccrest_80x80.png",
             "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Université de Montréal Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/montreal",
+            "set": 75123,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/umontreal_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Dataverse de l'Université du Québec à Chicoutimi",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/uqac",
+            "set": 75128,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/uqac_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Dataverse de l'Université du Québec à Trois-Rivières",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/uqtr",
+            "set": 75126,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/uqtr_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Dataverse de l'Université Laval",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/laval",
+            "set": 75125,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/laval_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Dataverse de l'Université TÉLUQ",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/teluq",
+            "set": 75137,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/teluq_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "University of Alberta Dataverse",
+            "url": "https://dataverse.library.ualberta.ca/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.library.ualberta.ca/",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/uofa_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "University of Calgary Prism",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/calgary",
+            "set": 42003,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/ucalgary_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "University of Guelph Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/guelph",
+            "set": 41123,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/guelph_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "University of Manitoba Dataverse",
+            "url": "https://dataverse.lib.umanitoba.ca/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.lib.umanitoba.ca",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/umanitoba_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "University of Manitoba MSpace",
+            "url": "https://mspace.lib.umanitoba.ca/oai/request",
+            "homepage_url": "https://mspace.lib.umanitoba.ca",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/umanitoba_80x80.png",
+            "set": "com_1993_3993",
+            "type": "oai",
+            "enabled": true
+        },
+        {
+            "name": "University of New Brunswick Dataverse",
+            "url": "https://dataverse.lib.unb.ca/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.lib.unb.ca",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/unb_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "University of Northern British Columbia Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/unbc",
+            "set": 104744,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/unbc_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "University of Ottawa Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/ottawa",
+            "set": 41131,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/uottawa_80x80.jpg",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "University of Regina Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/regina",
+            "set": 57748,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/regina_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "University of Toronto Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/toronto",
+            "set": 41139,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/uoft_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "University of Victoria Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/uvic",
+            "set": 71617,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/uvic_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "University of Waterloo Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/waterloo",
+            "set": 41143,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/waterloo_80x80.jpg",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "University of Windsor Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/windsor",
+            "set": 41149,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/uwindsor_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "UPEI Data Repository",
+            "url": "https://data.upei.ca/oai2",
+            "homepage_url": "https://data.upei.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/upei_80x80.png",
+            "type": "oai",
+            "item_url_pattern": "https://data.upei.ca/islandora/object/%id%",
+            "enabled": true
+        },
+        {
+            "name": "Vancouver Island University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/viu",
+            "set": 105047,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/viu_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Water Institute (FRDR)",
+            "url": "https://www.frdr-dfdr.ca/oai/request",
+            "homepage_url": "https://www.frdr-dfdr.ca/go/waterinstitute",
+            "set": "col_waterinstitute",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/waterinstitute_80x80.png",
+            "type": "oai",
+            "metadataprefix": "frdr",
+            "repo_refresh_days": 0,
+            "enabled": true
+        },
+        {
+            "name": "Western University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/westernu",
+            "set": 41145,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/western_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "Wilfrid Laurier University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/laurier",
+            "set": 41147,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/laurier_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "York University Dataverse",
+            "url": "https://dataverse.scholarsportal.info/api/dataverses/%id%/contents",
+            "homepage_url": "https://dataverse.scholarsportal.info/dataverse/york",
+            "set": 41150,
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/york_80x80.png",
+            "type": "dataverse",
+            "enabled": true
+        },
+        {
+            "name": "York University Digital Library",
+            "url": "https://digital.library.yorku.ca/oai2",
+            "homepage_url": "https://digital.library.yorku.ca/",
+            "set": "yul_232039",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/york_80x80.png",
+            "type": "oai",
             "enabled": true
         }
     ]

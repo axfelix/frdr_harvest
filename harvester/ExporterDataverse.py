@@ -17,7 +17,7 @@ class ExporterDataverse(Exporter.Exporter):
         records_con = self.db.getConnection()
         with records_con:
             records_cursor = records_con.cursor()
-        records_sql = """SELECT recs.record_id, recs.item_url, recs.pub_date, recs.title, recs.item_url, recs.series, recs.repository_id, reps.repository_url
+        records_sql = """SELECT recs.record_id, recs.item_url, recs.pub_date, recs.title, recs.item_url, recs.series, recs.repository_id, reps.repository_url, reps.repository_name
             FROM records recs
             JOIN repositories reps on reps.repository_id = recs.repository_id
             WHERE recs.geodisy_harvested = 0 AND recs.deleted = 0 LIMIT ?"""
@@ -25,7 +25,7 @@ class ExporterDataverse(Exporter.Exporter):
 
         records = []
         for row in records_cursor:
-            record = (dict(zip(['record_id','item_url','pub_date','title','item_url','series','repository_id','repository_url'], row)))
+            record = (dict(zip(['record_id','item_url','pub_date','title','item_url','series','repository_id','repository_url', 'repository_name'], row)))
             records.append(record)
         cur = self.db.getLambdaCursor()
         records_sql = """SELECT count(*)
@@ -89,7 +89,8 @@ class ExporterDataverse(Exporter.Exporter):
             "persistentUrl": record["item_url"],
             "publicationDate": record["pub_date"],
             "license": self.get_license(record),
-            "repo_base_url": record["repository_url"]
+            "repo_base_url": record["repository_url"],
+            "publisher": record["repository_name"]
         }
         geo = self.get_geospatial_metadata(record)
         files = self.get_files(record)
