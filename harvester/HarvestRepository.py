@@ -127,11 +127,19 @@ class HarvestRepository(object):
     def check_for_dms(self, coordinate):
         lowercase = coordinate.lower()
         if "west" in lowercase or "w" in lowercase or "south" in lowercase or ("s" in lowercase and "east" not in lowercase):
+            lowercase = self.remove_direction(lowercase)
             return self.convert_dms_2_dd(lowercase, False)
         elif "east" in lowercase or ("e" in lowercase and "west" not in lowercase) or "north" in lowercase or "n" in lowercase:
+            lowercase = self.remove_direction(lowercase)
             return self.convert_dms_2_dd(lowercase, True)
         else:
             return coordinate
+
+    def remove_direction(self, coordinate):
+        directions = ['n', 'north', 's', 'south', 'e', 'east', 'w', 'west']
+        for d in directions:
+            coordinate = coordinate.replace(d, '')
+        return coordinate
 
     def convert_dms_2_dd(self, lowercase, positive):
         try:
