@@ -136,7 +136,14 @@ class HarvestRepository(object):
     def convert_dms_2_dd(self, lowercase, positive):
         try:
             parts = re.split('[°\'"]+', lowercase)
-            coord = self.dms2dd(parts[0], parts[1], parts[2], positive)
+            if len(parts) == 3:
+                coord = self.dms2dd(parts[0], parts[1], parts[2], positive)
+            elif len(parts) == 2:
+                coord = self.dms2dd(parts[0], parts[1], 0, positive)
+            elif len(parts) == 1:
+                coord = self.dms2dd(parts[0], 0, 0, positive)
+            else:
+                return ""
         except:
             return ""
         return str(coord) if coord != 3600 else ""
