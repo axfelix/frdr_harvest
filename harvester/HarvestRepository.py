@@ -134,8 +134,11 @@ class HarvestRepository(object):
             return coordinate
 
     def convert_dms_2_dd(self, lowercase, positive):
-        parts = re.split('[°\'"]+', lowercase)
-        coord = self.dms2dd(parts[0], parts[1], parts[2], positive)
+        try:
+            parts = re.split('[°\'"]+', lowercase)
+            coord = self.dms2dd(parts[0], parts[1], parts[2], positive)
+        except:
+            return ""
         return str(coord) if coord != 3600 else ""
 
     def dms2dd(self, degrees, minutes, secs, positive):
