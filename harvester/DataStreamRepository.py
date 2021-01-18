@@ -73,9 +73,9 @@ class DataStreamRepository(HarvestRepository):
         if ("description" in datastream_record) and datastream_record["description"]:
             record["description"] = datastream_record["description"]
 
-        if ("author" in datastream_record) and datastream_record["author"]:
-            if ("name" in datastream_record["author"]) and datastream_record["author"]["name"]:
-                    record["creator"] = datastream_record["author"]["name"]
+        if ("creator" in datastream_record) and datastream_record["creator"]:
+            if ("name" in datastream_record["creator"]) and datastream_record["creator"]["name"]:
+                    record["creator"] = datastream_record["creator"]["name"]
 
         if ("keywords" in datastream_record) and datastream_record["keywords"]:
             if isinstance(datastream_record["keywords"], str):
@@ -97,6 +97,9 @@ class DataStreamRepository(HarvestRepository):
                 record["access"] = "Public"
             else:
                 record["access"] = "Limited"
+
+        if ("license" in datastream_record) and datastream_record["license"]:
+            record["rights"] = datastream_record["license"]
 
         if ("@id" in datastream_record) and datastream_record["@id"]:
             record["identifier"] = datastream_record["@id"]
