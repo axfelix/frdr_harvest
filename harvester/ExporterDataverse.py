@@ -103,7 +103,6 @@ class ExporterDataverse(Exporter.Exporter):
             "metadataBlocks": metadata_blocks
         }
         record_dv_data["datasetVersion"] = metadata
-        self.logger.info(record_dv_data)
         return record_dv_data
 
     def send_json(self, json_string, done):
@@ -242,8 +241,6 @@ class ExporterDataverse(Exporter.Exporter):
                     "city": self.json_dv_dict("city", "false", "primative", city),
                     "otherGeographicCoverage": self.json_dv_dict("otherGeographicCoverage", "false", "primative", other)
                 }
-                self.logger.info(row)
-                self.logger.info(location)
                 if country != "" or state != "" or city != "" or other != "":
                     geos_coverage.append(location)
         except:
