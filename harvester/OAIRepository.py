@@ -356,6 +356,9 @@ class OAIRepository(HarvestRepository):
         excludedElements = ['http://datacite.org/schema/kernel-4#resourcetype',
                     'http://datacite.org/schema/kernel-4#creatorAffiliation',
                     'http://datacite.org/schema/kernel-4#publicationyear',
+                    'http://datacite.org/schema/kernel-4#geolocationPlace',
+                    'http://datacite.org/schema/kernel-4#geolocationPoint',
+                    'http://datacite.org/schema/kernel-4#geolocationBox',
                     'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointName',
                     'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath']
         newRecord = {}

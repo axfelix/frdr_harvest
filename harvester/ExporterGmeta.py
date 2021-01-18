@@ -78,30 +78,40 @@ class ExporterGmeta(Exporter.Exporter):
             with con:
                 litecur = self.db.getRowCursor()
 
-                # TODO update this to export new geospatial elements
-                litecur.execute(self.db._prep("SELECT coordinate_type, lat, lon FROM geospatial WHERE record_id=?"),
-                                (record["record_id"],))
-                geodata = litecur.fetchall()
-                record["frdr_geospatial"] = []
-                polycoordinates = []
+                litecur.execute(self.db._prep("""SELECT geobbox.westLon, geobbox.eastLon, geobbox.northLat, geobbox.southLat
+                                    FROM geobbox WHERE geobbox.record_id=?"""), (record["record_id"],))
+                geobboxes = litecur.fetchall()
+                if len(geobboxes) > 0:
+                    record["datacite_geoLocationBox"] = []
+                    for geobbox in geobboxes:
+                        record["datacite_geoLocationBox"].append({"westBoundLongitude": float(geobbox["westlon"]),
+                                                                  "eastBoundLongitude": float(geobbox["eastlon"]),
+                                                                  "northBoundLatitude": float(geobbox["northlat"]),
+                                                                  "southBoundLatitude": float(geobbox["southlat"])})
 
-                try:
-                    for coordinate in geodata:
-                        if coordinate[0] == "Polygon":
-                            polycoordinates.append([float(coordinate[1]), float(coordinate[2])])
-                        else:
-                            record["frdr_geospatial"].append({"frdr_geospatial_type": "Feature",
-                                                              "frdr_geospatial_geometry": {
-                                                                  "frdr_geometry_type": coordinate[0],
-                                                                  "frdr_geometry_coordinates": [float(coordinate[1]),
-                                                                                                float(coordinate[2])]}})
-                except:
-                    pass
 
-                if polycoordinates:
-                    record["frdr_geospatial"].append({"frdr_geospatial_type": "Feature",
-                                                      "frdr_geospatial_geometry": {"frdr_geometry_type": "Polygon",
-                                                                                   "frdr_geometry_coordinates": polycoordinates}})
+                litecur.execute(self.db._prep("""SELECT geopoint.lat, geopoint.lon FROM geopoint WHERE geopoint.record_id=?"""), (record["record_id"],))
+                geopoints = litecur.fetchall()
+                if len(geopoints) > 0:
+                    record["datacite_geoLocationPoint"] = []
+                    for geopoint in geopoints:
+                        record["datacite_geoLocationPoint"].append({"pointLatitude": float(geopoint["lat"]),
+                                                                    "pointLongitude": float(geopoint["lon"])})
+
+                litecur.execute(self.db._prep("""SELECT geoplace.country, geoplace.province_state, geoplace.city, geoplace.other, geoplace.place_name
+                    FROM geoplace JOIN records_x_geoplace on records_x_geoplace.geoplace_id = geoplace.geoplace_id
+                                    WHERE records_x_geoplace.record_id=?"""), (record["record_id"],))
+                geoplaces = litecur.fetchall()
+                if len(geoplaces) > 0:
+                    record["datacite_geoLocationPlace"] = []
+                    for geoplace in geoplaces:
+                        if geoplace["place_name"]:
+                            record["datacite_geoLocationPlace"].append({"place_name": geoplace["place_name"]})
+                        elif geoplace["country"] or geoplace["province_state"] or geoplace["city"] or geoplace["other"]:
+                            record["datacite_geoLocationPlace"].append({"country": geoplace["country"],
+                                                                        "province_state": geoplace["province_state"],
+                                                                        "city": geoplace["city"],
+                                                                        "additional": geoplace["other"]})
 
             with con:
                 litecur = self.db.getLambdaCursor()
@@ -159,6 +169,32 @@ class ExporterGmeta(Exporter.Exporter):
                 litecur.execute(self.db._prep("""SELECT access.access FROM access JOIN records_x_access on records_x_access.access_id = access.access_id
                     WHERE records_x_access.record_id=?"""), (record["record_id"],))
                 record["frdr_access"] = self._rows_to_list(litecur)
+
+            with con:
+                if self.db.getType() == "sqlite":
+                    from sqlite3 import Row
+                    con.row_factory = Row
+                    litecur = con.cursor()
+                elif self.db.getType() == "postgres":
+                    litecur = con.cursor(cursor_factory=DictCursor)
+
+                litecur.execute(self.db._prep(
+                    "SELECT ds.namespace, dm.field_name, dm.field_value FROM domain_metadata dm, domain_schemas ds WHERE dm.schema_id=ds.schema_id and dm.record_id=?"),
+                                (record["record_id"],))
+                for row in litecur:
+                    domain_namespace = str(row["namespace"])
+                    field_name = str(row["field_name"])
+                    field_value = str(row["field_value"])
+                    if domain_namespace == "http://datacite.org/schema/kernel-4":
+                        custom_label = "datacite_" + field_name
+                    else:
+                        custom_label = domain_namespace + "#" + field_name
+                    if custom_label not in record:
+                        record[custom_label] = field_value
+                    else:
+                        if not isinstance(record[custom_label], list):
+                            record[custom_label] = [record[custom_label]]
+                        record[custom_label].append(field_value)
 
             # Convert friendly column names into dc element names
             record["dc_title_en"] = record["title"]
