@@ -405,7 +405,7 @@ class DBInterface:
         records = []
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getDictCursor()
             cur.execute(self._prep(sqlstring))
             if cur is not None:
                 records = cur.fetchall()
