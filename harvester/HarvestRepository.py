@@ -137,18 +137,18 @@ class HarvestRepository(object):
         try:
             parts = re.split('[°\'"]+', lowercase)
             if len(parts) == 3:
-                coord = self.dms2dd(parts[0], parts[1], parts[2], positive)
+                coord = self.dms2dd(positive, parts[0], parts[1], parts[2])
             elif len(parts) == 2:
-                coord = self.dms2dd(parts[0], parts[1], 0, positive)
+                coord = self.dms2dd(positive, parts[0], parts[1])
             elif len(parts) == 1:
-                coord = self.dms2dd(parts[0], 0, 0, positive)
+                coord = self.dms2dd(positive, parts[0])
             else:
                 return ""
         except:
             return ""
         return str(coord) if coord != 3600 else ""
 
-    def dms2dd(self, degrees, minutes, secs, positive):
+    def dms2dd(self, positive, degrees, minutes="0", secs="0"):
         try:
             dd = float(degrees) + float(minutes) / 60 + float(secs) / (60 * 60);
             if not positive:
