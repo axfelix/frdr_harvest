@@ -342,6 +342,7 @@ class OAIRepository(HarvestRepository):
         # EPrints workaround to fix duplicates and Nones in Rights
         if "rights" in record.keys() and isinstance(record["rights"], list):
             record["rights"] = list(set(filter(None.__ne__, record["rights"])))
+            record["rights"] = "\n".join(record["rights"])
 
         # EPrints workaround for liberal use of dc:identifier
         # Rather not hardcode a single source URL for this
