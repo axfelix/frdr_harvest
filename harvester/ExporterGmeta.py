@@ -133,12 +133,12 @@ class ExporterGmeta(Exporter.Exporter):
 
                 litecur.execute(self.db._prep("""SELECT subjects.subject FROM subjects JOIN records_x_subjects on records_x_subjects.subject_id = subjects.subject_id
                     WHERE records_x_subjects.record_id=? and subjects.language='en'"""), (record["record_id"],))
-                record["frdr_category_en"] = self._rows_to_list(litecur)
+                record["frdr_subject_en"] = self._rows_to_list(litecur)
 
 
                 litecur.execute(self.db._prep("""SELECT subjects.subject FROM subjects JOIN records_x_subjects on records_x_subjects.subject_id = subjects.subject_id
                     WHERE records_x_subjects.record_id=? and subjects.language='fr'"""), (record["record_id"],))
-                record["frdr_category_fr"] = self._rows_to_list(litecur)
+                record["frdr_subject_fr"] = self._rows_to_list(litecur)
 
                 litecur.execute(self.db._prep("""SELECT publishers.publisher FROM publishers JOIN records_x_publishers on records_x_publishers.publisher_id = publishers.publisher_id
                     WHERE records_x_publishers.record_id=?"""), (record["record_id"],))
