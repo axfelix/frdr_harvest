@@ -1,0 +1,1 @@
+alter table records alter column geodisy_harvested SET DEFAULT 0;

@@ -5,11 +5,10 @@
             "url": "https://researchdata.sfu.ca/oai2",
             "homepage_url": "https://researchdata.sfu.ca/",
             "set": "",
-            "thumbnail": "http://static.lib.sfu.ca/clf2013/sfu-logo.png",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/sfu_80x80.png",
             "type": "oai",
             "item_url_pattern": "http://researchdata.sfu.ca/islandora/object/%id%",
-            "enabled": true,
-            "copyerrorstoemail": false
+            "enabled": true
         }
     ]
 }

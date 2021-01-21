@@ -6,6 +6,8 @@ import json
 import re
 import pdb
 
+import psycopg2
+from psycopg2.extras import DictCursor, RealDictCursor
 
 class DBInterface:
     def __init__(self, params):
@@ -20,6 +22,8 @@ class DBInterface:
 
         if self.dbtype == "sqlite":
             self.dblayer = __import__('sqlite3')
+            global Row
+            from sqlite3 import Row
             if os.name == "posix":
                 try:
                     os.chmod(self.dbname, 0o664)
@@ -28,13 +32,14 @@ class DBInterface:
 
         elif self.dbtype == "postgres":
             self.dblayer = __import__('psycopg2')
+            from psycopg2.extras import RealDictCursor
 
         else:
             raise ValueError('Database type must be sqlite or postgres in config file')
 
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getRowCursor()
 
             # This table must always exist
             cur.execute(
@@ -75,21 +80,29 @@ class DBInterface:
                 self.connection = self.dblayer.connect("dbname='%s' user='%s' password='%s' host='%s'" % (
                     self.dbname, self.user, self.password, self.host))
                 self.connection.autocommit = True
-
         return self.connection
 
-    def getCursor(self, con):
+    def getDictCursor(self):
         if self.dbtype == "sqlite":
-            con.row_factory = self.getRow()
-        cur = con.cursor()
+            self.getConnection().row_factory = Row
+            cur = self.getConnection().cursor()
         if self.dbtype == "postgres":
-            from psycopg2.extras import RealDictCursor
-            cur = con.cursor(cursor_factory=RealDictCursor)
-
+            cur = self.getConnection().cursor(cursor_factory=RealDictCursor)
         return cur
 
-    def getRow(self):
-        return self.dblayer.Row
+    def getRowCursor(self):
+        if self.dbtype == "sqlite":
+            self.getConnection().row_factory = Row
+        cur = self.getConnection().cursor()
+        return cur
+
+    def getLambdaCursor(self):
+        if self.dbtype == "sqlite":
+            self.getConnection().row_factory = lambda cursor, row: row[0]
+            cur = self.getConnection().cursor()
+        elif self.dbtype == "postgres":
+            cur = self.getConnection().cursor(cursor_factory=DictCursor)
+        return cur
 
     def getType(self):
         return self.dbtype
@@ -105,7 +118,7 @@ class DBInterface:
         con = self.getConnection()
         res = None
         with con:
-            cur = self.getCursor(con)
+            cur = self.getDictCursor()
             cur.execute(
                 self._prep("select setting_value from settings where setting_name = ? order by setting_value desc"),
                 (setting_name,))
@@ -119,7 +132,7 @@ class DBInterface:
         curent_value = self.get_setting(setting_name)
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getRowCursor()
             if curent_value == 0:
                 cur.execute(self._prep("insert into settings(setting_value, setting_name) values (?,?)"),
                             (new_value, setting_name))
@@ -132,7 +145,7 @@ class DBInterface:
             setattr(self, key, value)
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getDictCursor()
             if self.repo_id > 0:
                 # Existing repo
                 try:
@@ -238,14 +251,14 @@ class DBInterface:
 
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getRowCursor()
             cur.execute(self._prep(update_record_sql),
                         update_vals)
 
     def update_last_crawl(self, repo_id):
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getRowCursor()
             cur.execute(self._prep("update repositories set last_crawl_timestamp = ? where repository_id = ?"),
                         (int(time.time()), repo_id))
 
@@ -254,7 +267,7 @@ class DBInterface:
         if record['record_id'] == 0:
             return False
         with con:
-            cur = self.getCursor(con)
+            cur = self.getRowCursor()
 
             try:
                 cur.execute(self._prep("UPDATE records set deleted = 1, modified_timestamp = ?, upstream_modified_timestamp = ? where record_id=?"),
@@ -285,7 +298,7 @@ class DBInterface:
     def purge_deleted_records(self):
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getRowCursor()
             try:
                 sqlstring = "DELETE from records where deleted=1"
                 cur.execute(sqlstring)
@@ -303,7 +316,7 @@ class DBInterface:
     def delete_row_generic(self, tablename, columnname, column_value, extrawhere=""):
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getRowCursor()
             try:
                 sqlstring = "DELETE from {} where {}=? {}".format(tablename, columnname, extrawhere)
                 cur.execute(self._prep(sqlstring), (column_value,))
@@ -334,7 +347,7 @@ class DBInterface:
 
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getDictCursor()
             try:
                 if self.dbtype == "postgres":
                     cur.execute(self._prep(sqlstring + " RETURNING " + idcolumn), list(paramlist.values()))
@@ -360,7 +373,7 @@ class DBInterface:
 
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getDictCursor()
             try:
                 if self.dbtype == "postgres":
                     cur.execute(self._prep(sqlstring + " RETURNING " + idcolumn), list(paramlist.values()))
@@ -382,7 +395,7 @@ class DBInterface:
         sqlstring = "select {} from {} where {}=? {}".format(columnlist, tablename, given_col, extrawhere)
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getDictCursor()
             cur.execute(self._prep(sqlstring), [given_val] + (list(paramlist.values())))
             if cur is not None:
                 records = cur.fetchall()
@@ -392,7 +405,7 @@ class DBInterface:
         records = []
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getDictCursor()
             cur.execute(self._prep(sqlstring))
             if cur is not None:
                 records = cur.fetchall()
@@ -470,7 +483,7 @@ class DBInterface:
         returnvalue = None
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getDictCursor()
             try:
                 if self.dbtype == "postgres":
                     cur.execute(self._prep(
@@ -509,7 +522,7 @@ class DBInterface:
 
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getRowCursor()
             source_url = ""
             if 'dc:source' in record:
                 if isinstance(record["dc:source"], list):
@@ -942,10 +955,12 @@ class DBInterface:
 
                     if geoplace_id is None:
                         geoplace_id = self.insert_related_record("geoplace", geoplace["place_name"], **extras)
+                        modified_upstream = True
                     if geoplace_id is not None:
                         new_geoplace_ids.append(geoplace_id)
                         if geoplace_id not in existing_geoplace_ids:
                             self.insert_cross_record("records_x_geoplace", "geoplace", geoplace_id, record["record_id"])
+                            modified_upstream = True
 
                 for eid in existing_geoplace_ids:
                     if eid not in new_geoplace_ids:
@@ -977,23 +992,33 @@ class DBInterface:
                         modified_upstream = True
 
             if len(domain_metadata) > 0:
-                # TODO Add deletion for domain metadata
-                existing_metadata_ids = self.get_multiple_records("domain_metadata", "metadata_id", "record_id",
+                existing_metadata_recs = self.get_multiple_records("domain_metadata", "*", "record_id",
                                                                   record["record_id"])
-                if not existing_metadata_ids:
-                    for field_uri in domain_metadata:
-                        field_pieces = field_uri.split("#")
-                        domain_schema = field_pieces[0]
-                        field_name = field_pieces[1]
-                        schema_id = self.get_single_record_id("domain_schemas", domain_schema)
-                        if schema_id is None:
-                            schema_id = self.insert_related_record("domain_schemas", domain_schema)
-                        if not isinstance(domain_metadata[field_uri], list):
-                            domain_metadata[field_uri] = [domain_metadata[field_uri]]
-                        for field_value in domain_metadata[field_uri]:
+                existing_metadata_ids = [e["metadata_id"] for e in existing_metadata_recs]
+                new_metadata_ids = []
+                for field_uri in domain_metadata:
+                    field_pieces = field_uri.split("#")
+                    domain_schema = field_pieces[0]
+                    field_name = field_pieces[1]
+                    schema_id = self.get_single_record_id("domain_schemas", domain_schema)
+                    if schema_id is None:
+                        schema_id = self.insert_related_record("domain_schemas", domain_schema)
+                    if not isinstance(domain_metadata[field_uri], list):
+                        domain_metadata[field_uri] = [domain_metadata[field_uri]]
+                    for field_value in domain_metadata[field_uri]:
+                        extras = {"record_id": record["record_id"], "field_name": field_name, "field_value": field_value}
+                        metadata_id = self.get_single_record_id("domain_metadata", schema_id, "", **extras)
+                        if metadata_id is None:
                             extras = {"record_id": record["record_id"], "field_name": field_name,
                                       "field_value": field_value}
-                            self.insert_related_record("domain_metadata", schema_id, **extras)
+                            metadata_id = self.insert_related_record("domain_metadata", schema_id, **extras)
+                        if metadata_id is not None:
+                            new_metadata_ids.append(metadata_id)
+
+                for eid in existing_metadata_ids:
+                    if eid not in new_metadata_ids:
+                        self.delete_row_generic("domain_metadata", "metadata_id", eid)
+                        modified_upstream = True
 
             if modified_upstream:
                 self.update_record_upstream_modified(record)
@@ -1004,7 +1029,7 @@ class DBInterface:
         con = self.getConnection()
         records = []
         with con:
-            cur = self.getCursor(con)
+            cur = self.getDictCursor()
             cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.series
                 , recs.modified_timestamp, recs.local_identifier, recs.item_url
                 , repos.repository_id, repos.repository_type
@@ -1020,7 +1045,7 @@ class DBInterface:
     def touch_record(self, record):
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getDictCursor()
             try:
                 cur.execute(self._prep("UPDATE records set modified_timestamp = ? where record_id = ?"),
                             (time.time(), record['record_id']))
@@ -1035,7 +1060,7 @@ class DBInterface:
         if record_id is None:
             con = self.getConnection()
             with con:
-                cur = self.getCursor(con)
+                cur = self.getDictCursor()
                 try:
                     cur.execute(self._prep(
                         "INSERT INTO records (title, title_fr, pub_date, series, modified_timestamp, local_identifier"
@@ -1049,7 +1074,7 @@ class DBInterface:
     def update_record_upstream_modified(self, record):
         con = self.getConnection()
         with con:
-            cur = self.getCursor(con)
+            cur = self.getDictCursor()
             try:
                 cur.execute(self._prep("UPDATE records set upstream_modified_timestamp = ?, geodisy_harvested = 0 where record_id = ?")
                             , (time.time(), record['record_id']))

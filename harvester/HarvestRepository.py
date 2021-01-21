@@ -123,3 +123,44 @@ class HarvestRepository(object):
 
         self.logger.info("Updated {} items in {} ({:.1f} items/sec)".format(record_count, self.formatter.humanize(
             time.time() - tstart), record_count / (time.time() - tstart + 0.1)))
+
+    def check_for_dms(self, coordinate):
+        lowercase = coordinate.lower()
+        if "west" in lowercase or "w" in lowercase or "south" in lowercase or ("s" in lowercase and "east" not in lowercase):
+            lowercase = self.remove_direction(lowercase)
+            return self.convert_dms_2_dd(lowercase, False)
+        elif "east" in lowercase or ("e" in lowercase and "west" not in lowercase) or "north" in lowercase or "n" in lowercase:
+            lowercase = self.remove_direction(lowercase)
+            return self.convert_dms_2_dd(lowercase, True)
+        else:
+            return coordinate
+
+    def remove_direction(self, coordinate):
+        directions = ['n', 'north', 's', 'south', 'e', 'east', 'w', 'west']
+        for d in directions:
+            coordinate = coordinate.replace(d, '')
+        return coordinate
+
+    def convert_dms_2_dd(self, lowercase, positive):
+        try:
+            parts = re.split('[°\'"]+', lowercase)
+            if len(parts) == 3:
+                coord = self.dms2dd(positive, parts[0], parts[1], parts[2])
+            elif len(parts) == 2:
+                coord = self.dms2dd(positive, parts[0], parts[1])
+            elif len(parts) == 1:
+                coord = self.dms2dd(positive, parts[0])
+            else:
+                return ""
+        except:
+            return ""
+        return str(coord) if coord != 3600 else ""
+
+    def dms2dd(self, positive, degrees, minutes="0", secs="0"):
+        try:
+            dd = float(degrees) + float(minutes) / 60 + float(secs) / (60 * 60);
+            if not positive:
+                dd *= -1
+            return dd
+        except ValueError:
+            return 3600

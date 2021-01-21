@@ -342,6 +342,7 @@ class OAIRepository(HarvestRepository):
         # EPrints workaround to fix duplicates and Nones in Rights
         if "rights" in record.keys() and isinstance(record["rights"], list):
             record["rights"] = list(set(filter(None.__ne__, record["rights"])))
+            record["rights"] = "\n".join(record["rights"])
 
         # EPrints workaround for liberal use of dc:identifier
         # Rather not hardcode a single source URL for this
@@ -356,6 +357,9 @@ class OAIRepository(HarvestRepository):
         excludedElements = ['http://datacite.org/schema/kernel-4#resourcetype',
                     'http://datacite.org/schema/kernel-4#creatorAffiliation',
                     'http://datacite.org/schema/kernel-4#publicationyear',
+                    'http://datacite.org/schema/kernel-4#geolocationPlace',
+                    'http://datacite.org/schema/kernel-4#geolocationPoint',
+                    'http://datacite.org/schema/kernel-4#geolocationBox',
                     'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointName',
                     'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath']
         newRecord = {}
