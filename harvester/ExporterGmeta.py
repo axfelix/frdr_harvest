@@ -1,6 +1,7 @@
 import re
 import json
 import harvester.Exporter as Exporter
+from psycopg2.extras import DictCursor
 
 
 class ExporterGmeta(Exporter.Exporter):
