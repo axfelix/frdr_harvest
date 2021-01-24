@@ -106,13 +106,13 @@ class ExporterGmeta(Exporter.Exporter):
                 if len(geoplaces) > 0:
                     record["datacite_geoLocationPlace"] = []
                     for geoplace in geoplaces:
-                        if geoplace["place_name"]:
-                            record["datacite_geoLocationPlace"].append({"place_name": geoplace["place_name"]})
-                        elif geoplace["country"] or geoplace["province_state"] or geoplace["city"] or geoplace["other"]:
-                            record["datacite_geoLocationPlace"].append({"country": geoplace["country"],
-                                                                        "province_state": geoplace["province_state"],
-                                                                        "city": geoplace["city"],
-                                                                        "additional": geoplace["other"]})
+                        if geoplace[4]:
+                            record["datacite_geoLocationPlace"].append({"place_name": geoplace[4]})
+                        elif geoplace[0] or geoplace[1] or geoplace[2] or geoplace[3]:
+                            record["datacite_geoLocationPlace"].append({"country": geoplace[0],
+                                                                        "province_state": geoplace[1],
+                                                                        "city": geoplace[2],
+                                                                        "additional": geoplace[3]})
 
             with con:
                 litecur = self.db.getLambdaCursor()
