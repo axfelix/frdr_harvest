@@ -77,7 +77,7 @@ class ExporterGmeta(Exporter.Exporter):
 
             con = self.db.getConnection()
             with con:
-                litecur = self.db.getRowCursor()
+                litecur = self.db.getDictCursor()
 
                 litecur.execute(self.db._prep("""SELECT geobbox.westLon, geobbox.eastLon, geobbox.northLat, geobbox.southLat
                                     FROM geobbox WHERE geobbox.record_id=?"""), (record["record_id"],))
@@ -85,10 +85,10 @@ class ExporterGmeta(Exporter.Exporter):
                 if len(geobboxes) > 0:
                     record["datacite_geoLocationBox"] = []
                     for geobbox in geobboxes:
-                        record["datacite_geoLocationBox"].append({"westBoundLongitude": float(geobbox[0]),
-                                                                  "eastBoundLongitude": float(geobbox[1]),
-                                                                  "northBoundLatitude": float(geobbox[2]),
-                                                                  "southBoundLatitude": float(geobbox[3])})
+                        record["datacite_geoLocationBox"].append({"westBoundLongitude": float(geobbox["westlon"]),
+                                                                  "eastBoundLongitude": float(geobbox["eastlon"]),
+                                                                  "northBoundLatitude": float(geobbox["northlat"]),
+                                                                  "southBoundLatitude": float(geobbox["southlat"])})
 
 
                 litecur.execute(self.db._prep("""SELECT geopoint.lat, geopoint.lon FROM geopoint WHERE geopoint.record_id=?"""), (record["record_id"],))
@@ -106,13 +106,13 @@ class ExporterGmeta(Exporter.Exporter):
                 if len(geoplaces) > 0:
                     record["datacite_geoLocationPlace"] = []
                     for geoplace in geoplaces:
-                        if geoplace[4]:
-                            record["datacite_geoLocationPlace"].append({"place_name": geoplace[4]})
-                        elif geoplace[0] or geoplace[1] or geoplace[2] or geoplace[3]:
-                            record["datacite_geoLocationPlace"].append({"country": geoplace[0],
-                                                                        "province_state": geoplace[1],
-                                                                        "city": geoplace[2],
-                                                                        "additional": geoplace[3]})
+                        if geoplace["place_name"]:
+                            record["datacite_geoLocationPlace"].append({"place_name": geoplace["place_name"]})
+                        elif geoplace["country"] or geoplace["province_state"] or geoplace["city"] or geoplace["other"]:
+                            record["datacite_geoLocationPlace"].append({"country": geoplace["country"],
+                                                                        "province_state": geoplace["province_state"],
+                                                                        "city": geoplace["city"],
+                                                                        "additional": geoplace["other"]})
 
             with con:
                 litecur = self.db.getLambdaCursor()
