@@ -85,10 +85,10 @@ class ExporterGmeta(Exporter.Exporter):
                 if len(geobboxes) > 0:
                     record["datacite_geoLocationBox"] = []
                     for geobbox in geobboxes:
-                        record["datacite_geoLocationBox"].append({"westBoundLongitude": float(geobbox["westlon"]),
-                                                                  "eastBoundLongitude": float(geobbox["eastlon"]),
-                                                                  "northBoundLatitude": float(geobbox["northlat"]),
-                                                                  "southBoundLatitude": float(geobbox["southlat"])})
+                        record["datacite_geoLocationBox"].append({"westBoundLongitude": float(geobbox[0]),
+                                                                  "eastBoundLongitude": float(geobbox[1]),
+                                                                  "northBoundLatitude": float(geobbox[2]),
+                                                                  "southBoundLatitude": float(geobbox[3])})
 
 
                 litecur.execute(self.db._prep("""SELECT geopoint.lat, geopoint.lon FROM geopoint WHERE geopoint.record_id=?"""), (record["record_id"],))
