@@ -16,8 +16,6 @@ class DataverseRepository(HarvestRepository):
         self.domain_metadata = []
         self.params = {
         }
-        self.geofile_extensions = [".tif", ".tiff",".xyz", ".png", ".aux.xml",".tab",".twf",".tifw", ".tiffw",".wld",
-                                  ".tif.prj",".tfw", ".geojson",".shp",".gpkg", ".shx", ".dbf", ".sbn",".prj", ".csv", ".txt", ".zip"]
 
     def _crawl(self):
         kwargs = {
