@@ -373,6 +373,24 @@ class CKANRepository(HarvestRepository):
                     if record["access"] == "unrestricted" or record["access"] == "":
                         record["access"] = "Public"
 
+        # Files
+        if "resources" in ckan_record and isinstance(ckan_record["resources"], list):
+            record["geofiles"] = []
+            for ckan_file in ckan_record["resources"]:
+                geofile = {}
+                try:
+                    url = ckan_file["url"].split("?")[0] # remove any query parameters
+                    filename = url.split("/")[len(url.split("/"))-1] # get the last part after the slasy
+                    extension = "." + filename.split(".")[len(filename.split("."))-1]
+                    if extension.lower() in self.geofile_extensions:
+                        geofile["uri"] = url
+                        geofile["filename"] = filename
+                        record["geofiles"].append(geofile)
+                except IndexError:
+                    pass
+            if len(record["geofiles"]) == 0:
+                record.pop("geofiles")
+
         return record
 
     @rate_limited(5)
