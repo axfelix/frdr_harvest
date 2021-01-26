@@ -94,8 +94,6 @@ class SocrataRepository(HarvestRepository):
 
         record["geofiles"] = [{"uri": "https://" + self.url + "/resource/" + record["identifier"] + ".csv", "filename": record["identifier"] + ".csv"}]
 
-
-
         # Continue to default to English for our current Socrata repositories.
         # For Nova Scoatia, "fra" language refers to the dataset, not the metadata.
         
