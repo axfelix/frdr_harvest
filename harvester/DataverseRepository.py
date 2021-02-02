@@ -84,7 +84,7 @@ class DataverseRepository(HarvestRepository):
             record = response.json()
             return record["data"]["name"]
         except Exception as e:
-            print(e)
+            self.logger.error("Fetching dataverse_name for dataverse_id {} failed: {}".format(str(dataverse_id), e))
 
 
     def format_dataverse_to_oai(self, dataverse_record):
@@ -102,7 +102,9 @@ class DataverseRepository(HarvestRepository):
             # dataset is direct child of sub-dataverse(s)
             record["series"] = []
             for dataverse_id in identifier_split[1:]:
-                record["series"].append(self.get_dataverse_name_from_dataverse_id(int(dataverse_id)))
+                dataverse_name = self.get_dataverse_name_from_dataverse_id(int(dataverse_id))
+                if dataverse_name:
+                    record["series"].append(dataverse_name)
             record["series"] = " // ".join(record["series"]) # list of sub-dataverse names
 
         if "latestVersion" not in dataverse_record:
@@ -253,9 +255,11 @@ class DataverseRepository(HarvestRepository):
                 item_response = requests.get(record_url)
                 dataverse_record = item_response.json()["data"]
                 dataverse_record["combined_identifier"] = record['local_identifier']
-            except:
+            except Exception as e:
                 # Exception means this URL was not found
-                self.db.delete_record(record)
+                self.logger.error("Fetching record {} failed: {}".format(record_url, e))
+                # Don't touch the record in this case  - touching updates timestamp and prevents updates for 30 days
+                # self.db.touch_record(record)
                 return True
             oai_record = self.format_dataverse_to_oai(dataverse_record)
             if oai_record:
