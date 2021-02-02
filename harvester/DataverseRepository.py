@@ -84,7 +84,7 @@ class DataverseRepository(HarvestRepository):
             record = response.json()
             return record["data"]["name"]
         except Exception as e:
-            print(e)
+            self.logger.error("Fetching dataverse_name for dataverse_id {} failed: {}".format(str(dataverse_id), e))
 
 
     def format_dataverse_to_oai(self, dataverse_record):
@@ -255,9 +255,10 @@ class DataverseRepository(HarvestRepository):
                 item_response = requests.get(record_url)
                 dataverse_record = item_response.json()["data"]
                 dataverse_record["combined_identifier"] = record['local_identifier']
-            except:
+            except Exception as e:
                 # Exception means this URL was not found
-                self.db.delete_record(record)
+                self.logger.error("Fetching record {} failed: {}".format(record_url, e))
+                self.db.touch_record(record)
                 return True
             oai_record = self.format_dataverse_to_oai(dataverse_record)
             if oai_record:
