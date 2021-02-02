@@ -102,7 +102,9 @@ class DataverseRepository(HarvestRepository):
             # dataset is direct child of sub-dataverse(s)
             record["series"] = []
             for dataverse_id in identifier_split[1:]:
-                record["series"].append(self.get_dataverse_name_from_dataverse_id(int(dataverse_id)))
+                dataverse_name = self.get_dataverse_name_from_dataverse_id(int(dataverse_id))
+                if dataverse_name:
+                    record["series"].append(dataverse_name)
             record["series"] = " // ".join(record["series"]) # list of sub-dataverse names
 
         if "latestVersion" not in dataverse_record:
