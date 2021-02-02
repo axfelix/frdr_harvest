@@ -258,7 +258,8 @@ class DataverseRepository(HarvestRepository):
             except Exception as e:
                 # Exception means this URL was not found
                 self.logger.error("Fetching record {} failed: {}".format(record_url, e))
-                self.db.touch_record(record)
+                # Don't touch the record in this case  - touching updates timestamp and prevents updates for 30 days
+                # self.db.touch_record(record)
                 return True
             oai_record = self.format_dataverse_to_oai(dataverse_record)
             if oai_record:
