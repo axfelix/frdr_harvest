@@ -229,6 +229,19 @@ class OAIRepository(HarvestRepository):
             if "http://datacite.org/schema/kernel-4#creatorAffiliation" in record:
                 record["affiliation"] = record.get("http://datacite.org/schema/kernel-4#creatorAffiliation")
 
+            # Add contributors
+            record["contributor"] = []
+            for contributorType in ['DataCollector', 'DataManager', 'ProjectManager', 'ResearchGroup', 'Sponsor', 'Supervisor', 'Other']:
+                dataciteContributorType = 'http://datacite.org/schema/kernel-4#contributor' + contributorType
+                if dataciteContributorType in record:
+                    for contributor in record[dataciteContributorType]:
+                        if contributor not in record["contributor"]:
+                            record["contributor"].append(contributor)
+
+            if len(record["contributor"]) == 0:
+                record.pop("contributor")
+
+
         if 'identifier' not in record.keys():
             return None
         if record["pub_date"] is None:
@@ -364,7 +377,14 @@ class OAIRepository(HarvestRepository):
                     'http://datacite.org/schema/kernel-4#geolocationPoint',
                     'http://datacite.org/schema/kernel-4#geolocationBox',
                     'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointName',
-                    'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath']
+                    'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath',
+                    'http://datacite.org/schema/kernel-4#contributorDataCollector',
+                    'http://datacite.org/schema/kernel-4#contributorDataManager',
+                    'http://datacite.org/schema/kernel-4#contributorProjectManager',
+                    'http://datacite.org/schema/kernel-4#contributorResearchGroup',
+                    'http://datacite.org/schema/kernel-4#contributorSponsor',
+                    'http://datacite.org/schema/kernel-4#contributorSupervisor',
+                    'http://datacite.org/schema/kernel-4#contributorOther']
         newRecord = {}
         for elementName in list(record.keys()):
             if '#' in elementName:
