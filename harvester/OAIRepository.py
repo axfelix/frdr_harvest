@@ -384,7 +384,11 @@ class OAIRepository(HarvestRepository):
                     'http://datacite.org/schema/kernel-4#contributorResearchGroup',
                     'http://datacite.org/schema/kernel-4#contributorSponsor',
                     'http://datacite.org/schema/kernel-4#contributorSupervisor',
-                    'http://datacite.org/schema/kernel-4#contributorOther']
+                    'http://datacite.org/schema/kernel-4#contributorOther',
+                    'http://datacite.org/schema/kernel-4#creatorNameIdentifier',
+                    'http://datacite.org/schema/kernel-4#fundingReferenceFunderName',
+                    'http://datacite.org/schema/kernel-4#fundingReferenceAwardNumber',
+                    'http://datacite.org/schema/kernel-4#fundingReferenceAwardTitle']
         newRecord = {}
         for elementName in list(record.keys()):
             if '#' in elementName:
