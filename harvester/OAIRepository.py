@@ -159,6 +159,9 @@ class OAIRepository(HarvestRepository):
             except StopIteration:
                 break
 
+            except Exception as e:
+                self.logger.debug("Exception while working on item {}: {}".format(item_count, e))
+
         self.logger.info("Processed {} items in feed".format(item_count))
 
     def unpack_oai_metadata(self, record):
