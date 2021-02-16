@@ -20,7 +20,7 @@ class ExporterDataverse(Exporter.Exporter):
         records_sql = """SELECT recs.record_id, recs.item_url, recs.pub_date, recs.title, recs.title_fr, recs.item_url, recs.series, recs.repository_id, reps.repository_url, reps.repository_name
             FROM records recs
             JOIN repositories reps on reps.repository_id = recs.repository_id
-            WHERE recs.geodisy_harvested = 0 AND recs.deleted = 0 LIMIT ?"""
+            WHERE recs.geodisy_harvested = 0 AND recs.deleted = 0 AND (recs.title <>''OR recs.title_fr <> '') LIMIT ?"""
         records_cursor.execute(self.db._prep(records_sql), (self.records_per_loop,))
 
         records = []
