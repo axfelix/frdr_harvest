@@ -339,7 +339,7 @@ class OAIRepository(HarvestRepository):
         if "series" not in record.keys():
             record["series"] = ""
 
-        if "coverage" in record.keys():
+[None]        if "coverage" in record.keys() and not record["coverage"] == [None]:
             record["geoplaces"] = []
             if self.name == "SFU Radar":
                 record["coverage"] = [x.strip() for x in record["coverage"][0].split(";")]
