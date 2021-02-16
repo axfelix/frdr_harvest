@@ -159,6 +159,9 @@ class OAIRepository(HarvestRepository):
             except StopIteration:
                 break
 
+            except Exception as e:
+                self.logger.debug("Exception while working on item {}: {}".format(item_count, e))
+
         self.logger.info("Processed {} items in feed".format(item_count))
 
     def unpack_oai_metadata(self, record):
@@ -225,6 +228,19 @@ class OAIRepository(HarvestRepository):
             # Look for datacite.creatorAffiliation
             if "http://datacite.org/schema/kernel-4#creatorAffiliation" in record:
                 record["affiliation"] = record.get("http://datacite.org/schema/kernel-4#creatorAffiliation")
+
+            # Add contributors
+            record["contributor"] = []
+            for contributorType in ['DataCollector', 'DataManager', 'ProjectManager', 'ResearchGroup', 'Sponsor', 'Supervisor', 'Other']:
+                dataciteContributorType = 'http://datacite.org/schema/kernel-4#contributor' + contributorType
+                if dataciteContributorType in record:
+                    for contributor in record[dataciteContributorType]:
+                        if contributor not in record["contributor"]:
+                            record["contributor"].append(contributor)
+
+            if len(record["contributor"]) == 0:
+                record.pop("contributor")
+
 
         if 'identifier' not in record.keys():
             return None
@@ -323,7 +339,7 @@ class OAIRepository(HarvestRepository):
         if "series" not in record.keys():
             record["series"] = ""
 
-        if "coverage" in record.keys():
+[None]        if "coverage" in record.keys() and not record["coverage"] == [None]:
             record["geoplaces"] = []
             if self.name == "SFU Radar":
                 record["coverage"] = [x.strip() for x in record["coverage"][0].split(";")]
@@ -361,7 +377,18 @@ class OAIRepository(HarvestRepository):
                     'http://datacite.org/schema/kernel-4#geolocationPoint',
                     'http://datacite.org/schema/kernel-4#geolocationBox',
                     'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointName',
-                    'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath']
+                    'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath',
+                    'http://datacite.org/schema/kernel-4#contributorDataCollector',
+                    'http://datacite.org/schema/kernel-4#contributorDataManager',
+                    'http://datacite.org/schema/kernel-4#contributorProjectManager',
+                    'http://datacite.org/schema/kernel-4#contributorResearchGroup',
+                    'http://datacite.org/schema/kernel-4#contributorSponsor',
+                    'http://datacite.org/schema/kernel-4#contributorSupervisor',
+                    'http://datacite.org/schema/kernel-4#contributorOther',
+                    'http://datacite.org/schema/kernel-4#creatorNameIdentifier',
+                    'http://datacite.org/schema/kernel-4#fundingReferenceFunderName',
+                    'http://datacite.org/schema/kernel-4#fundingReferenceAwardNumber',
+                    'http://datacite.org/schema/kernel-4#fundingReferenceAwardTitle']
         newRecord = {}
         for elementName in list(record.keys()):
             if '#' in elementName:

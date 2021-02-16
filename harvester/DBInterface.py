@@ -471,10 +471,11 @@ class DBInterface:
                     return record["dc:source"]
 
         # URL is in the identifier
-        local_url = re.search("(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?",
-                              record["local_identifier"])
-        if local_url:
-            return local_url.group(0)
+        if "local_identifier" in record:
+            local_url = re.search("(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?",
+                                  record["local_identifier"])
+            if local_url:
+                return local_url.group(0)
 
         self.logger.error("construct_local_url() failed for item: {}".format(json.dumps(record)) )
         return None
