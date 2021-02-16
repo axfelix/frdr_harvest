@@ -1,14 +1,6 @@
 {
     "repos": [
         {
-            "name": "University of Manitoba Dataverse",
-            "url": "https://dataverse.lib.umanitoba.ca/api/dataverses/%id%/contents",
-            "homepage_url": "https://dataverse.lib.umanitoba.ca",
-            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/umanitoba_80x80.png",
-            "type": "dataverse",
-            "enabled": true
-        },
-        {
             "name": "SFU Radar",
             "url": "https://researchdata.sfu.ca/oai2",
             "homepage_url": "https://researchdata.sfu.ca/",
