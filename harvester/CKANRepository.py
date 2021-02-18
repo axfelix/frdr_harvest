@@ -144,11 +144,15 @@ class CKANRepository(HarvestRepository):
             record["title_fr"] = ckan_record["title_translated"].get("fr", "")
             if "fr-t-en" in ckan_record["title_translated"]:
                 record["title_fr"] = ckan_record["title_translated"].get("fr-t-en", "")
+            if "en-t-fr" in ckan_record["title_translated"]:
+                record["title"] = ckan_record["title_translated"].get("en-t-fr", "")
         elif isinstance(ckan_record.get("title", ""), dict):
             record["title"] = ckan_record["title"].get("en", "")
             record["title_fr"] = ckan_record["title"].get("fr", "")
             if "fr-t-en" in ckan_record["title"]:
                 record["title_fr"] = ckan_record["title"].get("fr-t-en", "")
+            if "en-t-fr" in ckan_record["title_translated"]:
+                record["title"] = ckan_record["title_translated"].get("en-t-fr", "")
         else:
             if self.default_language == "en":
                 record["title"] = ckan_record.get("title", "")
@@ -173,11 +177,15 @@ class CKANRepository(HarvestRepository):
             record["description_fr"] = ckan_record["notes_translated"].get("fr", "")
             if "fr-t-en" in ckan_record["notes_translated"]:
                 record["description_fr"] = ckan_record["notes_translated"].get("fr-t-en", "")
+            if "en-t-fr" in ckan_record["notes_translated"]:
+                record["description"] = ckan_record["notes_translated"].get("en-t-fr", "")
         elif isinstance(ckan_record.get("description", ""), dict):
             record["description"] = ckan_record["description"].get("en", "")
             record["description_fr"] = ckan_record["description"].get("fr", "")
             if "fr-t-en" in ckan_record["description"]:
                 record["description_fr"] = ckan_record["description"].get("fr-t-en", "")
+            if "en-t-fr" in ckan_record["notes_translated"]:
+                record["description"] = ckan_record["notes_translated"].get("en-t-fr", "")
         else:
             record["description"] = ckan_record.get("notes", "")
             record["description_fr"] = ckan_record.get("notes_fra", "")
@@ -285,6 +293,9 @@ class CKANRepository(HarvestRepository):
             if "fr-t-en" in ckan_record["keywords"]:
                 for tag in ckan_record["keywords"]["fr-t-en"]:
                     record["tags_fr"].append(tag)
+            if "en-t-fr" in ckan_record["keywords"]:
+                for tag in ckan_record["keywords"]["en-t-fr"]:
+                    record["tags"].append(tag)
         elif isinstance(ckan_record.get("tags_translated", ""), dict):
             if "en" in ckan_record["tags_translated"]:
                 for tag in ckan_record["tags_translated"]["en"]:
@@ -295,6 +306,9 @@ class CKANRepository(HarvestRepository):
             if "fr-t-en" in ckan_record["tags_translated"]:
                 for tag in ckan_record["tags_translated"]["fr-t-en"]:
                     record["tags_fr"].append(tag)
+            if "en-t-fr" in ckan_record["keywords"]:
+                for tag in ckan_record["keywords"]["en-t-fr"]:
+                    record["tags"].append(tag)
         else:
             if ('tags' in ckan_record) and ckan_record['tags']:
                 for tag in ckan_record["tags"]:
