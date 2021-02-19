@@ -1,13 +1,45 @@
 {
     "repos": [
         {
-            "name": "SFU Radar",
-            "url": "https://researchdata.sfu.ca/oai2",
-            "homepage_url": "https://researchdata.sfu.ca/",
+            "name": "Open Data Kingston",
+            "url": "https://opendatakingston.cityofkingston.ca/api/datasets/1.0/search",
+            "homepage_url": "https://opendatakingston.cityofkingston.ca/",
             "set": "",
-            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/sfu_80x80.png",
-            "type": "oai",
-            "item_url_pattern": "http://researchdata.sfu.ca/islandora/object/%id%",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/kingston_80x80.png",
+            "type": "opendatasoft",
+            "item_url_pattern": "https://opendatakingston.cityofkingston.ca/explore/dataset/%id%",
+            "enabled": true,
+            "copyerrorstoemail": false
+        },
+        {
+            "name": "City of Vancouver Open Data Portal",
+            "url": "https://opendata.vancouver.ca/api/datasets/1.0/search",
+            "homepage_url": "https://opendata.vancouver.ca",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/vancouver_80x80.png",
+            "type": "opendatasoft",
+            "item_url_pattern": "https://opendata.vancouver.ca/explore/dataset/%id%",
+            "enabled": true
+        },
+        {
+            "name": "City of Winnipeg Open Data Portal",
+            "url": "data.winnipeg.ca",
+            "homepage_url": "https://data.winnipeg.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/winnipeg_80x80.png",
+            "type": "socrata",
+            "item_url_pattern": "https://data.winnipeg.ca/d/%id%",
+            "enabled": true
+        },
+        {
+            "name": "Prince Edward Island Government Open Data Portal",
+            "url": "data.princeedwardisland.ca",
+            "homepage_url": "https://data.princeedwardisland.ca/",
+            "set": "",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/pei_80x80.png",
+            "type": "socrata",
+            "contact": "opendata@gov.pe.ca",
+            "item_url_pattern": "https://data.princeedwardisland.ca/d/%id%",
             "enabled": true
         }
     ]

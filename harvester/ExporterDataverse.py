@@ -17,7 +17,7 @@ class ExporterDataverse(Exporter.Exporter):
         records_con = self.db.getConnection()
         with records_con:
             records_cursor = records_con.cursor()
-        records_sql = """SELECT recs.record_id, recs.item_url, recs.pub_date, recs.title, recs.item_url, recs.series, recs.repository_id, reps.repository_url, reps.repository_name
+        records_sql = """SELECT recs.record_id, recs.item_url, recs.pub_date, recs.title, recs.item_url, recs.series, recs.repository_id, reps.repository_url, reps.repository_name, reps.repository_type
             FROM records recs
             JOIN repositories reps on reps.repository_id = recs.repository_id
             WHERE recs.geodisy_harvested = 0 AND recs.deleted = 0 LIMIT ?"""
@@ -25,7 +25,7 @@ class ExporterDataverse(Exporter.Exporter):
 
         records = []
         for row in records_cursor:
-            record = (dict(zip(['record_id','item_url','pub_date','title','item_url','series','repository_id','repository_url', 'repository_name'], row)))
+            record = (dict(zip(['record_id','item_url','pub_date','title','item_url','series','repository_id','repository_url', 'repository_name','repository_type'], row)))
             records.append(record)
         cur = self.db.getLambdaCursor()
         records_sql = """SELECT count(*)
@@ -274,11 +274,15 @@ class ExporterDataverse(Exporter.Exporter):
         }
 
     def get_files(self, record):
+        files = []
+        # TODO We aren't processing ODS download links in Geodisy yet, remove the below check once ODS file processing
+        # has been implemented in Geodisy
+        if record.get("repository_url") == "opendatasoft":
+            return
         cur = self.db.getDictCursor()
         try:
             cur.execute(self.db._prep(
                     """SELECT filename, uri FROM geofile WHERE record_id=?"""),(record["record_id"],))
-            files = []
             for row in cur:
                 val = {"filename": row["filename"], "uri": row["uri"]}
                 files.append(self.get_file_info(val, record))
