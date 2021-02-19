@@ -277,7 +277,7 @@ class ExporterDataverse(Exporter.Exporter):
         files = []
         # TODO We aren't processing ODS download links in Geodisy yet, remove the below check once ODS file processing
         # has been implemented in Geodisy
-        if record.get("repository_url") == "opendatasoft":
+        if record.get("repository_type") == "opendatasoft":
             return
         cur = self.db.getDictCursor()
         try:
