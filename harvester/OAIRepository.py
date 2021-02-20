@@ -370,6 +370,7 @@ class OAIRepository(HarvestRepository):
         return record
 
     def find_domain_metadata(self, record):
+        # Exclude fundingReference and nameIdentifier; need a way to group linked fields in display first
         excludedElements = ['http://datacite.org/schema/kernel-4#resourcetype',
                     'http://datacite.org/schema/kernel-4#creatorAffiliation',
                     'http://datacite.org/schema/kernel-4#publicationyear',
