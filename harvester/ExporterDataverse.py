@@ -17,15 +17,15 @@ class ExporterDataverse(Exporter.Exporter):
         records_con = self.db.getConnection()
         with records_con:
             records_cursor = records_con.cursor()
-        records_sql = """SELECT recs.record_id, recs.item_url, recs.pub_date, recs.title, recs.item_url, recs.series, recs.repository_id, reps.repository_url, reps.repository_name
+        records_sql = """SELECT recs.record_id, recs.item_url, recs.pub_date, recs.title, recs.title_fr, recs.item_url, recs.series, recs.repository_id, reps.repository_url, reps.repository_name
             FROM records recs
             JOIN repositories reps on reps.repository_id = recs.repository_id
-            WHERE recs.geodisy_harvested = 0 AND recs.deleted = 0 LIMIT ?"""
+            WHERE recs.geodisy_harvested = 0 AND recs.deleted = 0 AND (recs.title <>''OR recs.title_fr <> '') LIMIT ?"""
         records_cursor.execute(self.db._prep(records_sql), (self.records_per_loop,))
 
         records = []
         for row in records_cursor:
-            record = (dict(zip(['record_id','item_url','pub_date','title','item_url','series','repository_id','repository_url', 'repository_name'], row)))
+            record = (dict(zip(['record_id','item_url','pub_date','title', 'title_fr','item_url','series','repository_id','repository_url', 'repository_name'], row)))
             records.append(record)
         cur = self.db.getLambdaCursor()
         records_sql = """SELECT count(*)
@@ -115,7 +115,8 @@ class ExporterDataverse(Exporter.Exporter):
 
     def get_citation_metadata_field(self, record):
         citations = {"displayName": "Citation Metadata"}
-        fields = [self.json_dv_dict("title", "false", "primitive", record["title"]),
+        title = record["title"] if not record["title"] == '' else record["title_fr"]
+        fields = [self.json_dv_dict("title", "false", "primitive", title),
                   self.json_dv_dict("author", "true", "compound", self.get_authors(record)),
                   self.json_dv_dict("dsDescription", "true", "compound", self.get_descriptions(record)),
                   self.json_dv_dict("subject", "true", "compound", self.get_subjects(record)),
