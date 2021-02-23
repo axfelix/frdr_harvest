@@ -58,8 +58,8 @@ class OpenDataSoftRepository(HarvestRepository):
                     item_count = item_count + 1
                     if (item_count % self.update_log_after_numitems == 0):
                         tdelta = time.time() - self.tstart + 0.1
-                        self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,
-                                                                            item_count / tdelta))
+                        self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,self.formatter.humanize(
+                                                                                               tdelta),item_count / tdelta))
                 offset += self.records_per_request
             self.logger.info("Found {} items in feed".format(item_count))
 
