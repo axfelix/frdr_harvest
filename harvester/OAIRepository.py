@@ -335,8 +335,11 @@ class OAIRepository(HarvestRepository):
         language = self.default_language
         if "language" in record.keys():
             if isinstance(record["language"], list):
-                record["language"] = record["language"][0].strip()
-                record["language"] = record["language"].lower()
+                if record["language"][0]: # take the first language if it isn't None
+                    record["language"] = record["language"][0].strip()
+                    record["language"] = record["language"].lower()
+                else:
+                    record["language"] = ""
             if record["language"] in ["fr", "fre", "fra", "french"]:
                 language = "fr"
 
@@ -376,7 +379,7 @@ class OAIRepository(HarvestRepository):
             if not isinstance(record["coverage"], list):
                 record["coverage"] = [record["coverage"]]
             for place_name in record["coverage"]:
-                if place_name != "" and place_name.lower().islower(): # to filter out dates, confirm at least one letter
+                if place_name and place_name.lower().islower(): # to filter out dates, confirm at least one letter
                     record["geoplaces"].append({"place_name": place_name})
 
 
