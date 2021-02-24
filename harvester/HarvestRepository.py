@@ -167,4 +167,5 @@ class HarvestRepository(object):
                 dd *= -1
             return dd
         except ValueError:
+            self.logger.info("Something went wrong parsing a coordinate: with degree {}, minute {}, and second{}".format(degrees, minutes, secs))
             return 3600
