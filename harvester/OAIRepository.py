@@ -122,7 +122,7 @@ class OAIRepository(HarvestRepository):
                 metadata = record.metadata
 
                 # Search for a hyperlink in the list of identifiers
-                if 'identifier' in metadata.keys():
+                if "identifier" in metadata.keys():
                     if not isinstance(metadata['identifier'], list):
                         metadata['identifier'] = [metadata['identifier']]
                     for idt in metadata['identifier']:
@@ -135,7 +135,7 @@ class OAIRepository(HarvestRepository):
                             metadata['dc:source'] = "https://hdl.handle.net/" + idt[4:]
 
                 # EPrints workaround for using header datestamp in lieu of date
-                if 'date' not in metadata.keys() and record.header.datestamp:
+                if "date" not in metadata.keys() and record.header.datestamp:
                     metadata["date"] = record.header.datestamp
 
                 # Use the header id for the database key (needed later for OAI GetRecord calls)
@@ -174,7 +174,7 @@ class OAIRepository(HarvestRepository):
             record["creator"] = record.get("AuthEnty")
             record["tags"] = record.get("keyword", [])
             if "topcClas" in record.keys() and len(record["topcClas"]) > 0:
-                record['tags'].extend(filter(None, record["topcClas"]))
+                record["tags"].extend(filter(None, record["topcClas"]))
             record["description"] = record.get("abstract")
             record["publisher"] = record.get("producer")
             record["contributor"] = record.get("othId")
@@ -242,7 +242,7 @@ class OAIRepository(HarvestRepository):
                 record.pop("contributor")
 
 
-        if 'identifier' not in record.keys():
+        if "identifier" not in record.keys():
             return None
         if record["pub_date"] is None:
             return None
@@ -256,48 +256,41 @@ class OAIRepository(HarvestRepository):
                     valid_id = idstring
             record["identifier"] = valid_id
 
-        if 'creator' in record.keys() and record['creator']:
-            if isinstance(record['creator'], list):
+        if "creator" in record.keys() and record["creator"]:
+            if isinstance(record["creator"], list):
                 # Only keep creators that aren't Nones
-                original_creator_list = record['creator']
-                record['creator'] = []
-                for creator in original_creator_list:
-                    if creator != None:
-                        record['creator'].append(creator)
+                record["creator"] = [x for x in record["creator"] if x != None]
         else:
+            record["creator"] = []
             if self.metadataprefix.lower() == "fgdc-std":
                 # Workaround for WOUDC, which doesn't attribute individual datasets
-                record["creator"] = self.name
-            elif 'contributor' in record.keys():
-                record["creator"] = []
-                for creator in record["contributor"]:
-                    if creator != None:
-                        record['creator'].append(creator)
+                record["creator"].append(self.name)
+            elif "contributor" in record.keys():
+                if isinstance(record["contributor"], list):
+                    record["creator"] = [x for x in record["contributor"] if x != None]
+                else:
+                    record["creator"].append(record["contributor"])
                 record.pop("contributor") # don't duplicate contributors and creators
-            elif 'publisher' in record.keys():
-                record["creator"] = record["publisher"]
-            else:
-                # No creators available - record won't be added per next conditional
-                record["creator"] = []
+            elif "publisher" in record.keys():
+                if isinstance(record["publisher"], list):
+                    record["creator"] = [x for x in record["publisher"] if x != None]
+                else:
+                    record["creator"].append(record["publisher"])
 
-        if 'creator' in record.keys() and isinstance(record["creator"], list) and len(record["creator"]) == 0:
+        if "creator" in record.keys() and isinstance(record["creator"], list) and len(record["creator"]) == 0:
             self.logger.debug("Item {} is missing creator - will not be added".format(record["identifier"]))
             return None
 
-        if 'contributor' in record.keys() and record['contributor']:
+        if "contributor" in record.keys() and record["contributor"]:
             # Only keep contributors that aren't Nones
-            if isinstance(record['contributor'], list):
-                original_contributor_list = record['contributor']
-                record['contributor'] = []
-                for contributor in original_contributor_list:
-                    if contributor != None:  # Only add contributors that aren't Nones
-                        record['contributor'].append(contributor)
-                if len(record['contributor']) == 0:
-                    record.pop('contributor')
+            if isinstance(record["contributor"], list):
+                record["contributor"] = [x for x in record["contributor"] if x != None]
+                if len(record["contributor"]) == 0:
+                    record.pop("contributor")
 
 
         # If date is undefined add an empty key
-        if 'pub_date' not in record.keys():
+        if "pub_date" not in record.keys():
             record["pub_date"] = ""
 
         # If there are multiple dates choose the longest one (likely the most specific)
@@ -395,7 +388,7 @@ class OAIRepository(HarvestRepository):
 
         # EPrints workaround for liberal use of dc:identifier
         # Rather not hardcode a single source URL for this
-        if self.url == "http://spectrum.library.concordia.ca/cgi/oai2":
+        if self.url == "spectrum.library.concordia.ca":
             for relation in record["relation"]:
                 if "http://spectrum.library.concordia.ca" in relation:
                     record["dc:source"] = relation
@@ -440,14 +433,14 @@ class OAIRepository(HarvestRepository):
 
             try:
                 metadata = single_record.metadata
-                if 'identifier' in metadata.keys() and isinstance(metadata['identifier'], list):
+                if "identifier" in metadata.keys() and isinstance(metadata['identifier'], list):
                     if "http" in metadata['identifier'][0].lower():
                         metadata['dc:source'] = metadata['identifier'][0]
             except AttributeError:
                 metadata = {}
 
             # EPrints workaround for using header datestamp in lieu of date
-            if 'date' not in metadata.keys() and single_record.header.datestamp:
+            if "date" not in metadata.keys() and single_record.header.datestamp:
                 metadata["date"] = single_record.header.datestamp
 
             metadata['identifier'] = single_record.header.identifier
