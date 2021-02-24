@@ -113,6 +113,9 @@ class OpenDataSoftRepository(HarvestRepository):
                 for territory in opendatasoft_record["metas"]["territory"]:
                     record["geoplaces"].append({"place_name": territory})
 
+        record["geofiles"] = [{"uri": self.url.replace("datasets/1.0/search", "records/1.0/download?dataset=") + record["identifier"] + "&format=geojson",
+                               "filename": ""}]
+
         return record
 
     def _update_record(self, record):

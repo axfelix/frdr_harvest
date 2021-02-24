@@ -8,7 +8,8 @@
             "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/sfu_80x80.png",
             "type": "oai",
             "item_url_pattern": "http://researchdata.sfu.ca/islandora/object/%id%",
-            "enabled": true
+            "enabled": true,
+            "copyerrorstoemail": false
         }
     ]
 }
