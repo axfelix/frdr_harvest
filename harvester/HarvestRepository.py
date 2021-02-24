@@ -48,6 +48,8 @@ class HarvestRepository(object):
             repo_oai_name = repo_oai_name[:-1]
         repo_oai_name = re.sub('[^0-9a-zA-Z\-\.]+', '-', repo_oai_name)
         setattr(self, "repo_oai_name", repo_oai_name)
+        setattr(self, "geofile_extensions", [".tif", ".tiff",".xyz", ".png", ".aux.xml",".tab",".twf",".tifw", ".tiffw",".wld",
+                                  ".tif.prj",".tfw", ".geojson",".shp",".gpkg", ".shx", ".dbf", ".sbn",".prj", ".csv", ".txt", ".zip"])
 
     def setLogger(self, l):
         self.logger = l
