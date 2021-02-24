@@ -255,16 +255,46 @@ class OAIRepository(HarvestRepository):
                 if "http" in idstring.lower():
                     valid_id = idstring
             record["identifier"] = valid_id
-        if 'creator' not in record.keys() and 'contributor' not in record.keys() and 'publisher' not in record.keys():
+
+        if 'creator' in record.keys() and record['creator']:
+            if isinstance(record['creator'], list):
+                # Only keep creators that aren't Nones
+                original_creator_list = record['creator']
+                record['creator'] = []
+                for creator in original_creator_list:
+                    if creator != None:
+                        record['creator'].append(creator)
+        else:
+            if self.metadataprefix.lower() == "fgdc-std":
+                # Workaround for WOUDC, which doesn't attribute individual datasets
+                record["creator"] = self.name
+            elif 'contributor' in record.keys():
+                record["creator"] = []
+                for creator in record["contributor"]:
+                    if creator != None:
+                        record['creator'].append(creator)
+                record.pop("contributor") # don't duplicate contributors and creators
+            elif 'publisher' in record.keys():
+                record["creator"] = record["publisher"]
+            else:
+                # No creators available - record won't be added per next conditional
+                record["creator"] = []
+
+        if 'creator' in record.keys() and isinstance(record["creator"], list) and len(record["creator"]) == 0:
             self.logger.debug("Item {} is missing creator - will not be added".format(record["identifier"]))
             return None
-        elif 'creator' not in record.keys() and 'contributor' in record.keys():
-            record["creator"] = record["contributor"]
-        elif 'creator' not in record.keys() and 'publisher' in record.keys():
-            record["creator"] = record["publisher"]
-        # Workaround for WOUDC, which doesn't attribute individual datasets
-        elif self.metadataprefix.lower() == "fgdc-std":
-            record["creator"] = self.name
+
+        if 'contributor' in record.keys() and record['contributor']:
+            # Only keep contributors that aren't Nones
+            if isinstance(record['contributor'], list):
+                original_contributor_list = record['contributor']
+                record['contributor'] = []
+                for contributor in original_contributor_list:
+                    if contributor != None:  # Only add contributors that aren't Nones
+                        record['contributor'].append(contributor)
+                if len(record['contributor']) == 0:
+                    record.pop('contributor')
+
 
         # If date is undefined add an empty key
         if 'pub_date' not in record.keys():
