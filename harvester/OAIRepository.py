@@ -386,11 +386,10 @@ class OAIRepository(HarvestRepository):
             record["rights"] = list(set(filter(None.__ne__, record["rights"])))
             record["rights"] = "\n".join(record["rights"])
 
-        # EPrints workaround for liberal use of dc:identifier
-        # Rather not hardcode a single source URL for this
-        if self.url == "spectrum.library.concordia.ca":
+        # EPrints workaround - relation link is to landing page, dc:source is to object
+        if "spectrum.library.concordia.ca" in self.url:
             for relation in record["relation"]:
-                if "http://spectrum.library.concordia.ca" in relation:
+                if "https://spectrum.library.concordia.ca" in relation:
                     record["dc:source"] = relation
 
         return record
