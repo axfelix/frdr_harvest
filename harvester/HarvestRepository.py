@@ -145,7 +145,11 @@ class HarvestRepository(object):
 
     def convert_dms_2_dd(self, lowercase, positive):
         try:
-            parts = re.split('[°\'"]+', lowercase)
+            partsOrig = re.split('[°\'"]+', lowercase)
+            parts = []
+            for part in partsOrig:
+                if not part == ' ':
+                    parts.append(part)
             if len(parts) == 3:
                 coord = self.dms2dd(positive, parts[0], parts[1], parts[2])
             elif len(parts) == 2:
@@ -165,4 +169,5 @@ class HarvestRepository(object):
                 dd *= -1
             return dd
         except ValueError:
+            self.logger.info("Something went wrong parsing a coordinate: with degree {}, minute {}, and second{}".format(degrees, minutes, secs))
             return 3600
