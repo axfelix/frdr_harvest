@@ -317,7 +317,7 @@ class OAIRepository(HarvestRepository):
                 date_object = dateparser.parse(record["pub_date"], date_formats=['%Y%m%d'])
             record["pub_date"] = date_object.strftime("%Y-%m-%d")
         except:
-            self.logger.debug("Something went wrong parsing the date, {} from {}".format(record["pub_date"]
+            self.logger.error("Something went wrong parsing the date, {} from {}".format(record["pub_date"]
                               , (record["dc:source"] if record["identifier"] is None else record["identifier"])))
             return None
 

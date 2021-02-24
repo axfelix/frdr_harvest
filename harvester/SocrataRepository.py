@@ -132,11 +132,16 @@ class SocrataRepository(HarvestRepository):
                     print(socrata_record)
                 except:
                     pass
-            # Touch the record so we do not keep requesting it on every run
-            self.db.touch_record(record)
-            self.error_count = self.error_count + 1
-            if self.error_count < self.abort_after_numerrors:
-                return True
+            if "404" in str(e):
+                # The record was deleted from source - "404 Client Error: Not Found"
+                self.db.delete_record(record)
+            else:
+                # Some other possibly transient error
+                # Touch the record so we do not keep requesting it on every run
+                self.db.touch_record(record)
+                self.error_count = self.error_count + 1
+                if self.error_count < self.abort_after_numerrors:
+                    return True
 
         return False
 
