@@ -6,7 +6,7 @@ import json
 import re
 import os.path
 import ftfy
-
+import requests
 
 class CKANRepository(HarvestRepository):
     """ CKAN Repository """
@@ -32,7 +32,11 @@ class CKANRepository(HarvestRepository):
         }
         self.repository_id = self.db.update_repo(**kwargs)
 
-        records = self.ckanrepo.call_action('package_list', requests_kwargs={'verify': False})
+        if self.name != "Yukon Open Data":
+            records = self.ckanrepo.call_action('package_list', requests_kwargs={'verify': False})
+        else:
+            r = requests.get(self.url + "/api/3/action/package_list")
+            records = json.loads(r.text)["result"]
 
         # If response is limited to 1000, get all records with pagination
         if len(records) == 1000:
@@ -49,14 +53,15 @@ class CKANRepository(HarvestRepository):
 
         item_count = 0
         for ckan_identifier in records:
-            result = self.db.write_header(ckan_identifier, self.repository_id)
-            item_count = item_count + 1
-            if (item_count % self.update_log_after_numitems == 0):
-                tdelta = time.time() - self.tstart + 0.1
-                self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,
-                                                                                           self.formatter.humanize(
-                                                                                               tdelta),
-                                                                                           item_count / tdelta))
+            if self.name != "Yukon Open Data" or "data/datasets" in ckan_identifier: # exclude non-datasets for Yukon
+                result = self.db.write_header(ckan_identifier, self.repository_id)
+                item_count = item_count + 1
+                if (item_count % self.update_log_after_numitems == 0):
+                    tdelta = time.time() - self.tstart + 0.1
+                    self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,
+                                                                                               self.formatter.humanize(
+                                                                                                   tdelta),
+                                                                                               item_count / tdelta))
 
         self.logger.info("Found {} items in feed".format(item_count))
 
@@ -138,6 +143,8 @@ class CKANRepository(HarvestRepository):
 
         if self.item_url_pattern:
             record["item_url"] = self.item_url_pattern.replace("%id%", ckan_record["id"])
+        else:
+            record["item_url"] = ckan_record["url"]
 
         if isinstance(ckan_record.get("title_translated", ""), dict):
             record["title"] = ckan_record["title_translated"].get("en", "")
@@ -209,14 +216,20 @@ class CKANRepository(HarvestRepository):
             elif self.default_language == "fr":
                 record["subject_fr"] = ckan_record.get('subject', "")
         elif "groups" in ckan_record and ckan_record["groups"]:
-            # Surrey, CanWin Data Hub, Quebec, Montreal (plus Regina, Guelph, Niagara)
+            # Surrey, CanWin Data Hub, Quebec, Montreal, Yukon (plus Regina, Guelph, Niagara)
             record["subject"] = []
             record["subject_fr"] = []
             for group in ckan_record["groups"]:
                 if self.default_language == "en":
-                    record["subject"].append(group.get("display_name", ""))
+                    if "display_name" in group:
+                        record["subject"].append(group.get("display_name", ""))
+                    elif "title" in group: # Yukon
+                        record["subject"].append(group.get("title", ""))
                 elif self.default_language == "fr":
-                    record["subject_fr"].append(group.get("display_name", ""))
+                    if "display_name" in group:
+                        record["subject_fr"].append(group.get("display_name", ""))
+                    elif "title" in group:
+                        record["subject_fr"].append(group.get("title", ""))
         elif "topic" in ckan_record and ckan_record["topic"]:
             # Alberta
             if self.default_language == "en":
@@ -258,6 +271,14 @@ class CKANRepository(HarvestRepository):
             record["pub_date"] = ckan_record["date_issued"]
         elif ('metadata_created' in ckan_record):
             record["pub_date"] = ckan_record["metadata_created"]
+            if self.name == "Yukon Open Data":
+                if "1969-12-31" in record["pub_date"]:
+                    record["pub_date"] = ckan_record["revision_timestamp"]
+                try:
+                    month_day_year = record["pub_date"].split(", ")[1].split(" - ")[0].split("/")
+                    record["pub_date"] = month_day_year[2] + "-" + month_day_year[0] + "-" + month_day_year[1]
+                except:
+                    pass
 
         # Some date formats have a trailing timestamp after date (ie: "2014-12-10T15:05:03.074998Z")
         record["pub_date"] = re.sub("[T ][0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.?[0-9]*[Z]?$", "", record["pub_date"])
@@ -313,9 +334,15 @@ class CKANRepository(HarvestRepository):
             if ('tags' in ckan_record) and ckan_record['tags']:
                 for tag in ckan_record["tags"]:
                     if self.default_language == "fr":
-                        record["tags_fr"].append(tag["display_name"])
+                        if "display_name" in tag:
+                            record["tags_fr"].append(tag["display_name"])
+                        elif "name" in tag:
+                            record["tags_fr"].append(tag["name"])
                     else:
-                        record["tags"].append(tag["display_name"])
+                        if "display_name" in tag:
+                            record["tags"].append(tag["display_name"])
+                        elif "name" in tag: # Yukon
+                            record["tags"].append(tag["name"])
 
         if ('west_bound_longitude' in ckan_record) and ('east_bound_longitude' in ckan_record) and \
                 ('north_bound_latitude' in ckan_record) and ('south_bound_latitude' in ckan_record):
@@ -369,7 +396,7 @@ class CKANRepository(HarvestRepository):
 
         # Access Constraints, if available
         if ('private' in ckan_record):
-            if ckan_record['private']:
+            if ckan_record['private'] and self.name != "Yukon Open Data": #  Yukon always sets private to True
                 record["access"] = "Limited"
             else:
                 record["access"] = "Public"
@@ -412,7 +439,11 @@ class CKANRepository(HarvestRepository):
         # self.logger.debug("Updating CKAN record {}".format(record['local_identifier']) )
 
         try:
-            ckan_record = self.ckanrepo.call_action('package_show', {'id':record['local_identifier']}, requests_kwargs={'verify': False})
+            if self.name != "Yukon Open Data":
+                ckan_record = self.ckanrepo.call_action('package_show', {'id':record['local_identifier']}, requests_kwargs={'verify': False})
+            else:
+                r = requests.get(self.url + "api/3/action/package_show?id=" + record['local_identifier'].split("data/datasets/")[1])
+                ckan_record = json.loads(r.text)["result"][0]
             oai_record = self.format_ckan_to_oai(ckan_record, record['local_identifier'])
             if oai_record:
                 self.db.write_record(oai_record, self)
