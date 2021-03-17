@@ -321,7 +321,6 @@ class OAIRepository(HarvestRepository):
                               , (record["dc:source"] if record["identifier"] is None else record["identifier"])))
             return None
 
-
         if "title" not in record.keys():
             return None
 
@@ -385,6 +384,21 @@ class OAIRepository(HarvestRepository):
         if "rights" in record.keys() and isinstance(record["rights"], list):
             record["rights"] = list(set(filter(None.__ne__, record["rights"])))
             record["rights"] = "\n".join(record["rights"])
+
+        # TODO make sure the filenames label is correct
+        if "https://www.frdr-dfdr.ca/schema/1.0/#globusFileNames" in record.keys():
+            # Get File Download URLs
+            hostname = "https://" + record.get("https://www.frdr-dfdr.ca/schema/1.0/#globusHttpsHostname")
+            globus_endpoint_path = \
+                record.get("https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath") + "submitted_data/"
+            filenames = record.get("https://www.frdr-dfdr.ca/schema/1.0/#globusFileNames")
+            for f in filenames:
+                extension = "." + f.split(".")[1]
+                if extension.lower() in self.geofile_extensions:
+                    geofile = {}
+                    geofile["filename"] = f
+                    geofile["uri"] = hostname + globus_endpoint_path + f
+                    record["geofiles"].append(geofile)
 
         # EPrints workaround - relation link is to landing page, dc:source is to object
         if "spectrum.library.concordia.ca" in self.url:
