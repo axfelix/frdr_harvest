@@ -1,5 +1,10 @@
 import json
 import harvester.Exporter as Exporter
+import re
+
+
+def check_dd(decimal_string):
+    return re.search('^[-]?((\d+(\.\d+)?)|(\.\d+))$', decimal_string) is not None
 
 
 class ExporterDataverse(Exporter.Exporter):
@@ -258,8 +263,13 @@ class ExporterDataverse(Exporter.Exporter):
                 (record["record_id"],))
             coords = []
             for row in cur:
-                val = {"westLon": row["westlon"], "eastLon": row["eastlon"], "northLat": row["northlat"], "southLat": row["southlat"]}
-                coords.append(self.get_bbox(val))
+                west = str(row["westlon"])
+                east = str(row["eastlon"])
+                north = str(row["northlat"])
+                south = str(row["southlat"])
+                if check_dd(west) and check_dd(east) and check_dd(north) and check_dd(south):
+                    val = {"westLon": row["westlon"], "eastLon": row["eastlon"], "northLat": row["northlat"], "southLat": row["southlat"]}
+                    coords.append(self.get_bbox(val))
             if coords:
                 return coords
         except:
