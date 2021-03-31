@@ -430,6 +430,7 @@ class OAIRepository(HarvestRepository):
                     'http://datacite.org/schema/kernel-4#geolocationBox',
                     'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointName',
                     'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath',
+                    'https://www.frdr-dfdr.ca/schema/1.0/#globusHttpsHostname',
                     'http://datacite.org/schema/kernel-4#contributorDataCollector',
                     'http://datacite.org/schema/kernel-4#contributorDataManager',
                     'http://datacite.org/schema/kernel-4#contributorProjectManager',
