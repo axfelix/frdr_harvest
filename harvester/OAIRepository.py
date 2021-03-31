@@ -1,3 +1,7 @@
+import urllib
+
+import requests as requests
+
 from harvester.HarvestRepository import HarvestRepository
 from harvester.rate_limited import rate_limited
 from sickle import Sickle
@@ -11,7 +15,6 @@ import dateparser
 import os.path
 import time
 import json
-import pdb
 
 
 # import dateparser
@@ -82,6 +85,20 @@ class FRDRItemIterator(BaseOAIIterator):
                 raise StopIteration
 
 
+def get_filenames(base_url):
+    full_url = base_url+"file_sizes.json?download=1:1"
+    session = requests.Session()
+    session.headers.update({'referer':"https://g-35d771.c34cd.8540.data.globus.org/1/published/publication_3/file_sizes.json?download=1:1"})
+    file = session.get(full_url)
+    file_text = file.text
+    data = json.loads(file_text)
+    files = data["contents"]
+    file_names = []
+    for f in files:
+        file_names.append(f["name"])
+    return file_names
+
+
 class OAIRepository(HarvestRepository):
     """ OAI Repository """
 
@@ -122,7 +139,7 @@ class OAIRepository(HarvestRepository):
                 metadata = record.metadata
 
                 # Search for a hyperlink in the list of identifiers
-                if 'identifier' in metadata.keys():
+                if "identifier" in metadata.keys():
                     if not isinstance(metadata['identifier'], list):
                         metadata['identifier'] = [metadata['identifier']]
                     for idt in metadata['identifier']:
@@ -135,7 +152,7 @@ class OAIRepository(HarvestRepository):
                             metadata['dc:source'] = "https://hdl.handle.net/" + idt[4:]
 
                 # EPrints workaround for using header datestamp in lieu of date
-                if 'date' not in metadata.keys() and record.header.datestamp:
+                if "date" not in metadata.keys() and record.header.datestamp:
                     metadata["date"] = record.header.datestamp
 
                 # Use the header id for the database key (needed later for OAI GetRecord calls)
@@ -174,7 +191,7 @@ class OAIRepository(HarvestRepository):
             record["creator"] = record.get("AuthEnty")
             record["tags"] = record.get("keyword", [])
             if "topcClas" in record.keys() and len(record["topcClas"]) > 0:
-                record['tags'].extend(filter(None, record["topcClas"]))
+                record["tags"].extend(filter(None, record["topcClas"]))
             record["description"] = record.get("abstract")
             record["publisher"] = record.get("producer")
             record["contributor"] = record.get("othId")
@@ -242,7 +259,8 @@ class OAIRepository(HarvestRepository):
                 record.pop("contributor")
 
 
-        if 'identifier' not in record.keys():
+
+        if "identifier" not in record.keys():
             return None
         if record["pub_date"] is None:
             return None
@@ -255,19 +273,42 @@ class OAIRepository(HarvestRepository):
                 if "http" in idstring.lower():
                     valid_id = idstring
             record["identifier"] = valid_id
-        if 'creator' not in record.keys() and 'contributor' not in record.keys() and 'publisher' not in record.keys():
+
+        if "creator" in record.keys() and record["creator"]:
+            if isinstance(record["creator"], list):
+                # Only keep creators that aren't Nones
+                record["creator"] = [x for x in record["creator"] if x != None]
+        else:
+            record["creator"] = []
+            if self.metadataprefix.lower() == "fgdc-std":
+                # Workaround for WOUDC, which doesn't attribute individual datasets
+                record["creator"].append(self.name)
+            elif "contributor" in record.keys():
+                if isinstance(record["contributor"], list):
+                    record["creator"] = [x for x in record["contributor"] if x != None]
+                else:
+                    record["creator"].append(record["contributor"])
+                record.pop("contributor") # don't duplicate contributors and creators
+            elif "publisher" in record.keys():
+                if isinstance(record["publisher"], list):
+                    record["creator"] = [x for x in record["publisher"] if x != None]
+                else:
+                    record["creator"].append(record["publisher"])
+
+        if "creator" in record.keys() and isinstance(record["creator"], list) and len(record["creator"]) == 0:
             self.logger.debug("Item {} is missing creator - will not be added".format(record["identifier"]))
             return None
-        elif 'creator' not in record.keys() and 'contributor' in record.keys():
-            record["creator"] = record["contributor"]
-        elif 'creator' not in record.keys() and 'publisher' in record.keys():
-            record["creator"] = record["publisher"]
-        # Workaround for WOUDC, which doesn't attribute individual datasets
-        elif self.metadataprefix.lower() == "fgdc-std":
-            record["creator"] = self.name
+
+        if "contributor" in record.keys() and record["contributor"]:
+            # Only keep contributors that aren't Nones
+            if isinstance(record["contributor"], list):
+                record["contributor"] = [x for x in record["contributor"] if x != None]
+                if len(record["contributor"]) == 0:
+                    record.pop("contributor")
+
 
         # If date is undefined add an empty key
-        if 'pub_date' not in record.keys():
+        if "pub_date" not in record.keys():
             record["pub_date"] = ""
 
         # If there are multiple dates choose the longest one (likely the most specific)
@@ -294,10 +335,9 @@ class OAIRepository(HarvestRepository):
                 date_object = dateparser.parse(record["pub_date"], date_formats=['%Y%m%d'])
             record["pub_date"] = date_object.strftime("%Y-%m-%d")
         except:
-            self.logger.debug("Something went wrong parsing the date, {} from {}", record["pub_date"]
-                              , (record["dc:source"] if record["identifier"] is None else record["identifier"]))
+            self.logger.error("Something went wrong parsing the date, {} from {}".format(record["pub_date"]
+                              , (record["dc:source"] if record["identifier"] is None else record["identifier"])))
             return None
-
 
         if "title" not in record.keys():
             return None
@@ -305,8 +345,11 @@ class OAIRepository(HarvestRepository):
         language = self.default_language
         if "language" in record.keys():
             if isinstance(record["language"], list):
-                record["language"] = record["language"][0].strip()
-                record["language"] = record["language"].lower()
+                if record["language"][0]: # take the first language if it isn't None
+                    record["language"] = record["language"][0].strip()
+                    record["language"] = record["language"].lower()
+                else:
+                    record["language"] = ""
             if record["language"] in ["fr", "fre", "fra", "french"]:
                 language = "fr"
 
@@ -339,16 +382,15 @@ class OAIRepository(HarvestRepository):
         if "series" not in record.keys():
             record["series"] = ""
 
-[None]        if "coverage" in record.keys() and not record["coverage"] == [None]:
+        if "coverage" in record.keys() and not record["coverage"] == [None]:
             record["geoplaces"] = []
             if self.name == "SFU Radar":
                 record["coverage"] = [x.strip() for x in record["coverage"][0].split(";")]
             if not isinstance(record["coverage"], list):
                 record["coverage"] = [record["coverage"]]
             for place_name in record["coverage"]:
-                if place_name != "" and place_name.lower().islower(): # to filter out dates, confirm at least one letter
+                if place_name and place_name.lower().islower(): # to filter out dates, confirm at least one letter
                     record["geoplaces"].append({"place_name": place_name})
-
 
         # DSpace workaround to exclude theses and non-data content
         if self.prune_non_dataset_items:
@@ -360,16 +402,26 @@ class OAIRepository(HarvestRepository):
             record["rights"] = list(set(filter(None.__ne__, record["rights"])))
             record["rights"] = "\n".join(record["rights"])
 
-        # EPrints workaround for liberal use of dc:identifier
-        # Rather not hardcode a single source URL for this
-        if self.url == "http://spectrum.library.concordia.ca/cgi/oai2":
-            for relation in record["relation"]:
-                if "http://spectrum.library.concordia.ca" in relation:
-                    record["dc:source"] = relation
-
+            # TODO make sure the filenames label is correct
+            #hostname = "https://" + record.get("https://www.frdr-dfdr.ca/schema/1.0/#globusHttpsHostname")[0]
+            hostname = "https://g-35d771.c34cd.8540.data.globus.org"
+            globus_endpoint_path = record.get("https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath")[0]
+            filenames = get_filenames(hostname + globus_endpoint_path)
+            # Get File Download URLs
+            for f in filenames:
+                file_segments = len(f.split("."))
+                extension = "." + f.split(".")[file_segments-1]
+                if extension.lower() in self.geofile_extensions:
+                    geofile = {}
+                    geofile["filename"] = f
+                    geofile["uri"] = hostname + globus_endpoint_path + "submitted_data/" + f
+                    if record.__contains__("geofiles"):
+                        record["geofiles"].append(geofile)
+                    else:
+                        record["geofiles"] = geofile
         return record
-
     def find_domain_metadata(self, record):
+        # Exclude fundingReference and nameIdentifier; need a way to group linked fields in display first
         excludedElements = ['http://datacite.org/schema/kernel-4#resourcetype',
                     'http://datacite.org/schema/kernel-4#creatorAffiliation',
                     'http://datacite.org/schema/kernel-4#publicationyear',
@@ -406,14 +458,14 @@ class OAIRepository(HarvestRepository):
 
             try:
                 metadata = single_record.metadata
-                if 'identifier' in metadata.keys() and isinstance(metadata['identifier'], list):
+                if "identifier" in metadata.keys() and isinstance(metadata['identifier'], list):
                     if "http" in metadata['identifier'][0].lower():
                         metadata['dc:source'] = metadata['identifier'][0]
             except AttributeError:
                 metadata = {}
 
             # EPrints workaround for using header datestamp in lieu of date
-            if 'date' not in metadata.keys() and single_record.header.datestamp:
+            if "date" not in metadata.keys() and single_record.header.datestamp:
                 metadata["date"] = single_record.header.datestamp
 
             metadata['identifier'] = single_record.header.identifier

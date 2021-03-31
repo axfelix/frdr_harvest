@@ -58,8 +58,8 @@ class OpenDataSoftRepository(HarvestRepository):
                     item_count = item_count + 1
                     if (item_count % self.update_log_after_numitems == 0):
                         tdelta = time.time() - self.tstart + 0.1
-                        self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,
-                                                                            item_count / tdelta))
+                        self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,self.formatter.humanize(
+                                                                                               tdelta),item_count / tdelta))
                 offset += self.records_per_request
             self.logger.info("Found {} items in feed".format(item_count))
 
@@ -112,6 +112,9 @@ class OpenDataSoftRepository(HarvestRepository):
             if isinstance(opendatasoft_record["metas"]["territory"], list):
                 for territory in opendatasoft_record["metas"]["territory"]:
                     record["geoplaces"].append({"place_name": territory})
+
+        record["geofiles"] = [{"uri": self.url.replace("datasets/1.0/search", "records/1.0/download?dataset=") + record["identifier"] + "&format=geojson",
+                               "filename": ""}]
 
         return record
 
