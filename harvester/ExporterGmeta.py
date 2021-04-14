@@ -206,7 +206,8 @@ class ExporterGmeta(Exporter.Exporter):
             record["frdr_origin_icon"] = record["repository_thumbnail"]
 
             # Concatenate EN and FR into multi-language fields for Globus search
-            record["dc_title_multi"]       = record["dc_title_en"] + " " + record["dc_title_fr"]
+            record["dc_title_multi"] = record["dc_title_en"] + " " + record["dc_title_fr"]
+            record["dc_title_multi"] = record["dc_title_multi"].strip()
             record["dc_description_multi"] = []
             record["dc_description_multi"].extend(record["dc_description_en"])
             record["dc_description_multi"].extend(record["dc_description_fr"])
