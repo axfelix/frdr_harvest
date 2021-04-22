@@ -68,6 +68,7 @@ class SocrataRepository(HarvestRepository):
 
         if ('metadata' in socrata_record) and socrata_record['metadata']:
             if ('custom_fields' in socrata_record['metadata']) and socrata_record['metadata']['custom_fields']:
+                # Rights metadata
                 if ('License/Attribution' in socrata_record['metadata']['custom_fields']) and socrata_record['metadata']['custom_fields']['License/Attribution']:
                     if ('License URL' in socrata_record['metadata']['custom_fields']['License/Attribution'] and socrata_record['metadata']['custom_fields']['License/Attribution']['License URL']):
                         if record["rights"] == "" or record["rights"] == []:
@@ -87,6 +88,13 @@ class SocrataRepository(HarvestRepository):
                         if record["rights"] == "" or record["rights"] == []:
                             # Strathcona
                             record["rights"] = socrata_record['metadata']['custom_fields']['Attributes']['Licence']
+
+            if ('geo' in socrata_record['metadata']) and socrata_record['metadata']['geo']:
+                if ('bbox' in socrata_record['metadata']['geo']) and socrata_record['metadata']['geo']['bbox']:
+                    bbox_array = socrata_record['metadata']['geo']['bbox'].split(",")
+                    record["geobboxes"] = [{"westLon": bbox_array[0], "eastLon": bbox_array[2], "southLat": bbox_array[1], "northLat": bbox_array[3]}]
+
+
         if record["rights"] == "" or record["rights"] == []:
             record.pop("rights")
 
