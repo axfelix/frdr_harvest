@@ -1,3 +1,7 @@
+import urllib
+
+import requests as requests
+
 from harvester.HarvestRepository import HarvestRepository
 from harvester.rate_limited import rate_limited
 from sickle import Sickle
@@ -11,7 +15,6 @@ import dateparser
 import os.path
 import time
 import json
-import pdb
 
 
 # import dateparser
@@ -82,6 +85,23 @@ class FRDRItemIterator(BaseOAIIterator):
                 raise StopIteration
 
 
+def get_filenames(base_url):
+    full_url = base_url+"file_sizes.json?download=1:1"
+    session = requests.Session()
+    session.headers.update({'referer': full_url})
+    file = session.get(full_url)
+    file_text = file.text
+    try:
+        data = json.loads(file_text)
+        files = data["contents"]
+        file_names = []
+        for f in files:
+            file_names.append(f["name"])
+        return file_names
+    except:
+        return ""
+
+
 class OAIRepository(HarvestRepository):
     """ OAI Repository """
 
@@ -120,6 +140,9 @@ class OAIRepository(HarvestRepository):
             try:
                 record = records.next()
                 metadata = record.metadata
+
+                if "oai:https://" in record.header.identifier:
+                    record.header.identifier = record.header.identifier.replace("oai:https://", "oai:")
 
                 # Search for a hyperlink in the list of identifiers
                 if "identifier" in metadata.keys():
@@ -241,6 +264,22 @@ class OAIRepository(HarvestRepository):
             if len(record["contributor"]) == 0:
                 record.pop("contributor")
 
+            # Get geospatial files
+            hostname = "https://" + record.get("https://www.frdr-dfdr.ca/schema/1.0/#globusHttpsHostname")[0]
+            globus_endpoint_path = record.get("https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath")[0]
+            filenames = get_filenames(hostname + globus_endpoint_path)
+            # Get File Download URLs
+            for f in filenames:
+                file_segments = len(f.split("."))
+                extension = "." + f.split(".")[file_segments - 1]
+                if extension.lower() in self.geofile_extensions:
+                    geofile = {}
+                    geofile["filename"] = f
+                    geofile["uri"] = hostname + globus_endpoint_path + "submitted_data/" + f
+                    if record.__contains__("geofiles"):
+                        record["geofiles"].append(geofile)
+                    else:
+                        record["geofiles"] = [geofile]
 
         if "identifier" not in record.keys():
             return None
@@ -321,7 +360,6 @@ class OAIRepository(HarvestRepository):
                               , (record["dc:source"] if record["identifier"] is None else record["identifier"])))
             return None
 
-
         if "title" not in record.keys():
             return None
 
@@ -375,7 +413,6 @@ class OAIRepository(HarvestRepository):
                 if place_name and place_name.lower().islower(): # to filter out dates, confirm at least one letter
                     record["geoplaces"].append({"place_name": place_name})
 
-
         # DSpace workaround to exclude theses and non-data content
         if self.prune_non_dataset_items:
             if record["type"] and "Dataset" not in record["type"]:
@@ -386,14 +423,8 @@ class OAIRepository(HarvestRepository):
             record["rights"] = list(set(filter(None.__ne__, record["rights"])))
             record["rights"] = "\n".join(record["rights"])
 
-        # EPrints workaround - relation link is to landing page, dc:source is to object
-        if "spectrum.library.concordia.ca" in self.url:
-            for relation in record["relation"]:
-                if "https://spectrum.library.concordia.ca" in relation:
-                    record["dc:source"] = relation
 
         return record
-
     def find_domain_metadata(self, record):
         # Exclude fundingReference and nameIdentifier; need a way to group linked fields in display first
         excludedElements = ['http://datacite.org/schema/kernel-4#resourcetype',
@@ -404,6 +435,7 @@ class OAIRepository(HarvestRepository):
                     'http://datacite.org/schema/kernel-4#geolocationBox',
                     'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointName',
                     'https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath',
+                    'https://www.frdr-dfdr.ca/schema/1.0/#globusHttpsHostname',
                     'http://datacite.org/schema/kernel-4#contributorDataCollector',
                     'http://datacite.org/schema/kernel-4#contributorDataManager',
                     'http://datacite.org/schema/kernel-4#contributorProjectManager',

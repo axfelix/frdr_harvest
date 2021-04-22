@@ -205,6 +205,19 @@ class ExporterGmeta(Exporter.Exporter):
             record["frdr_origin_id"] = record["repository_name"]
             record["frdr_origin_icon"] = record["repository_thumbnail"]
 
+            # Concatenate EN and FR into multi-language fields for Globus search
+            record["dc_title_multi"] = str(record["dc_title_en"]) + " " + str(record["dc_title_fr"])
+            record["dc_title_multi"] = record["dc_title_multi"].strip()
+            record["dc_description_multi"] = []
+            record["dc_description_multi"].extend(record["dc_description_en"])
+            record["dc_description_multi"].extend(record["dc_description_fr"])
+            record["frdr_subject_multi"] = []
+            record["frdr_subject_multi"].extend(record["frdr_subject_en"])
+            record["frdr_subject_multi"].extend(record["frdr_subject_fr"])
+            record["frdr_keyword_multi"] = []
+            record["frdr_keyword_multi"].extend(record["frdr_keyword_en"])
+            record["frdr_keyword_multi"].extend(record["frdr_keyword_fr"])
+
             # remove unneeded columns from output
             record.pop("contact", None)
             record.pop("deleted", None)
