@@ -32,11 +32,11 @@ class CKANRepository(HarvestRepository):
         }
         self.repository_id = self.db.update_repo(**kwargs)
 
-        if self.name != "Yukon Open Data":
-            records = self.ckanrepo.call_action('package_list', requests_kwargs={'verify': False})
-        else:
-            r = requests.get(self.url + "/api/3/action/package_list")
+        if self.ckan_api_endpoint:
+            r = requests.get(self.url + self.ckan_api_endpoint + "/package_list")
             records = json.loads(r.text)["result"]
+        else:
+            records = self.ckanrepo.call_action('package_list', requests_kwargs={'verify': False})
 
         # If response is limited to 1000, get all records with pagination
         if len(records) == 1000:
@@ -439,11 +439,11 @@ class CKANRepository(HarvestRepository):
         # self.logger.debug("Updating CKAN record {}".format(record['local_identifier']) )
 
         try:
-            if self.name != "Yukon Open Data":
-                ckan_record = self.ckanrepo.call_action('package_show', {'id':record['local_identifier']}, requests_kwargs={'verify': False})
-            else:
-                r = requests.get(self.url + "api/3/action/package_show?id=" + record['local_identifier'].split("data/datasets/")[1])
+            if self.ckan_api_endpoint:
+                r = requests.get(self.url + self.ckan_api_endpoint + "/package_show?id=" + record['local_identifier'].split("data/datasets/")[1])
                 ckan_record = json.loads(r.text)["result"][0]
+            else:
+                ckan_record = self.ckanrepo.call_action('package_show', {'id':record['local_identifier']}, requests_kwargs={'verify': False})
             oai_record = self.format_ckan_to_oai(ckan_record, record['local_identifier'])
             if oai_record:
                 self.db.write_record(oai_record, self)
