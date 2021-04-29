@@ -54,6 +54,8 @@ class CKANRepository(HarvestRepository):
         item_count = 0
         for ckan_identifier in records:
             if not self.ckan_include_identifier_pattern or self.ckan_include_identifier_pattern in ckan_identifier:
+                if self.ckan_strip_from_identifier:
+                    ckan_identifier = ckan_identifier.replace(self.ckan_strip_from_identifier,"")
                 result = self.db.write_header(ckan_identifier, self.repository_id)
                 item_count = item_count + 1
                 if (item_count % self.update_log_after_numitems == 0):
@@ -429,7 +431,7 @@ class CKANRepository(HarvestRepository):
 
         try:
             if self.ckan_api_endpoint:
-                r = requests.get(self.url + self.ckan_api_endpoint + "/package_show?id=" + record['local_identifier'].split("data/datasets/")[1])
+                r = requests.get(self.url + self.ckan_api_endpoint + "/package_show?id=" + record['local_identifier'])
                 ckan_record = json.loads(r.text)["result"][0]
             else:
                 ckan_record = self.ckanrepo.call_action('package_show', {'id':record['local_identifier']}, requests_kwargs={'verify': False})
