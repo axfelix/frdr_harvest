@@ -53,7 +53,7 @@ class CKANRepository(HarvestRepository):
 
         item_count = 0
         for ckan_identifier in records:
-            if not self.ckan_omit_identifier_pattern or self.ckan_omit_identifier_pattern not in ckan_identifier:
+            if not self.ckan_include_identifier_pattern or self.ckan_include_identifier_pattern in ckan_identifier:
                 result = self.db.write_header(ckan_identifier, self.repository_id)
                 item_count = item_count + 1
                 if (item_count % self.update_log_after_numitems == 0):
