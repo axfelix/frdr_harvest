@@ -53,15 +53,13 @@ class CKANRepository(HarvestRepository):
 
         item_count = 0
         for ckan_identifier in records:
-            if self.name != "Yukon Open Data" or "data/datasets" in ckan_identifier: # exclude non-datasets for Yukon
+            if not self.ckan_omit_identifier_pattern or self.ckan_omit_identifier_pattern not in ckan_identifier:
                 result = self.db.write_header(ckan_identifier, self.repository_id)
                 item_count = item_count + 1
                 if (item_count % self.update_log_after_numitems == 0):
                     tdelta = time.time() - self.tstart + 0.1
                     self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,
-                                                                                               self.formatter.humanize(
-                                                                                                   tdelta),
-                                                                                               item_count / tdelta))
+                            self.formatter.humanize(tdelta), item_count / tdelta))
 
         self.logger.info("Found {} items in feed".format(item_count))
 
@@ -331,7 +329,7 @@ class CKANRepository(HarvestRepository):
                 for tag in ckan_record["keywords"]["en-t-fr"]:
                     record["tags"].append(tag)
         else:
-            if ('tags' in ckan_record) and ckan_record['tags']:
+            if ("tags" in ckan_record) and ckan_record["tags"]:
                 for tag in ckan_record["tags"]:
                     if self.default_language == "fr":
                         if "display_name" in tag:
@@ -344,19 +342,19 @@ class CKANRepository(HarvestRepository):
                         elif "name" in tag: # Yukon
                             record["tags"].append(tag["name"])
 
-        if ('west_bound_longitude' in ckan_record) and ('east_bound_longitude' in ckan_record) and \
+        if ("west_bound_longitude" in ckan_record) and ("east_bound_longitude" in ckan_record) and \
                 ('north_bound_latitude' in ckan_record) and ('south_bound_latitude' in ckan_record):
             # BC Data Catalogue
             record["geobboxes"] = [{"southLat": ckan_record['south_bound_latitude'], "westLon": ckan_record['west_bound_longitude'],
                                     "northLat": ckan_record['north_bound_latitude'], "eastLon": ckan_record['east_bound_longitude']}]
-        elif ('bbox-west-long' in ckan_record) and ('bbox-east-long' in ckan_record) and \
+        elif ("bbox-west-long" in ckan_record) and ("bbox-east-long" in ckan_record) and \
                 ('bbox-north-lat' in ckan_record) and ('bbox-south-lat' in ckan_record):
             # CIOOS
             record["geobboxes"] = [{"southLat": ckan_record['bbox-south-lat'], "westLon": ckan_record['bbox-west-long'],
                                     "northLat": ckan_record['bbox-north-lat'], "eastLon": ckan_record['bbox-east-long']}]
-        elif ('spatialcoverage1' in ckan_record) and ckan_record['spatialcoverage1']:
+        elif ("spatialcoverage1" in ckan_record) and ckan_record["spatialcoverage1"]:
             # Alberta
-            spatialcoverage1 = ckan_record['spatialcoverage1'].split(",")
+            spatialcoverage1 = ckan_record["spatialcoverage1"].split(",")
             if len(spatialcoverage1) == 4:
                 # Check to make sure we have the right number of pieces because sometimes spatialcoverage1 is a place name
                 # Coordinates are in W N E S order
@@ -366,7 +364,7 @@ class CKANRepository(HarvestRepository):
             else:
                 # If it isn't split into 4 pieces, use as a place name
                 record["geoplaces"] = [{"place_name": ckan_record['spatialcoverage1']}]
-        elif ('spatial' in ckan_record) and ckan_record['spatial']:
+        elif ("spatial" in ckan_record) and ckan_record['spatial']:
             # CanWin Data Hub, Open Data Canada, plus a few from BC Data Catalogue
             spatial = ckan_record["spatial"]
             if isinstance(ckan_record["spatial"], str):
@@ -390,29 +388,20 @@ class CKANRepository(HarvestRepository):
                              "northLat": max(yValues), "eastLon": max(xValues)})
                 if len(record["geobboxes"]) == 0:
                     record.pop("geobboxes")
-        if ('ext_spatial' in ckan_record) and ckan_record['ext_spatial']:
+        if ("ext_spatial" in ckan_record) and ckan_record['ext_spatial']:
             # Quebec, Montreal
             record["geoplaces"] = [{"place_name": ckan_record['ext_spatial']}]
 
         # Access Constraints, if available
-        if ('private' in ckan_record):
-            if ckan_record['private'] and self.name != "Yukon Open Data": #  Yukon always sets private to True
+        if ("private" in ckan_record):
+            if ckan_record["private"] and not self.ckan_ignore_private:
                 record["access"] = "Limited"
             else:
                 record["access"] = "Public"
-                if self.name == 'BC Data Catalogue':
-                    # 'private' is always False; view_audience is "public" for public
-                    record["access"] = ckan_record.get("view_audience")
-                elif self.name == "Data Ontario":
-                    # 'private' is always False; access_level is "open" for public
-                    record["access"] = ckan_record.get("access_level", "")
-                    if record["access"] == "open":
-                        record["access"] = "Public"
-                elif self.name == "Province of Alberta":
-                    # 'private' is always False; sensitivity is "unrestricted" for public
-                    record["access"] = ckan_record.get("sensitivity", "")
-                    if record["access"] == "unrestricted" or record["access"] == "":
-                        record["access"] = "Public"
+                if self.ckan_access_field:
+                    record["access"] = ckan_record.get(self.ckan_access_field,"")
+                if record["access"] in ["open", "unrestricted", ""]:
+                    record["access"] = "Public"
 
         # Files
         if "resources" in ckan_record and isinstance(ckan_record["resources"], list):
