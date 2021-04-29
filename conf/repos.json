@@ -1,15 +1,15 @@
 {
     "repos": [
         {
-            "name": "SFU Radar",
-            "url": "https://researchdata.sfu.ca/oai2",
-            "homepage_url": "https://researchdata.sfu.ca/",
-            "set": "",
-            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/sfu_80x80.png",
+            "name": "FRDR",
+            "url": "https://www.frdr-dfdr.ca/oai/request",
+            "homepage_url": "https://www.frdr-dfdr.ca/",
+            "set": "col_storagegroup1",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/frdr_80x80.png",
             "type": "oai",
-            "item_url_pattern": "http://researchdata.sfu.ca/islandora/object/%id%",
-            "enabled": true,
-            "copyerrorstoemail": false
+            "metadataprefix": "frdr",
+            "repo_refresh_days": 0,
+            "enabled": true
         }
     ]
 }
