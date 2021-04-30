@@ -27,6 +27,8 @@ class CKANRepository(HarvestRepository):
             self.ckan_strip_from_identifier = ""
         if "ckan_access_field" not in repoParams:
             self.ckan_access_field = ""
+        if "ckan_ignore_date" not in repoParams:
+            self.ckan_ignore_date = False
 
     def _crawl(self):
         kwargs = {
@@ -281,14 +283,13 @@ class CKANRepository(HarvestRepository):
             record["pub_date"] = ckan_record["date_issued"]
         elif ('metadata_created' in ckan_record):
             record["pub_date"] = ckan_record["metadata_created"]
-            if self.name == "Yukon Open Data":
-                if "1969-12-31" in record["pub_date"]:
-                    record["pub_date"] = ckan_record["revision_timestamp"]
-                try:
-                    month_day_year = record["pub_date"].split(", ")[1].split(" - ")[0].split("/")
-                    record["pub_date"] = month_day_year[2] + "-" + month_day_year[0] + "-" + month_day_year[1]
-                except:
-                    pass
+            if self.ckan_ignore_date and self.ckan_ignore_date in record["pub_date"]: # Yukon
+                record["pub_date"] = ckan_record["revision_timestamp"]
+            try:
+                month_day_year = record["pub_date"].split(", ")[1].split(" - ")[0].split("/")
+                record["pub_date"] = month_day_year[2] + "-" + month_day_year[0] + "-" + month_day_year[1]
+            except:
+                pass
 
         # Some date formats have a trailing timestamp after date (ie: "2014-12-10T15:05:03.074998Z")
         record["pub_date"] = re.sub("[T ][0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.?[0-9]*[Z]?$", "", record["pub_date"])
