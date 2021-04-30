@@ -17,6 +17,16 @@ class CKANRepository(HarvestRepository):
         super(CKANRepository, self).setRepoParams(repoParams)
         self.ckanrepo = ckanapi.RemoteCKAN(self.url)
         self.domain_metadata = []
+        if "ckan_api_endpoint" not in repoParams:
+            self.ckan_api_endpoint = ""
+        if "ckan_ignore_private" not in repoParams:
+            self.ckan_ignore_private = False
+        if "ckan_include_identifier_pattern" not in repoParams:
+            self.ckan_include_identifier_pattern = ""
+        if "ckan_strip_from_identifier" not in repoParams:
+            self.ckan_strip_from_identifier = ""
+        if "ckan_access_field" not in repoParams:
+            self.ckan_access_field = ""
 
     def _crawl(self):
         kwargs = {
