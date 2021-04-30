@@ -42,7 +42,7 @@ class CKANRepository(HarvestRepository):
         }
         self.repository_id = self.db.update_repo(**kwargs)
 
-        if self.ckan_api_endpoint:
+        if self.ckan_api_endpoint: # Yukon
             r = requests.get(self.url + self.ckan_api_endpoint + "/package_list")
             records = json.loads(r.text)["result"]
         else:
@@ -63,7 +63,7 @@ class CKANRepository(HarvestRepository):
 
         item_count = 0
         for ckan_identifier in records:
-            if not self.ckan_include_identifier_pattern or self.ckan_include_identifier_pattern in ckan_identifier:
+            if not self.ckan_include_identifier_pattern or self.ckan_include_identifier_pattern in ckan_identifier: # Yukon
                 if self.ckan_strip_from_identifier:
                     ckan_identifier = ckan_identifier.replace(self.ckan_strip_from_identifier,"")
                 result = self.db.write_header(ckan_identifier, self.repository_id)
@@ -412,7 +412,7 @@ class CKANRepository(HarvestRepository):
                 record["access"] = "Public"
                 if self.ckan_access_field:
                     record["access"] = ckan_record.get(self.ckan_access_field,"")
-                if record["access"] in ["open", "unrestricted", ""]:
+                if record["access"].lower() in ["open", "unrestricted", "public", ""]:
                     record["access"] = "Public"
 
         # Files
@@ -440,7 +440,7 @@ class CKANRepository(HarvestRepository):
         # self.logger.debug("Updating CKAN record {}".format(record['local_identifier']) )
 
         try:
-            if self.ckan_api_endpoint:
+            if self.ckan_api_endpoint: # Yukon
                 r = requests.get(self.url + self.ckan_api_endpoint + "/package_show?id=" + record['local_identifier'])
                 ckan_record = json.loads(r.text)["result"][0]
             else:
