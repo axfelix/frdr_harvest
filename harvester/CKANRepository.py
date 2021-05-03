@@ -443,7 +443,10 @@ class CKANRepository(HarvestRepository):
         try:
             if self.ckan_api_endpoint: # Yukon
                 r = requests.get(self.url + self.ckan_api_endpoint + "/package_show?id=" + record['local_identifier'])
-                ckan_record = json.loads(r.text)["result"][0]
+                try:
+                    ckan_record = json.loads(r.text)["result"][0]
+                except IndexError:
+                    raise ckanapi.errors.NotFound
             else:
                 ckan_record = self.ckanrepo.call_action('package_show', {'id':record['local_identifier']}, requests_kwargs={'verify': False})
             oai_record = self.format_ckan_to_oai(ckan_record, record['local_identifier'])
