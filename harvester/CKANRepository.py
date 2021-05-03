@@ -265,6 +265,9 @@ class CKANRepository(HarvestRepository):
             record["rights"] = "\n".join(record["rights"])
             record["rights"] = record["rights"].strip()
 
+        if ("rights" in record) and record["rights"] == "/open-government-licence-yukon":
+            record["rights"] = "Open Government Licence - Yukon\nhttps://open.yukon.ca/open-government-licence-yukon"
+
         # Look for publication date in a few places
         # All of these assume the date will start with year first
         record["pub_date"] = ""
