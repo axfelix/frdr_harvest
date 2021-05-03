@@ -287,7 +287,10 @@ class CKANRepository(HarvestRepository):
         elif ('metadata_created' in ckan_record):
             record["pub_date"] = ckan_record["metadata_created"]
             if self.ckan_ignore_date and self.ckan_ignore_date in record["pub_date"]: # Yukon
-                record["pub_date"] = ckan_record["revision_timestamp"]
+                if ('metadata_modified' in ckan_record):
+                    record["pub_date"] = ckan_record["metadata_modified"]
+                if self.ckan_ignore_date in record["pub_date"]:
+                    record["pub_date"] = ckan_record["revision_timestamp"]
             try:
                 month_day_year = record["pub_date"].split(", ")[1].split(" - ")[0].split("/")
                 record["pub_date"] = month_day_year[2] + "-" + month_day_year[0] + "-" + month_day_year[1]
