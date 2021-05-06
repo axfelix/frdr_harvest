@@ -1,7 +1,7 @@
 {
     "repos": [
         {
-             "name": "FRDR",
+            "name": "FRDR",
             "url": "https://www.frdr-dfdr.ca/oai/request",
             "homepage_url": "https://www.frdr-dfdr.ca/",
             "set": "col_storagegroup1",

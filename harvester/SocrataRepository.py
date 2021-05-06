@@ -49,16 +49,16 @@ class SocrataRepository(HarvestRepository):
         record["tags"] = socrata_record.get("tags", "")
         record["identifier"] = local_identifier
         record["creator"] = socrata_record.get("attribution", self.name)
-        record["pub_date"] = datetime.fromtimestamp(socrata_record["publicationDate"]).strftime('%Y-%m-%d')
+        record["pub_date"] = datetime.fromtimestamp(socrata_record["publicationDate"]).strftime("%Y-%m-%d")
         record["subject"] = socrata_record.get("category", "")
         record["title_fr"] = ""
         record["series"] = ""
         record["rights"] = []
 
-        if ('license' in socrata_record) and socrata_record['license']:
+        if ("license" in socrata_record) and socrata_record["license"]:
             # Winnipeg, Nova Scotia, PEI
-            record["rights"].append(socrata_record['license'].get("name", ""))
-            record["rights"].append(socrata_record['license'].get("termsLink", ""))
+            record["rights"].append(socrata_record["license"].get("name", ""))
+            record["rights"].append(socrata_record["license"].get("termsLink", ""))
             record["rights"] = "\n".join(record["rights"])
             record["rights"] = record["rights"].strip()
 
@@ -66,27 +66,35 @@ class SocrataRepository(HarvestRepository):
             # Calgary, Edmonton
             record["rights"] = []
 
-        if ('metadata' in socrata_record) and socrata_record['metadata']:
-            if ('custom_fields' in socrata_record['metadata']) and socrata_record['metadata']['custom_fields']:
-                if ('License/Attribution' in socrata_record['metadata']['custom_fields']) and socrata_record['metadata']['custom_fields']['License/Attribution']:
-                    if ('License URL' in socrata_record['metadata']['custom_fields']['License/Attribution'] and socrata_record['metadata']['custom_fields']['License/Attribution']['License URL']):
+        if ("metadata" in socrata_record) and socrata_record["metadata"]:
+            if ("custom_fields" in socrata_record["metadata"]) and socrata_record["metadata"]["custom_fields"]:
+                # Rights metadata
+                if ("License/Attribution" in socrata_record["metadata"]["custom_fields"]) and socrata_record["metadata"]["custom_fields"]["License/Attribution"]:
+                    if ("License URL" in socrata_record["metadata"]["custom_fields"]["License/Attribution"] and socrata_record["metadata"]["custom_fields"]["License/Attribution"]["License URL"]):
                         if record["rights"] == "" or record["rights"] == []:
                             # Calgary
-                            record["rights"] = socrata_record['metadata']['custom_fields']['License/Attribution']['License URL']
-                    if ('License-URL' in socrata_record['metadata']['custom_fields']['License/Attribution'] and socrata_record['metadata']['custom_fields']['License/Attribution']['License-URL']):
+                            record["rights"] = socrata_record["metadata"]["custom_fields"]["License/Attribution"]["License URL"]
+                    if ("License-URL" in socrata_record["metadata"]["custom_fields"]["License/Attribution"] and socrata_record["metadata"]["custom_fields"]["License/Attribution"]["License-URL"]):
                         if record["rights"] == "" or record["rights"] == []:
                             # Calgary
-                            record["rights"] = socrata_record['metadata']['custom_fields']['License/Attribution']['License-URL']
-                elif ('Licence' in socrata_record['metadata']['custom_fields']) and socrata_record['metadata']['custom_fields']['Licence']:
-                    if ('Licence' in socrata_record['metadata']['custom_fields']['Licence']) and socrata_record['metadata']['custom_fields']['Licence']['Licence']:
+                            record["rights"] = socrata_record["metadata"]["custom_fields"]["License/Attribution"]["License-URL"]
+                elif ("Licence" in socrata_record["metadata"]["custom_fields"]) and socrata_record["metadata"]["custom_fields"]["Licence"]:
+                    if ("Licence" in socrata_record["metadata"]["custom_fields"]["Licence"]) and socrata_record["metadata"]["custom_fields"]["Licence"]["Licence"]:
                         if record["rights"] == "" or record["rights"] == []:
                             # Winnipeg
-                            record["rights"] = socrata_record['metadata']['custom_fields']['Licence']['Licence']
-                elif ('Attributes' in socrata_record['metadata']['custom_fields']) and socrata_record['metadata']['custom_fields']['Attributes']:
-                    if ('Licence' in socrata_record['metadata']['custom_fields']['Attributes']) and socrata_record['metadata']['custom_fields']['Attributes']['Licence']:
+                            record["rights"] = socrata_record["metadata"]["custom_fields"]["Licence"]["Licence"]
+                elif ("Attributes" in socrata_record["metadata"]["custom_fields"]) and socrata_record["metadata"]["custom_fields"]["Attributes"]:
+                    if ("Licence" in socrata_record["metadata"]["custom_fields"]["Attributes"]) and socrata_record["metadata"]["custom_fields"]["Attributes"]["Licence"]:
                         if record["rights"] == "" or record["rights"] == []:
                             # Strathcona
-                            record["rights"] = socrata_record['metadata']['custom_fields']['Attributes']['Licence']
+                            record["rights"] = socrata_record["metadata"]["custom_fields"]["Attributes"]["Licence"]
+
+            if ("geo" in socrata_record["metadata"]) and socrata_record["metadata"]["geo"]:
+                if ("bbox" in socrata_record["metadata"]["geo"]) and socrata_record["metadata"]["geo"]["bbox"]:
+                    bbox_array = socrata_record["metadata"]["geo"]["bbox"].split(",")
+                    record["geobboxes"] = [{"westLon": bbox_array[0], "eastLon": bbox_array[2], "southLat": bbox_array[1], "northLat": bbox_array[3]}]
+
+
         if record["rights"] == "" or record["rights"] == []:
             record.pop("rights")
 
@@ -122,14 +130,14 @@ class SocrataRepository(HarvestRepository):
     def _update_record(self,record):
 
         try:            
-            socrata_record = self.socratarepo.get_metadata(record['local_identifier'])
-            oai_record = self.format_socrata_to_oai(socrata_record,record['local_identifier'])
+            socrata_record = self.socratarepo.get_metadata(record["local_identifier"])
+            oai_record = self.format_socrata_to_oai(socrata_record,record["local_identifier"])
             if oai_record:
                 self.db.write_record(oai_record, self)
             return True
 
         except Exception as e:
-            self.logger.error("Updating record {} failed: {}".format(record['local_identifier'], e))
+            self.logger.error("Updating record {} failed: {}".format(record["local_identifier"], e))
             if self.dump_on_failure == True:
                 try:
                     print(socrata_record)
