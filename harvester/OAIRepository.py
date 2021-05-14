@@ -232,6 +232,9 @@ class OAIRepository(HarvestRepository):
 
         # Parse FRDR records
         if self.metadataprefix.lower() == "frdr":
+            if "dateissued" in record:
+                record["pub_date"] = record["dateissued"]
+
             if "http://datacite.org/schema/kernel-4#geolocationPlace" in record:
                 record["coverage"] = record.get("http://datacite.org/schema/kernel-4#geolocationPlace")
 
