@@ -33,6 +33,7 @@ from harvester.OpenDataSoftRepository import OpenDataSoftRepository
 from harvester.CSWRepository import CSWRepository
 from harvester.SocrataRepository import SocrataRepository
 from harvester.DataStreamRepository import DataStreamRepository
+from harvester.ArcGISRepository import ArcGISRepository
 from harvester.DataCiteRepository import DataCiteRepository
 from harvester.DBInterface import DBInterface
 from harvester.HarvestLogger import HarvestLogger
@@ -145,6 +146,8 @@ if __name__ == "__main__":
                 repo = SocrataRepository(final_config)
             elif repoconfig['type'] == "datastream":
                 repo = DataStreamRepository(final_config)
+            elif repoconfig['type'] == "arcgis":
+                repo = ArcGISRepository(final_config)
             elif repoconfig['type'] == "datacite":
                 repo = DataCiteRepository(final_config)
             repo.setLogger(main_log)

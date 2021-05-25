@@ -429,7 +429,7 @@ class CKANRepository(HarvestRepository):
                 geofile = {}
                 try:
                     url = ckan_file["url"].split("?")[0] # remove any query parameters
-                    filename = url.split("/")[len(url.split("/"))-1] # get the last part after the slasy
+                    filename = url.split("/")[len(url.split("/"))-1] # get the last part after the slash
                     extension = "." + filename.split(".")[len(filename.split("."))-1]
                     if extension.lower() in self.geofile_extensions:
                         geofile["uri"] = url
