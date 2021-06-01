@@ -23,6 +23,8 @@
 	"geobbox":								{ "idcol": "geobbox_id",								"valcol": "record_id"},
 	"geopoint":								{ "idcol": "geopoint_id",								"valcol": "record_id"},
 	"geoplace":								{ "idcol": "geoplace_id",								"valcol": "place_name"},
+	"crdc":										{ "idcol": "crdc_id",										"valcol": "crdc_code"},
 	"geofile":								{ "idcol": "geofile_id",								"valcol": "record_id"},
-	"records_x_geoplace":			{ "idcol": "records_x_geoplace_id",			"valcol": "" }
+	"records_x_geoplace":			{ "idcol": "records_x_geoplace_id",			"valcol": "" },
+	"records_x_crdc":					{ "idcol": "records_x_crdc_id",				"valcol": "" }
 }

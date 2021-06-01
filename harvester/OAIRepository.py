@@ -232,6 +232,23 @@ class OAIRepository(HarvestRepository):
 
         # Parse FRDR records
         if self.metadataprefix.lower() == "frdr":
+            if "https://www.frdr-dfdr.ca/schema/1.0/#crdc" in record:
+                record["crdc"] = []
+                crdc_index = 0
+                while crdc_index < len(record["https://www.frdr-dfdr.ca/schema/1.0/#crdcCode"]):
+                    en_index = crdc_index*2
+                    fr_index = en_index + 1
+                    record["crdc"].append({
+                        "crdc_code": record["https://www.frdr-dfdr.ca/schema/1.0/#crdcCode"][crdc_index],
+                        "crdc_group_en": record["https://www.frdr-dfdr.ca/schema/1.0/#crdcGroup"][en_index],
+                        "crdc_group_fr": record["https://www.frdr-dfdr.ca/schema/1.0/#crdcGroup"][fr_index],
+                        "crdc_class_en": record["https://www.frdr-dfdr.ca/schema/1.0/#crdcClass"][en_index],
+                        "crdc_class_fr": record["https://www.frdr-dfdr.ca/schema/1.0/#crdcClass"][fr_index],
+                        "crdc_field_en": record["https://www.frdr-dfdr.ca/schema/1.0/#crdcField"][en_index],
+                        "crdc_field_fr": record["https://www.frdr-dfdr.ca/schema/1.0/#crdcField"][fr_index],
+                    })
+                    crdc_index += 1
+
             if "dateissued" in record:
                 record["pub_date"] = record["dateissued"]
 
@@ -452,7 +469,12 @@ class OAIRepository(HarvestRepository):
                     "http://datacite.org/schema/kernel-4#creatorNameIdentifier",
                     "http://datacite.org/schema/kernel-4#fundingReferenceFunderName",
                     "http://datacite.org/schema/kernel-4#fundingReferenceAwardNumber",
-                    "http://datacite.org/schema/kernel-4#fundingReferenceAwardTitle"]
+                    "http://datacite.org/schema/kernel-4#fundingReferenceAwardTitle",
+                    "https://www.frdr-dfdr.ca/schema/1.0/#crdc",
+                    "https://www.frdr-dfdr.ca/schema/1.0/#crdcCode",
+                    "https://www.frdr-dfdr.ca/schema/1.0/#crdcGroup",
+                    "https://www.frdr-dfdr.ca/schema/1.0/#crdcClass",
+                    "'https://www.frdr-dfdr.ca/schema/1.0/#crdcField'"]
         newRecord = {}
         for elementName in list(record):
             if '#' in elementName:
