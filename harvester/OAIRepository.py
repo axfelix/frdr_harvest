@@ -287,22 +287,23 @@ class OAIRepository(HarvestRepository):
                 record.pop("contributor")
 
             # Get geospatial files
-            endpoint_hostname = "https://" + record.get("https://www.frdr-dfdr.ca/schema/1.0/#globusHttpsHostname", [""])[0]
-            endpoint_path = record.get("https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath", [""])[0]
-            try:
-                filenames = get_frdr_filenames(endpoint_hostname + endpoint_path)
+            if "geodisy_harvested" not in record or record["geodisy_harvested"] == 0:
+                endpoint_hostname = "https://" + record.get("https://www.frdr-dfdr.ca/schema/1.0/#globusHttpsHostname", [""])[0]
+                endpoint_path = record.get("https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath", [""])[0]
+                try:
+                    filenames = get_frdr_filenames(endpoint_hostname + endpoint_path)
 
-                # Get File Download URLs
-                for f in filenames:
-                    file_segments = len(f.split("."))
-                    extension = "." + f.split(".")[file_segments - 1]
-                    if extension.lower() in self.geofile_extensions:
-                        geofile = {}
-                        geofile["filename"] = f
-                        geofile["uri"] = endpoint_hostname + endpoint_path + "submitted_data/" + f
-                        record.setdefault("geofiles", []).append(geofile)
-            except:
-                self.logger.error("Something wrong trying to access files from hostname: {} , path: {}".format(endpoint_hostname, endpoint_path))
+                    # Get File Download URLs
+                    for f in filenames:
+                        file_segments = len(f.split("."))
+                        extension = "." + f.split(".")[file_segments - 1]
+                        if extension.lower() in self.geofile_extensions:
+                            geofile = {}
+                            geofile["filename"] = f
+                            geofile["uri"] = endpoint_hostname + endpoint_path + "submitted_data/" + f
+                            record.setdefault("geofiles", []).append(geofile)
+                except:
+                    self.logger.error("Something wrong trying to access files from hostname: {} , path: {}".format(endpoint_hostname, endpoint_path))
 
         if "identifier" not in record:
             return None
@@ -446,8 +447,8 @@ class OAIRepository(HarvestRepository):
             record["rights"] = list(set(filter(None.__ne__, record["rights"])))
             record["rights"] = "\n".join(record["rights"])
 
-
         return record
+
     def find_domain_metadata(self, record):
         # Exclude fundingReference and nameIdentifier; need a way to group linked fields in display first
         excludedElements = ["http://datacite.org/schema/kernel-4#resourcetype",
@@ -503,6 +504,7 @@ class OAIRepository(HarvestRepository):
                 metadata["date"] = single_record.header.datestamp
 
             metadata["identifier"] = single_record.header.identifier
+            metadata["geodisy_harvested"] = single_record.get("geodisy_harvested", 0)
             oai_record = self.unpack_oai_metadata(metadata)
             self.domain_metadata = self.find_domain_metadata(metadata)
             if oai_record is None:

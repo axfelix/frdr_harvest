@@ -326,16 +326,15 @@ class DBInterface:
 
     def update_row_generic(self, tablename, row_id, updates, extrawhere=""):
         idcolumn = self.get_table_id_column(tablename)
-        paramlist = {}
-        for key, value in updates.items():
-            paramlist[key] = value
-        sqlstring = "UPDATE {} set {} where {}=? {}".format(tablename, "=?, ".join(str(k) for k in list(paramlist.keys())) + "=?", idcolumn, extrawhere)
+        sqlstring = "UPDATE {} set {} where {}=? {}".format(tablename, "=?, ".join(str(k) for k in list(updates.keys())) + "=?", idcolumn, extrawhere)
+        values = list(updates.values())
+        values.append(row_id)
 
         con = self.getConnection()
         with con:
             cur = self.getRowCursor()
             try:
-                cur.execute(self._prep(sqlstring), ([row_id] + list(paramlist.values()))) # FIXME this doesn't work!
+                cur.execute(self._prep(sqlstring), values )
             except:
                 return False
             return True
@@ -1088,7 +1087,7 @@ class DBInterface:
             cur = self.getDictCursor()
             cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.series
                 , recs.modified_timestamp, recs.local_identifier, recs.item_url
-                , repos.repository_id, repos.repository_type
+                , repos.repository_id, repos.repository_type, recs.geodisy_harvested
                 FROM records recs, repositories repos
                 where recs.repository_id = repos.repository_id and recs.modified_timestamp < ? 
                 and repos.repository_id = ? and recs.deleted = 0
