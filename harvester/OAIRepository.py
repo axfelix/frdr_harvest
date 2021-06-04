@@ -409,6 +409,8 @@ class OAIRepository(HarvestRepository):
             if "tags_fr" not in record:
                 record["tags_fr"] = record.get("subject")
                 record.pop("subject", None)
+                if record["tags_fr"] == None:
+                    record.pop("tags_fr")
         else:
             if isinstance(record["title"], list):
                 record["title"] = record["title"][0].strip()
@@ -419,6 +421,8 @@ class OAIRepository(HarvestRepository):
             if "tags" not in record:
                 record["tags"] = record.get("subject")
                 record.pop("subject", None)
+                if record["tags"] == None:
+                    record.pop("tags")
 
         if "publisher" in record:
             if isinstance(record["publisher"], list):
@@ -442,10 +446,10 @@ class OAIRepository(HarvestRepository):
             if record["type"] and "Dataset" not in record["type"]:
                 return None
 
-        # EPrints workaround to fix duplicates and Nones in Rights
         if "rights" in record and isinstance(record["rights"], list):
-            record["rights"] = list(set(filter(None.__ne__, record["rights"])))
-            record["rights"] = "\n".join(record["rights"])
+            record["rights"] = list(set(filter(None.__ne__, record["rights"]))) # Remove duplicates and Nones from Rights (FRDR, Eprints)
+            record["rights"].sort() # Ensure consistent order
+            record["rights"] = "\n".join(record["rights"]) # Join all rights entries into one
 
         return record
 

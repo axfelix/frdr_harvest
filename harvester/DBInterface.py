@@ -1005,7 +1005,7 @@ class DBInterface:
                         crdc_record = self.get_multiple_records("crdc", "*", "crdc_id", crdc_id)[0]
                         for key in crdc_key_list:
                             if crdc[key] != crdc_record[key]:
-                                self.update_row_generic("crdc", crdc_id, extras)  # FIXME this function doesn't work
+                                self.update_row_generic("crdc", crdc_id, extras)
                                 modified_upstream = True
                                 break
                     if crdc_id is None:
