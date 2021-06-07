@@ -1,6 +1,6 @@
 CREATE TABLE crdc (
     crdc_id INTEGER PRIMARY KEY NOT NULL,
-    crdc_code TEXT NOT NULL UNIQUE,
+    crdc_code VARCHAR(100) NOT NULL UNIQUE,
     crdc_group_en TEXT NOT NULL,
     crdc_group_fr TEXT NOT NULL,
     crdc_class_en TEXT NOT NULL,
