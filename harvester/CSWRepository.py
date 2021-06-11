@@ -83,6 +83,7 @@ class CSWRepository(HarvestRepository):
         record["series"] = ""
 
         if csw_record.bbox:
+            # Workaround to address issue in oswlib related to EPSG:4326 CRS code that flips coordinates
             if float(csw_record.bbox.minx) > float(csw_record.bbox.maxx):
                 # longitude values (minx and maxx) are switched by oswlib; switch them back
                 record["geobboxes"] = [{"southLat": csw_record.bbox.miny, "westLon": csw_record.bbox.maxx,
