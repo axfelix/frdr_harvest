@@ -324,6 +324,21 @@ class DBInterface:
                 return False
         return True
 
+    def update_row_generic(self, tablename, row_id, updates, extrawhere=""):
+        idcolumn = self.get_table_id_column(tablename)
+        sqlstring = "UPDATE {} set {} where {}=? {}".format(tablename, "=?, ".join(str(k) for k in list(updates.keys())) + "=?", idcolumn, extrawhere)
+        values = list(updates.values())
+        values.append(row_id)
+
+        con = self.getConnection()
+        with con:
+            cur = self.getRowCursor()
+            try:
+                cur.execute(self._prep(sqlstring), values )
+            except:
+                return False
+            return True
+
     def get_table_id_column(self, tablename):
         if tablename in self.tabledict and "idcol" in self.tabledict[tablename]:
             return str(self.tabledict[tablename]["idcol"])
@@ -972,6 +987,45 @@ class DBInterface:
                         self.delete_row_generic("records_x_geoplace", "records_x_geoplace_id", records_x_geoplace_id)
                         modified_upstream = True
 
+            if "crdc" in record:
+                existing_crdc_recs = self.get_multiple_records("records_x_crdc", "*", "record_id",
+                                                                   record["record_id"])
+                existing_crdc_ids = [e["crdc_id"] for e in existing_crdc_recs]
+                new_crdc_ids = []
+                crdc_key_list = ["crdc_code", "crdc_group_en", "crdc_group_fr", "crdc_class_en", "crdc_class_fr", "crdc_field_en", "crdc_field_fr"]
+                for crdc in record["crdc"]:
+                    for key in crdc_key_list:
+                        if key not in crdc:
+                            continue
+                    crdc_id = self.get_single_record_id("crdc", crdc["crdc_code"])
+                    extras = crdc.copy()
+                    extras.pop("crdc_code")
+                    if crdc_id is not None:
+                        # check if the existing CRDC entry matches - if not, update
+                        crdc_record = self.get_multiple_records("crdc", "*", "crdc_id", crdc_id)[0]
+                        for key in crdc_key_list:
+                            if crdc[key] != crdc_record[key]:
+                                self.update_row_generic("crdc", crdc_id, extras)
+                                modified_upstream = True
+                                break
+                    if crdc_id is None:
+                        crdc_id = self.insert_related_record("crdc", crdc["crdc_code"], **extras)
+                        modified_upstream = True
+                    if crdc_id is not None:
+                        new_crdc_ids.append(crdc_id)
+                        if crdc_id not in existing_crdc_ids:
+                            self.insert_cross_record("records_x_crdc", "crdc", crdc_id, record["record_id"])
+                            modified_upstream = True
+
+                for eid in existing_crdc_ids:
+                    if eid not in new_crdc_ids:
+                        records_x_crdc_id = \
+                            self.get_multiple_records("records_x_crdc", "records_x_crdc_id", "record_id",
+                                                      record["record_id"], " and crdc_id='"
+                                                      + str(eid) + "'")[0]["records_x_crdc_id"]
+                        self.delete_row_generic("records_x_crdc", "records_x_crdc_id", records_x_crdc_id)
+                        modified_upstream = True
+
             if "geofiles" in record:
                 existing_geofile_recs = self.get_multiple_records("geofile", "*", "record_id",
                                                                record["record_id"])
@@ -1033,7 +1087,7 @@ class DBInterface:
             cur = self.getDictCursor()
             cur.execute(self._prep("""SELECT recs.record_id, recs.title, recs.pub_date, recs.series
                 , recs.modified_timestamp, recs.local_identifier, recs.item_url
-                , repos.repository_id, repos.repository_type
+                , repos.repository_id, repos.repository_type, recs.geodisy_harvested
                 FROM records recs, repositories repos
                 where recs.repository_id = repos.repository_id and recs.modified_timestamp < ? 
                 and repos.repository_id = ? and recs.deleted = 0
