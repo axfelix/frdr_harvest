@@ -232,6 +232,23 @@ class OAIRepository(HarvestRepository):
 
         # Parse FRDR records
         if self.metadataprefix.lower() == "frdr":
+            if "https://www.frdr-dfdr.ca/schema/1.0/#crdc" in record:
+                record["crdc"] = []
+                crdc_index = 0
+                while crdc_index < len(record["https://www.frdr-dfdr.ca/schema/1.0/#crdcCode"]):
+                    en_index = crdc_index*2
+                    fr_index = en_index + 1
+                    record["crdc"].append({
+                        "crdc_code": record["https://www.frdr-dfdr.ca/schema/1.0/#crdcCode"][crdc_index],
+                        "crdc_group_en": record["https://www.frdr-dfdr.ca/schema/1.0/#crdcGroup"][en_index],
+                        "crdc_group_fr": record["https://www.frdr-dfdr.ca/schema/1.0/#crdcGroup"][fr_index],
+                        "crdc_class_en": record["https://www.frdr-dfdr.ca/schema/1.0/#crdcClass"][en_index],
+                        "crdc_class_fr": record["https://www.frdr-dfdr.ca/schema/1.0/#crdcClass"][fr_index],
+                        "crdc_field_en": record["https://www.frdr-dfdr.ca/schema/1.0/#crdcField"][en_index],
+                        "crdc_field_fr": record["https://www.frdr-dfdr.ca/schema/1.0/#crdcField"][fr_index],
+                    })
+                    crdc_index += 1
+
             if "dateissued" in record:
                 record["pub_date"] = record["dateissued"]
 
@@ -270,22 +287,23 @@ class OAIRepository(HarvestRepository):
                 record.pop("contributor")
 
             # Get geospatial files
-            endpoint_hostname = "https://" + record.get("https://www.frdr-dfdr.ca/schema/1.0/#globusHttpsHostname", [""])[0]
-            endpoint_path = record.get("https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath", [""])[0]
-            try:
-                filenames = get_frdr_filenames(endpoint_hostname + endpoint_path)
+            if "geodisy_harvested" not in record or record["geodisy_harvested"] == 0:
+                endpoint_hostname = "https://" + record.get("https://www.frdr-dfdr.ca/schema/1.0/#globusHttpsHostname", [""])[0]
+                endpoint_path = record.get("https://www.frdr-dfdr.ca/schema/1.0/#globusEndpointPath", [""])[0]
+                try:
+                    filenames = get_frdr_filenames(endpoint_hostname + endpoint_path)
 
-                # Get File Download URLs
-                for f in filenames:
-                    file_segments = len(f.split("."))
-                    extension = "." + f.split(".")[file_segments - 1]
-                    if extension.lower() in self.geofile_extensions:
-                        geofile = {}
-                        geofile["filename"] = f
-                        geofile["uri"] = endpoint_hostname + endpoint_path + "submitted_data/" + f
-                        record.setdefault("geofiles", []).append(geofile)
-            except:
-                self.logger.error("Something wrong trying to access files from hostname: {} , path: {}".format(endpoint_hostname, endpoint_path))
+                    # Get File Download URLs
+                    for f in filenames:
+                        file_segments = len(f.split("."))
+                        extension = "." + f.split(".")[file_segments - 1]
+                        if extension.lower() in self.geofile_extensions:
+                            geofile = {}
+                            geofile["filename"] = f
+                            geofile["uri"] = endpoint_hostname + endpoint_path + "submitted_data/" + f
+                            record.setdefault("geofiles", []).append(geofile)
+                except:
+                    self.logger.error("Something wrong trying to access files from hostname: {} , path: {}".format(endpoint_hostname, endpoint_path))
 
         if "identifier" not in record:
             return None
@@ -391,6 +409,8 @@ class OAIRepository(HarvestRepository):
             if "tags_fr" not in record:
                 record["tags_fr"] = record.get("subject")
                 record.pop("subject", None)
+                if record["tags_fr"] == None:
+                    record.pop("tags_fr")
         else:
             if isinstance(record["title"], list):
                 record["title"] = record["title"][0].strip()
@@ -401,6 +421,8 @@ class OAIRepository(HarvestRepository):
             if "tags" not in record:
                 record["tags"] = record.get("subject")
                 record.pop("subject", None)
+                if record["tags"] == None:
+                    record.pop("tags")
 
         if "publisher" in record:
             if isinstance(record["publisher"], list):
@@ -424,13 +446,13 @@ class OAIRepository(HarvestRepository):
             if record["type"] and "Dataset" not in record["type"]:
                 return None
 
-        # EPrints workaround to fix duplicates and Nones in Rights
         if "rights" in record and isinstance(record["rights"], list):
-            record["rights"] = list(set(filter(None.__ne__, record["rights"])))
-            record["rights"] = "\n".join(record["rights"])
-
+            record["rights"] = list(set(filter(None.__ne__, record["rights"]))) # Remove duplicates and Nones from Rights (FRDR, Eprints)
+            record["rights"].sort() # Ensure consistent order
+            record["rights"] = "\n".join(record["rights"]) # Join all rights entries into one
 
         return record
+
     def find_domain_metadata(self, record):
         # Exclude fundingReference and nameIdentifier; need a way to group linked fields in display first
         excludedElements = ["http://datacite.org/schema/kernel-4#resourcetype",
@@ -452,7 +474,12 @@ class OAIRepository(HarvestRepository):
                     "http://datacite.org/schema/kernel-4#creatorNameIdentifier",
                     "http://datacite.org/schema/kernel-4#fundingReferenceFunderName",
                     "http://datacite.org/schema/kernel-4#fundingReferenceAwardNumber",
-                    "http://datacite.org/schema/kernel-4#fundingReferenceAwardTitle"]
+                    "http://datacite.org/schema/kernel-4#fundingReferenceAwardTitle",
+                    "https://www.frdr-dfdr.ca/schema/1.0/#crdc",
+                    "https://www.frdr-dfdr.ca/schema/1.0/#crdcCode",
+                    "https://www.frdr-dfdr.ca/schema/1.0/#crdcGroup",
+                    "https://www.frdr-dfdr.ca/schema/1.0/#crdcClass",
+                    "'https://www.frdr-dfdr.ca/schema/1.0/#crdcField'"]
         newRecord = {}
         for elementName in list(record):
             if '#' in elementName:
@@ -481,6 +508,7 @@ class OAIRepository(HarvestRepository):
                 metadata["date"] = single_record.header.datestamp
 
             metadata["identifier"] = single_record.header.identifier
+            metadata["geodisy_harvested"] = single_record.get("geodisy_harvested", 0)
             oai_record = self.unpack_oai_metadata(metadata)
             self.domain_metadata = self.find_domain_metadata(metadata)
             if oai_record is None:

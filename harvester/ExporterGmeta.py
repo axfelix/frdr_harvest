@@ -114,6 +114,21 @@ class ExporterGmeta(Exporter.Exporter):
                                                                         "city": geoplace["city"],
                                                                         "additional": geoplace["other"]})
 
+                # CRDC (FRDR records only)
+                litecur.execute(self.db._prep("""SELECT crdc.crdc_code, crdc.crdc_group_en, crdc.crdc_group_fr, 
+                                                    crdc.crdc_class_en, crdc.crdc_class_fr, crdc.crdc_field_en, crdc.crdc_field_fr
+                                                    FROM crdc JOIN records_x_crdc on records_x_crdc.crdc_id = crdc.crdc_id
+                                                    WHERE records_x_crdc.record_id=?"""),
+                                (record["record_id"],))
+                crdc_entries = litecur.fetchall()
+                if len(crdc_entries) > 0:
+                    record["crdc"] = []
+                    for crdc_entry in crdc_entries:
+                        record["crdc"].append({"crdc_code": crdc_entry["crdc_code"],
+                                               "crdc_group_en": crdc_entry["crdc_group_en"], "crdc_group_fr": crdc_entry["crdc_group_fr"],
+                                               "crdc_class_en": crdc_entry["crdc_class_en"], "crdc_class_fr": crdc_entry["crdc_class_fr"],
+                                               "crdc_field_en": crdc_entry["crdc_field_en"], "crdc_field_fr": crdc_entry["crdc_field_fr"] })
+
             with con:
                 litecur = self.db.getLambdaCursor()
 
