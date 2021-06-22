@@ -1,13 +1,14 @@
 {
     "repos": [
         {
-            "name": "City of Vancouver Open Data Portal",
-            "url": "https://opendata.vancouver.ca/api/datasets/1.0/search",
-            "homepage_url": "https://opendata.vancouver.ca",
-            "set": "",
-            "thumbnail": "https://{{ web_hostname }}/discover/img/sources/vancouver_80x80.png",
-            "type": "opendatasoft",
-            "item_url_pattern": "https://opendata.vancouver.ca/explore/dataset/%id%",
+            "name": "FRDR",
+            "url": "https://www.frdr-dfdr.ca/oai/request",
+            "homepage_url": "https://www.frdr-dfdr.ca/",
+            "set": "col_storagegroup1",
+            "thumbnail": "https://www.frdr-dfdr.ca/discover/img/sources/frdr_80x80.png",
+            "type": "oai",
+            "metadataprefix": "frdr",
+            "repo_refresh_days": 0,
             "enabled": true
         }
     ]
