@@ -184,15 +184,16 @@ class DataCiteRepository(HarvestRepository):
             record["description"] = []
             record["description_fr"] = []
             for description in datacite_record["attributes"]["descriptions"]:
-                if "lang" in description and description["lang"]:
-                    if "fr" in description["lang"]:
+                if "description" in description and description["description"]:
+                    if "lang" in description and description["lang"]:
+                        if "fr" in description["lang"]:
+                            record["description_fr"].append(description["description"])
+                        else:
+                            record["description"].append(description["description"])
+                    elif self.default_language == "fr":
                         record["description_fr"].append(description["description"])
                     else:
                         record["description"].append(description["description"])
-                elif self.default_language == "fr":
-                    record["description_fr"].append(description["description"])
-                else:
-                    record["description"].append(description["description"])
             if len(record["description"]) == 0:
                 record.pop("description")
             if len(record["description_fr"]) == 0:
