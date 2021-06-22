@@ -57,7 +57,6 @@ class DataCiteRepository(HarvestRepository):
                     next = response["links"]["next"]
                     while next:
                         page_number = page_number + 1
-                        print("Cursor #" + str(page_number) + ": " + next) # FIXME remove this
                         for record in response["data"]:
                             item_identifier = record["id"]
                             result = self.db.write_header(item_identifier, self.repository_id)

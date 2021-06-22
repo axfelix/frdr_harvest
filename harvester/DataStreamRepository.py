@@ -5,6 +5,7 @@ from dateutil import parser
 import time
 import json
 import xml.etree.ElementTree as ET
+import requests
 
 
 class DataStreamRepository(HarvestRepository):
@@ -14,6 +15,7 @@ class DataStreamRepository(HarvestRepository):
         self.metadataprefix = "datastream"
         super(DataStreamRepository, self).setRepoParams(repoParams)
         self.domain_metadata = []
+        self.headers = {'accept': 'application/vnd.api+json'}
 
     def _crawl(self):
         kwargs = {
@@ -30,22 +32,26 @@ class DataStreamRepository(HarvestRepository):
         self.repository_id = self.db.update_repo(**kwargs)
 
         try:
-            response = urllib.request.urlopen('https://datastream.org/dataset/sitemap.xml')
-            response_xml = ET.parse(response)
-            root = response_xml.getroot()
-            results = []
-
+            page_number = 1
+            page_size = 1000
+            totalPages = 1
             item_count = 0
-            for child in root:
-                item_identifier = child[0].text.split("https://datastream.org/dataset/")[1]
-                result = self.db.write_header(item_identifier, self.repository_id)
-                item_count = item_count + 1
-                if (item_count % self.update_log_after_numitems == 0):
-                    tdelta = time.time() - self.tstart + 0.1
-                    self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,
-                                                                                               self.formatter.humanize(
-                                                                                                   tdelta),
-                                                                                               item_count / tdelta))
+            while page_number <= totalPages:
+                querystring = {"client-id": self.set, "page[number]": str(page_number), "page[size]": str(page_size)}
+                response = requests.request("GET", self.url, headers=self.headers, params=querystring)
+                response = response.json()
+                totalPages = response['meta']['totalPages']
+                page_number += 1
+                for record in response["data"]:
+                    item_identifier = record["attributes"]["url"]
+                    result = self.db.write_header(item_identifier, self.repository_id)
+                    item_count = item_count + 1
+                    if (item_count % self.update_log_after_numitems == 0):
+                        tdelta = time.time() - self.tstart + 0.1
+                        self.logger.info("Done {} item headers after {} ({:.1f} items/sec)".format(item_count,
+                                                                                                   self.formatter.humanize(
+                                                                                                       tdelta),
+                                                                                                   item_count / tdelta))
             self.logger.info("Found {} items in feed".format(item_count))
 
             return True
@@ -101,8 +107,8 @@ class DataStreamRepository(HarvestRepository):
         if ("license" in datastream_record) and datastream_record["license"]:
             record["rights"] = datastream_record["license"]
 
-        if ("@id" in datastream_record) and datastream_record["@id"]:
-            record["identifier"] = datastream_record["@id"]
+        if ("url" in datastream_record) and datastream_record["url"]:
+            record["identifier"] = datastream_record["url"]
 
         if ("spatialCoverage" in datastream_record) and datastream_record["spatialCoverage"]:
             try:
@@ -119,7 +125,7 @@ class DataStreamRepository(HarvestRepository):
     def _update_record(self, record):
         try:
             identifier = record['local_identifier']
-            item_dcat_json_url = "https://datastream.org/dataset/" + identifier + ".dcat.json"
+            item_dcat_json_url = identifier + ".dcat.json"
             try:
                 item_response = urllib.request.urlopen(item_dcat_json_url)
             except Exception as e:
